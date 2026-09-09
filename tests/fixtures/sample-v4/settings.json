@@ -111,7 +111,7 @@
       "APP.備考欄": "備考欄",
       "APP.変更内容": "変更内容",
       "APP.管理番号": "管理番号",
-      "PAYMAP": "MAP決済照合結果",
+      "PAYMAP": "申請・決済照合結果",
       "INTEGRATED": "申請情報統合結果",
       "ledger": "統合台帳",
       "APP.受付年月日": "受付年月日",
@@ -237,24 +237,24 @@
           },
           {
             "operation": "join",
-            "target1": "PAY",
-            "target2": "MAP",
+            "target1": "APP",
+            "target2": "PAY",
             "keys": [
-              "PAY.会員番号照合用",
-              "MAP.会員番号照合用"
+              "APP.申請番号",
+              "PAY.申請番号照合用"
             ],
-            "condition": "match",
+            "condition": "left",
             "output": "PAYMAP"
           },
           {
             "operation": "join",
             "target1": "PAYMAP",
-            "target2": "APP",
+            "target2": "MAP",
             "keys": [
-              "PAY.申請番号照合用",
-              "APP.申請番号"
+              "PAY.会員番号照合用",
+              "MAP.会員番号照合用"
             ],
-            "condition": "match",
+            "condition": "left",
             "output": "INTEGRATED"
           },
           {
@@ -262,8 +262,8 @@
             "target1": "INTEGRATED",
             "target2": "ledger",
             "keys": [
-              "PAY.オーダーID",
-              "PAY.オーダーID"
+              "APP.申請番号",
+              "APP.申請番号"
             ],
             "sourceOnly": "add",
             "both": "update",
@@ -274,7 +274,7 @@
       }
     ],
     "ledger": {
-      "identity": "PAY.オーダーID",
+      "identity": "APP.申請番号",
       "search": {
         "columns": [
           "APP.会員番号",
@@ -551,7 +551,12 @@
             "title": "利用者情報",
             "labelWidth": 88,
             "rowHeight": 28,
-            "margin": [2, 0, 2, 0],
+            "margin": [
+              2,
+              0,
+              2,
+              0
+            ],
             "rows": [
               {
                 "label": "利用者ID",
@@ -581,7 +586,12 @@
             "title": "申請情報",
             "labelWidth": 130,
             "rowHeight": 28,
-            "margin": [2, 0, 2, 0],
+            "margin": [
+              2,
+              0,
+              2,
+              0
+            ],
             "rows": [
               {
                 "label": "申請日",
