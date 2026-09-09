@@ -937,6 +937,8 @@ R02,1
 
 `judgments`はsourceの値に対してrulesを上から試し、最初に当たるresultを採用します。equals配列／pattern正規表現／empty:trueは、同じ規則内ではORです。各resultの`text`と`look:ok/ng/undefined/error`をresultsへ書きます。規則不一致はundefined、読めない値はerror。意味のある「要確認」等の文言を、省略のために成功表示へ置き換えないでください。
 
+表示値の定義には、省略可能な`requires`配列で表示に必要な保存列を指定できます。例：`{"field":"A.name","requires":["B.id"],"empty":""}`は、`B.id`が空なら画面の値を空欄にし、台帳の`A.name`は保持します。複数指定した場合は全列に値があるときだけ表示します。判定の`source`に指定した場合、必要な列が空なら判定元を空として`empty:true`の規則へ進みます。存在しない列は設定エラーになり、欠損値として隠しません。
+
 `paths/search/watch/jobs`の領域全体は省略できます。`screen.card`、judgments、watch.targetsも省略できます。全て省略して画面を自動生成する機能ではありません。schema、dataの入力・ジョブ・台帳、screenのworkState/export/candidates/sectionsは必要です。全項目索引に省略値と制約を載せています。
 
 外部監視は`watch.targets`に窓から対象欄までのUI Automationの経路を指定します。window→path配列→fieldの順で探し、readでvalue/text/nameを選びます。各段のautomationId/className/name/nameLike/processName/controlTypes/requireValuePattern/index/scopeを使えます。省略属性では絞りません。nameLikeは`*`と`?`、indexは0から、scopeはdescendantsまたはchildren。対象アプリごとにUIAの公開内容・読取権限が違うため、設定画面の「画面から選ぶ」と実窓で確認してください。
