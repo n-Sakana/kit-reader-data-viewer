@@ -73,6 +73,21 @@
           "duplicates": "error",
           "empty": "error"
         }
+      },
+      "DEL": {
+        "label": "処理済みデータ",
+        "file": "④処理済みデータ_100件.xlsx",
+        "sheet": "リスト_3",
+        "key": [
+          "会員番号",
+          "申請番号"
+        ],
+        "keyValidation": {
+          "characters": "unicode",
+          "length": "variable",
+          "duplicates": "distinct",
+          "empty": "skip"
+        }
       }
     },
     "types": {
@@ -111,7 +126,7 @@
       "APP.備考欄": "備考欄",
       "APP.変更内容": "変更内容",
       "APP.管理番号": "管理番号",
-      "PAYMAP": "申請・決済照合結果",
+      "PAYMAP": "取引・決済照合結果",
       "INTEGRATED": "申請情報統合結果",
       "ledger": "統合台帳",
       "APP.受付年月日": "受付年月日",
@@ -120,9 +135,9 @@
       "PAY.利用者氏名": "利用者氏名",
       "PAY.利用者区分": "利用者区分",
       "PAY.氏名": "氏名",
-      "target1": "会員番号一致分",
-      "target2": "申請番号一致分",
-      "target": "削除対象"
+      "target": "削除対象",
+      "DEL.会員番号": "削除対象の会員番号",
+      "DEL.申請番号": "削除対象の申請番号"
     },
     "jobs": [
       {
@@ -131,69 +146,31 @@
         "kind": "delete",
         "inputs": [
           {
-            "id": "D1",
-            "label": "処理済みデータ",
-            "file": "④処理済みデータ_100件.xlsx",
-            "sheet": "リスト_3",
-            "keyValidation": {
-              "characters": "unicode",
-              "length": "variable",
-              "duplicates": "distinct",
-              "empty": "skip"
-            },
-            "column": "会員番号",
-            "key": "APP.会員番号"
-          },
-          {
-            "id": "D2",
-            "label": "処理済みデータ",
-            "file": "④処理済みデータ_100件.xlsx",
-            "sheet": "リスト_3",
-            "keyValidation": {
-              "characters": "unicode",
-              "length": "variable",
-              "duplicates": "distinct",
-              "empty": "skip"
-            },
-            "column": "申請番号",
-            "key": "APP.申請番号"
+            "table": "DEL"
           }
         ],
         "steps": [
           {
             "operation": "extract",
             "target1": "ledger",
-            "target2": "D1",
+            "target2": "DEL",
             "keys": [
-              "APP.会員番号",
-              "APP.会員番号"
+              [
+                "APP.会員番号",
+                "APP.申請番号"
+              ],
+              [
+                "DEL.会員番号",
+                "DEL.申請番号"
+              ]
             ],
             "condition": "match",
-            "output": "target1"
-          },
-          {
-            "operation": "extract",
-            "target1": "ledger",
-            "target2": "D2",
-            "keys": [
-              "APP.申請番号",
-              "APP.申請番号"
-            ],
-            "condition": "match",
-            "output": "target2"
-          },
-          {
-            "operation": "extract",
-            "target1": "target1",
-            "target2": "target2",
-            "condition": "both",
             "output": "target"
           },
           {
             "operation": "delete",
             "target1": "ledger",
             "target2": "target",
-            "condition": "",
             "output": "ledger"
           }
         ]
@@ -237,22 +214,22 @@
           },
           {
             "operation": "join",
-            "target1": "APP",
-            "target2": "PAY",
-            "keys": [
-              "APP.申請番号",
-              "PAY.申請番号照合用"
-            ],
-            "condition": "left",
-            "output": "PAYMAP"
-          },
-          {
-            "operation": "join",
-            "target1": "PAYMAP",
+            "target1": "PAY",
             "target2": "MAP",
             "keys": [
               "PAY.会員番号照合用",
               "MAP.会員番号照合用"
+            ],
+            "condition": "match",
+            "output": "PAYMAP"
+          },
+          {
+            "operation": "join",
+            "target1": "APP",
+            "target2": "PAYMAP",
+            "keys": [
+              "APP.申請番号",
+              "PAY.申請番号照合用"
             ],
             "condition": "left",
             "output": "INTEGRATED"
@@ -333,21 +310,12 @@
     "judgments": {
       "paymentStatus": {
         "source": {
-          "field": "PAY.決済ステータス"
+          "field": "PAY.オーダーID"
         },
         "rules": [
           {
-            "equals": [
-              "決済済"
-            ],
+            "pattern": ".+",
             "result": "paid"
-          },
-          {
-            "equals": [
-              "未決済",
-              "決済待ち"
-            ],
-            "result": "unpaid"
           },
           {
             "empty": true,
@@ -356,12 +324,8 @@
         ],
         "results": {
           "paid": {
-            "text": "済（決済完了）",
+            "text": "済",
             "look": "ok"
-          },
-          "unpaid": {
-            "text": "未決済",
-            "look": "ng"
           },
           "none": {
             "text": "該当なし",
@@ -602,28 +566,40 @@
                     "from": "yyyyMMdd",
                     "to": "yyyy/MM/dd"
                   },
-                  "empty": ""
+                  "empty": "",
+                  "requires": [
+                    "PAY.オーダーID"
+                  ]
                 }
               },
               {
                 "label": "受付番号",
                 "value": {
                   "field": "APP.申請番号",
-                  "empty": ""
+                  "empty": "",
+                  "requires": [
+                    "PAY.オーダーID"
+                  ]
                 }
               },
               {
                 "label": "会員番号",
                 "value": {
                   "field": "APP.会員番号",
-                  "empty": ""
+                  "empty": "",
+                  "requires": [
+                    "PAY.オーダーID"
+                  ]
                 }
               },
               {
                 "label": "利用者氏名",
                 "value": {
                   "field": "APP.管理番号",
-                  "empty": ""
+                  "empty": "",
+                  "requires": [
+                    "PAY.オーダーID"
+                  ]
                 }
               },
               {
@@ -635,21 +611,30 @@
                     "from": "yyyyMMdd",
                     "to": "yyyy/MM/dd"
                   },
-                  "empty": ""
+                  "empty": "",
+                  "requires": [
+                    "PAY.オーダーID"
+                  ]
                 }
               },
               {
                 "label": "有効期間",
                 "value": {
                   "field": "APP.有効期間",
-                  "empty": ""
+                  "empty": "",
+                  "requires": [
+                    "PAY.オーダーID"
+                  ]
                 }
               },
               {
                 "label": "担当拠点",
                 "value": {
                   "field": "APP.担当拠点",
-                  "empty": ""
+                  "empty": "",
+                  "requires": [
+                    "PAY.オーダーID"
+                  ]
                 }
               }
             ]
@@ -668,7 +653,10 @@
         "lines": 5,
         "value": {
           "field": "APP.備考欄",
-          "empty": ""
+          "empty": "",
+          "requires": [
+            "PAY.オーダーID"
+          ]
         },
         "margin": [
           8,
@@ -683,7 +671,10 @@
         "lines": 1,
         "value": {
           "field": "APP.変更内容",
-          "empty": ""
+          "empty": "",
+          "requires": [
+            "PAY.オーダーID"
+          ]
         },
         "margin": [
           8,
