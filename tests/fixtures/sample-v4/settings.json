@@ -135,6 +135,12 @@
             "label": "処理済みデータ",
             "file": "④処理済みデータ_100件.xlsx",
             "sheet": "リスト_3",
+            "keyValidation": {
+              "characters": "unicode",
+              "length": "variable",
+              "duplicates": "distinct",
+              "empty": "skip"
+            },
             "column": "会員番号",
             "key": "APP.会員番号"
           },
@@ -143,6 +149,12 @@
             "label": "処理済みデータ",
             "file": "④処理済みデータ_100件.xlsx",
             "sheet": "リスト_3",
+            "keyValidation": {
+              "characters": "unicode",
+              "length": "variable",
+              "duplicates": "distinct",
+              "empty": "skip"
+            },
             "column": "申請番号",
             "key": "APP.申請番号"
           }
