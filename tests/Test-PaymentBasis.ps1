@@ -30,7 +30,7 @@ $flag=$fields.IndexOf('PAYMAP.決済確認済')
 $counts=@{paid=0;unpaid=0}
 $noApp=0
 $identities=[Collections.Generic.HashSet[string]]::new()
-$masked=@($cfg.Screen.AllBindings()|Where-Object {$_.Requires.Length -gt 0})
+$masked=@($cfg.Screen.AllBindings()|Where-Object {$_.Requires -contains 'PAYMAP.決済確認済'})
 Assert ($masked.Count -eq 9) 'Nine application detail fields must remain conditional'
 foreach($line in $result.Lines){
     $row=$line.Split([char]9)
