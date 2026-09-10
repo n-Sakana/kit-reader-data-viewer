@@ -76,3 +76,6 @@ dist/
 # Python の生成物 (2026-09-10)
 __pycache__/
 *.pyc
+
+# User-supplied production settings stay local (2026-09-10).
+/configs/production/
