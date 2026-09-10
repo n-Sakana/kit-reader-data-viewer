@@ -136,7 +136,7 @@ function New-Win98Package($Options) {
         $packageName = 'ReaderDataViewer-' + $id
         $package = Join-Path $stage $packageName
         [IO.Directory]::CreateDirectory($package) | Out-Null
-        foreach ($file in @('ReaderDataViewer.cmd', 'ReaderDataViewer.vbs', 'README.md', 'LICENSE', 'THIRD-PARTY-NOTICES.md')) {
+        foreach ($file in @('ReaderDataViewer.cmd', 'ReaderDataViewer.vbs', 'README.md', 'PAYMENT-GUIDE.md', 'LICENSE', 'THIRD-PARTY-NOTICES.md')) {
             Copy-SafeFile (Join-Path $script:Root $file) (Join-Path $package $file)
         }
         # 見本データ一式と同じ形の設定を入れる。sample-v4 に無ければ直下のものを使う。
@@ -180,7 +180,7 @@ function New-Win98Package($Options) {
             "Theme: win98 / motion: off / input data: $($Options.Data)`r`n" +
             "Native compile: $compileStatus / core tests: $testStatus`r`n" +
             "This is a source-at-startup distribution, NOT a standalone EXE.`r`n" +
-            "The original business settings are copied unchanged. Sample data is not your live data.`r`n" +
+            "The sample uses PAY+MAP pairs, two-status payment checks and processed-only deletion. See PAYMENT-GUIDE.md.`r`n" +
             "No live ledger, log, output or local pending changes were copied.`r`n" +
             "Review paths in settings.json BEFORE running a production copy.`r`n" +
             "Check steps before acceptance: README.md`r`n"

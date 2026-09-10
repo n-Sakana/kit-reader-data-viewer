@@ -24,7 +24,7 @@ async function main(){let app,modal;try{
   const masked=['s1.item1.row0','s1.item1.row1','s1.item1.row2','s1.item1.row3','s1.item1.row4','s1.item1.row5','s1.item1.row6','s2.value','s3.value'];
   const deleteOnce=async()=>{
     await click(app,'#b-del');await visible('v-del');
-    await click(modal,'#v-del [data-command=execute]');
+    await click(modal,'#v-del [data-modal-default=true]');
     await waitFor(app,`document.querySelector('#b-upd[aria-disabled=true]')!==null`,10000,'deletion started');
     await ready();
   };
@@ -40,7 +40,7 @@ async function main(){let app,modal;try{
   check('two real candidate rows',await modal.evaluate(`document.querySelectorAll('#v-cand tbody tr').length===2`));
   await capture(modal,'candidates');
   await modal.evaluate(`document.querySelector('#v-cand tbody tr').dispatchEvent(new MouseEvent('dblclick',{bubbles:true}));true`);
-  await ready();await waitFor(app,`document.querySelector('[data-judgment=paymentStatus] .ok').textContent==='済'`,10000,'paid');
+  await ready();await waitFor(app,`document.querySelector('#judge').textContent==='済'`,10000,'paid');
   check('paid detail bindings',await app.evaluate(`${JSON.stringify(masked)}.every(id=>document.querySelector('[data-bind="'+id+'"]').textContent.length>0)`));
   await capture(app,'main-paid');
   await click(app,'#b-work');await waitFor(app,`document.querySelector('[data-bind="s5.value"]').textContent==='未送信 1 件'`,10000,'one pending');
@@ -50,18 +50,18 @@ async function main(){let app,modal;try{
   await ready();await waitFor(app,`document.querySelector('[data-bind="s5.value"]').textContent==='未送信 0 件'`,10000,'sent');
   fs.copyFileSync(info.ledger,path.join(evidence,'sent-ledger.xlsx'));
   check('sent changes clear the display',await app.evaluate(`document.querySelector('[data-bind="s1.item1.row1"]').textContent===''`));
-  await search(info.noAppKey);await waitFor(app,`document.querySelector('[data-judgment=paymentStatus] .ok').textContent==='済'`,10000,'paid without APP');
+  await search(info.noAppKey);await waitFor(app,`document.querySelector('#judge').textContent==='済'`,10000,'paid without APP');
   check('paid without APP remains searchable',await app.evaluate(`document.querySelector('[data-bind="s1.item1.row1"]').textContent!=='' && document.querySelector('[data-bind="s1.item1.row3"]').textContent===''`));
   await capture(app,'main-no-application');
-  await search(info.missingKey);await waitFor(app,`document.querySelector('[data-judgment=paymentStatus] .ok').textContent==='未決済'`,10000,'no payment');
+  await search(info.missingKey);await waitFor(app,`document.querySelector('#judge').textContent==='未決済'`,10000,'no payment');
   check('unpaid masks nine details',await app.evaluate(`${JSON.stringify(masked)}.every(id=>document.querySelector('[data-bind="'+id+'"]').textContent==='')`));
   await capture(app,'main-unpaid');
   await click(app,'#b-set');await visible('v-set');await capture(modal,'settings');
-  await click(modal,'#v-set [data-command=execute]');await ready();
+  await click(modal,'#v-set [data-modal-default=true]');await ready();
   check('settings save retains legacy layout',!!JSON.parse(fs.readFileSync(info.settings,'utf8').replace(/^\uFEFF/,'' )).screen.sections);
   await click(app,'#b-out');await visible('v-out');await capture(modal,'export');
   const exportPath=await modal.evaluate(`document.querySelector('#v-out [data-field=exportPath]').textContent.trim()`);
-  await click(modal,'#v-out [data-command=execute]');await ready();
+  await click(modal,'#v-out [data-modal-default=true]');await ready();
   const exported=path.isAbsolute(exportPath)?exportPath:path.join(info.scratch,exportPath);
   for(let i=0;i<100&&!fs.existsSync(exported);i++)await delay(100);
   check('export creates a nonempty CSV',fs.existsSync(exported)&&fs.statSync(exported).size>0);
@@ -70,7 +70,7 @@ async function main(){let app,modal;try{
     await click(app,button);await visible(id);await capture(modal,id==='v-upd'?'update':'delete');
     const overlaps=await modal.evaluate(`(()=>{const body=document.querySelector('#${id} .body');return Array.from(body.querySelectorAll('fieldset')).filter(f=>{const l=f.querySelector('legend').getBoundingClientRect(),r=f.getBoundingClientRect();return l.top<r.top||l.bottom>r.bottom;}).length;})()`);
     check(id+' legends stay inside frames',overlaps===0);
-    await click(modal,`#${id} [data-command=execute]`);
+    await click(modal,`#${id} [data-modal-default=true]`);
     await waitFor(app,`document.querySelector('#b-upd[aria-disabled=true]')!==null`,10000,'process started');
     // Source update may show an informational reset summary on this fixture.
     for(let i=0;i<100;i++){
