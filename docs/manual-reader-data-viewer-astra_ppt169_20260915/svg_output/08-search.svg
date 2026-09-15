@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="720" viewBox="0 0 1280 720" data-pptx-page-role="content" font-family="'Yu Gothic UI','Segoe UI',sans-serif">
+  <rect id="background" data-pptx-role="background" width="1280" height="720" fill="#FFFFFF" />
+  <g id="heading" data-pptx-bounds="64 36 1152 98" font-weight="bold"><text x="64" y="58" font-size="18" fill="#C05B21">02　検索・確認・送信　／　まず1件を探す</text><text x="64" y="112" font-size="40" fill="#24507F">番号を入れて、［検索］を押す</text></g>
+  <g id="search-screen" data-pptx-bounds="64 153 590 509"><image href="../images/04-paid.png" x="64" y="156" width="585" height="503.3" preserveAspectRatio="xMidYMid meet" /></g>
+  <g id="search-instructions" data-pptx-bounds="704 169 512 351">
+    <text x="704" y="202" font-size="26" fill="#24507F" font-weight="bold">この番号で試す</text>
+    <rect x="704" y="223" width="512" height="72" rx="12" fill="#F2F6FB" /><text x="730" y="269" font-size="30" fill="#C05B21" font-weight="bold">AA10000000AA</text>
+    <text x="704" y="351" font-size="22" fill="#1F2A37">1　会員番号／受付番号の欄へ入力。</text>
+    <text x="704" y="403" font-size="22" fill="#1F2A37">2　［検索］を押す。</text>
+    <text x="704" y="455" font-size="22" fill="#1F2A37">3　読取値と対象の情報を照合する。</text>
+    <text x="704" y="507" font-size="22" fill="#1F2A37">4　次へ進むときは［クリア］。</text>
+  </g>
+  <g id="manual-search-rule" data-pptx-bounds="704 546 512 111"><text x="704" y="575" font-size="26" fill="#24507F" font-weight="bold">手動検索だけでは、<tspan x="704" dy="34">処理済になりません。</tspan></text><text x="704" y="648" font-size="18" fill="#5D6B7A">確認後の状態変更は、P12で説明します。</text></g>
+  <g id="footer" data-pptx-bounds="64 664 1152 26" fill="#5D6B7A" font-size="14"><text x="64" y="682">出典：PAYMENT-GUIDE「サンプルを実際に使う」　／　実画面と未送信件数を確認</text><text x="1216" y="682" text-anchor="end">08 / 24</text></g>
+</svg>

@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="720" viewBox="0 0 1280 720" data-pptx-page-role="content" font-family="'Yu Gothic UI','Segoe UI',sans-serif">
+  <rect id="background" data-pptx-role="background" width="1280" height="720" fill="#FFFFFF" />
+  <g id="heading" data-pptx-bounds="64 36 1152 98" font-weight="bold"><text x="64" y="58" font-size="18" fill="#C05B21">01　準備と台帳作成　／　入力と処理</text><text x="64" y="112" font-size="40" fill="#24507F">データ更新で、使う入力と処理を確認する</text></g>
+  <g id="update-screen" data-pptx-bounds="64 174 690 480"><image href="../images/03-update.png" x="64" y="177" width="680" height="464" preserveAspectRatio="xMidYMid meet" /></g>
+  <g id="read-dialog" data-pptx-bounds="792 169 424 360">
+    <text x="792" y="200" font-size="26" fill="#24507F" font-weight="bold">上から3つを確認</text>
+    <text x="792" y="253" font-size="22" fill="#C05B21" font-weight="bold">1　取り込むデータ</text><text x="792" y="290" font-size="22" fill="#1F2A37">①・②・③の場所と検証結果。</text>
+    <text x="792" y="345" font-size="22" fill="#C05B21" font-weight="bold">2　処理内容</text><text x="792" y="382" font-size="22" fill="#1F2A37">①②の組に、③を左結合。<tspan x="792" dy="34">表示は設定から作られます。</tspan></text>
+    <text x="792" y="470" font-size="22" fill="#C05B21" font-weight="bold">3　書き出し先</text><text x="792" y="507" font-size="22" fill="#1F2A37">保存する台帳を確認して実行。</text>
+  </g>
+  <g id="sample-counts" data-pptx-bounds="792 545 424 107"><rect x="792" y="545" width="424" height="107" rx="12" fill="#F2F6FB" /><text x="814" y="580" font-size="22" fill="#24507F" font-weight="bold">統合 100件</text><text x="814" y="615" font-size="18" fill="#1F2A37">済80件・未決済20件・③なし20件</text><text x="814" y="641" font-size="16" fill="#5D6B7A">同梱の入力4本は、それぞれ100件</text></g>
+  <g id="footer" data-pptx-bounds="64 664 1152 26" fill="#5D6B7A" font-size="14"><text x="64" y="682">出典：PAYMENT-GUIDE「統合と決済の条件」「サンプルを実際に使う」　／　実画面：更新</text><text x="1216" y="682" text-anchor="end">06 / 24</text></g>
+</svg>

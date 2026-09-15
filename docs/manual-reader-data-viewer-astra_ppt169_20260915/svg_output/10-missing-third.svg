@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="720" viewBox="0 0 1280 720" data-pptx-page-role="content" font-family="'Yu Gothic UI','Segoe UI',sans-serif">
+  <rect id="background" data-pptx-role="background" width="1280" height="720" fill="#FFFFFF" />
+  <g id="heading" data-pptx-bounds="64 36 1152 98" font-weight="bold"><text x="64" y="58" font-size="18" fill="#C05B21">02　検索・確認・送信　／　③のない行</text><text x="64" y="112" font-size="40" fill="#24507F">③がなくても、①②の行は検索できる</text></g>
+  <g id="missing-third-screen" data-pptx-bounds="64 153 590 509"><image href="../images/06-third-missing.png" x="64" y="156" width="585" height="503.3" preserveAspectRatio="xMidYMid meet" /></g>
+  <g id="missing-third-explanation" data-pptx-bounds="704 169 512 325"><text x="704" y="202" font-size="26" fill="#24507F" font-weight="bold">試す番号：ZZ20000080ZZ</text><text x="704" y="269" font-size="22" fill="#1F2A37">①と②はそろい、決済も済んでいます。<tspan x="704" dy="34">③に対応する申請がなくても、</tspan><tspan x="704" dy="34">この行は台帳に残ります。</tspan></text><text x="704" y="420" font-size="22" fill="#1F2A37">判定は「済」。<tspan x="704" dy="34">③から取る項目だけが空欄になります。</tspan></text></g>
+  <g id="left-join-note" data-pptx-bounds="704 525 512 123"><rect x="704" y="525" width="512" height="123" rx="12" fill="#F2F6FB" /><text x="730" y="565" font-size="26" fill="#24507F" font-weight="bold">③の有無と、決済判定は別です。</text><text x="730" y="610" font-size="22" fill="#1F2A37">同梱サンプルには③なしが20件あります。</text></g>
+  <g id="footer" data-pptx-bounds="64 664 1152 26" fill="#5D6B7A" font-size="14"><text x="64" y="682">出典：PAYMENT-GUIDE「統合と決済の条件」　／　実画面：③なし・済</text><text x="1216" y="682" text-anchor="end">10 / 24</text></g>
+</svg>

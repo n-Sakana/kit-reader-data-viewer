@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="720" viewBox="0 0 1280 720" data-pptx-page-role="content" font-family="'Yu Gothic UI','Segoe UI',sans-serif">
+  <rect id="background" data-pptx-role="background" width="1280" height="720" fill="#FFFFFF" />
+  <g id="heading" data-pptx-bounds="64 36 1152 98" font-weight="bold"><text x="64" y="58" font-size="18" fill="#C05B21">03　更新・削除・共有　／　設定の入口</text><text x="64" y="112" font-size="40" fill="#24507F">場所・検索・監視は［設定］から確認する</text></g>
+  <g id="settings-screen" data-pptx-bounds="64 173 699 480"><image href="../images/17-settings.png" x="64" y="177" width="690" height="477.38" preserveAspectRatio="xMidYMid meet" /></g>
+  <g id="settings-instructions" data-pptx-bounds="812 174 404 298"><text x="812" y="206" font-size="26" fill="#24507F" font-weight="bold">ここで確認するもの</text><text x="812" y="266" font-size="22" fill="#1F2A37">入力と台帳の場所。<tspan x="812" dy="34">検索に使える番号の形式。</tspan><tspan x="812" dy="34">外部ウィンドウの監視対象。</tspan></text><text x="812" y="424" font-size="22" fill="#1F2A37">表の結合や判定の変更は、<tspan x="812" dy="34">設定を作る担当者へ渡します。</tspan></text></g>
+  <g id="settings-notes" data-pptx-bounds="812 518 404 137"><rect x="812" y="518" width="404" height="137" rx="12" fill="#F2F6FB" /><text x="836" y="553" font-size="18" fill="#5D6B7A">写真は、監視を無効にした撮影用設定。</text><text x="836" y="597" font-size="18" fill="#C05B21">固定版・従来版のJSONを<tspan x="836" dy="28">取り違えないでください。</tspan></text></g>
+  <g id="footer" data-pptx-bounds="64 664 1152 26" fill="#5D6B7A" font-size="14"><text x="64" y="682">出典：PAYMENT-GUIDE「JSONのどこを変えるか」・docs/settings.md　／　実画面：設定</text><text x="1216" y="682" text-anchor="end">20 / 24</text></g>
+</svg>

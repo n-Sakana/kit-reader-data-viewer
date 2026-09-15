@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="720" viewBox="0 0 1280 720" data-pptx-page-role="content" font-family="'Yu Gothic UI','Segoe UI',sans-serif">
+  <rect id="background" data-pptx-role="background" width="1280" height="720" fill="#FFFFFF" />
+  <g id="heading" data-pptx-bounds="64 36 1152 98" font-weight="bold"><text x="64" y="58" font-size="18" fill="#C05B21">01　準備と台帳作成</text><text x="64" y="112" font-size="40" fill="#24507F">ZIPを空のフォルダへ展開して始める</text></g>
+  <g id="prepare-steps" data-pptx-bounds="64 172 524 454">
+    <text x="64" y="207" font-size="30" fill="#24507F" font-weight="bold">配布されたサンプル一式を使う</text>
+    <text x="64" y="270" font-size="22" fill="#1F2A37">1　空のフォルダへZIPを展開する。</text>
+    <text x="64" y="322" font-size="22" fill="#1F2A37">2　設定と入力4本があることを確認する。</text>
+    <text x="64" y="374" font-size="22" fill="#1F2A37">3　ReaderDataViewer.vbsを開く。</text>
+    <text x="64" y="454" font-size="18" fill="#5D6B7A">必要な環境</text>
+    <text font-size="22" fill="#1F2A37" x="64" y="495">Windows 64bit / Windows PowerShell 5.1</text><text font-size="22" fill="#1F2A37" x="64" y="529">WPF / WebView2 Runtime</text><text x="64" y="601" font-size="18" fill="#C05B21" font-weight="bold">固定版と従来版のJSONは混ぜないでください。</text>
+  </g>
+  <g id="folder-contents" data-pptx-bounds="640 174 576 428">
+    <rect x="640" y="174" width="576" height="428" rx="12" fill="#F2F6FB" />
+    <text x="674" y="220" font-size="26" fill="#24507F" font-weight="bold">展開したフォルダ</text>
+    <line x1="690" y1="258" x2="690" y2="542" stroke="#CFD7DE" stroke-width="2" />
+    <g id="launcher"><line x1="690" y1="280" x2="714" y2="280" stroke="#CFD7DE" stroke-width="2" /><text x="726" y="288" font-size="22" fill="#C05B21" font-weight="bold">ReaderDataViewer.vbs</text><text x="726" y="319" font-size="18" fill="#5D6B7A">起動するファイル</text></g>
+    <g id="config"><line x1="690" y1="363" x2="714" y2="363" stroke="#CFD7DE" stroke-width="2" /><text x="726" y="371" font-size="22" fill="#24507F" font-weight="bold">settings.json</text><text x="726" y="402" font-size="18" fill="#5D6B7A">サンプル用の設定</text></g>
+    <g id="data"><line x1="690" y1="446" x2="714" y2="446" stroke="#CFD7DE" stroke-width="2" /><text x="726" y="454" font-size="22" fill="#24507F" font-weight="bold">data</text><text x="726" y="485" font-size="18" fill="#5D6B7A">①・②・③・④の入力ファイル</text></g>
+    <g id="program"><line x1="690" y1="535" x2="714" y2="535" stroke="#CFD7DE" stroke-width="2" /><text x="726" y="543" font-size="22" fill="#24507F" font-weight="bold">src / web / lib</text><text x="726" y="574" font-size="18" fill="#5D6B7A">アプリに必要なファイル一式</text></g>
+  </g>
+  <g id="footer" data-pptx-bounds="64 664 1152 26" fill="#5D6B7A" font-size="14"><text x="64" y="682">出典：PAYMENT-GUIDE「使うアプリとJSON」　／　図は配布物の構成</text><text x="1216" y="682" text-anchor="end">04 / 24</text></g>
+</svg>

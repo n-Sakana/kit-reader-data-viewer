@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="720" viewBox="0 0 1280 720" data-pptx-page-role="content" font-family="'Yu Gothic UI','Segoe UI',sans-serif">
+  <rect id="background" data-pptx-role="background" width="1280" height="720" fill="#FFFFFF" />
+  <g id="heading" data-pptx-bounds="64 36 1152 98" font-weight="bold"><text x="64" y="58" font-size="18" fill="#C05B21">01　準備と台帳作成　／　初回起動</text><text x="64" y="112" font-size="40" fill="#24507F">初回は「台帳を作りますか」に答える</text></g>
+  <g id="first-start-evidence" data-pptx-bounds="184 181 912 235">
+    <text x="184" y="207" font-size="18" fill="#5D6B7A">初回の確認画面</text>
+    <image href="../images/01-first-start.png" x="184" y="231" width="800" height="172.7" preserveAspectRatio="xMidYMid meet" />
+  </g>
+  <g id="first-start-steps" data-pptx-bounds="64 437 730 188">
+    <text x="64" y="473" font-size="30" fill="#24507F" font-weight="bold">サンプル用フォルダなら［はい］で作成。</text>
+    <text x="64" y="526" font-size="22" fill="#1F2A37">入力を読み終えるまで待ち、主画面の台帳件数を見ます。<tspan x="64" dy="34">台帳を同梱していないので、初回にこの確認が出ます。</tspan></text>
+    <text x="64" y="614" font-size="18" fill="#C05B21">既存台帳がある運用では、理由を確かめずに作り直さないでください。</text>
+  </g>
+  <g id="expected-count" data-pptx-bounds="852 440 364 174"><rect x="852" y="440" width="364" height="174" rx="12" fill="#F2F6FB" /><text x="880" y="480" font-size="18" fill="#5D6B7A">同梱サンプルの完成件数</text><text x="880" y="553" font-size="54" fill="#24507F" font-weight="bold">100 件</text><text x="880" y="590" font-size="18" fill="#5D6B7A">主画面の最下段で確認</text></g>
+  <g id="footer" data-pptx-bounds="64 664 1152 26" fill="#5D6B7A" font-size="14"><text x="64" y="682">出典：PAYMENT-GUIDE「サンプルを実際に使う」　／　実画面：初回起動</text><text x="1216" y="682" text-anchor="end">05 / 24</text></g>
+</svg>

@@ -1,0 +1,30 @@
+{
+  "baseline_commit": "adcba63eae989a58d0ee7db411249a065882c181",
+  "sent_rows": 100,
+  "sent_true": 1,
+  "paid_rows": 80,
+  "missing_third": 20,
+  "unsent_delete_rows": 100,
+  "unsent_after_delete": 1,
+  "deleted_rows": 99,
+  "deleted_key_absent": "AA10000000AA",
+  "csv_rows": 80,
+  "csv_columns": 11,
+  "candidate_rows": 2,
+  "manual_candidate_pending_after": 0,
+  "checks": "passed",
+  "files": {
+    "candidate-observations.json": "d9f23d63cb8a89cfb2f6e640229994c6a6a85d72f98692ff3b89454c98f9cdb3",
+    "delete-observations.json": "333d09d16fa6b04a7f4ff0fc3182c70dab77989eb14bb4c875c748f5a13d6edb",
+    "deleted-ledger.xlsx": "79e0d4fe0752156f573af88968044e4513b93aaddf3dcf860a33656fe91cd4ba",
+    "export-empty-filter.png": "22b52a0761d7060a0d7d8bf25a321c633d42d29eeea5fe5ff6bcc16c890514e6",
+    "export-observations.json": "5fc0ba66ddbe21c5072f531e1785b7be90b3e8739355dfa0f8d790edcd980631",
+    "initial-observations.json": "ddde8d3d8fdca5c61a7675ea344932d16779d64e735c322c55ea9448b399b821",
+    "sample-paid-80.csv": "ceb5be2b59b997262038804957382d0566f815e3ae2991ddb137121e4bb62d8d",
+    "sample-paid.csv": "d0705cbf775cc8717cf2a98cbd94b757b528d98fa513fbe938429d3c77e4baa5",
+    "screens-observations.json": "7770e2b4484f80dccad0b4d3b87eb692c75058ff2da09f42652b904192d55875",
+    "sent-ledger.xlsx": "c9ecadb98fede46ce0af7f68c18b77dbcccb158a3e59f374afda62ccea4764ad",
+    "state-observations.json": "650a18776b8d8eb141806a30d3ca8d1b1521153c7fb248d351a47fa7155a3351",
+    "update-confirm-observations.json": "20bd20892f99894fa89bf7f5f0305e303bcdcfaf09feda3bd84f949c31654275"
+  }
+}

@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="720" viewBox="0 0 1280 720" data-pptx-page-role="content" font-family="'Yu Gothic UI','Segoe UI',sans-serif">
+  <rect id="background" data-pptx-role="background" width="1280" height="720" fill="#FFFFFF" />
+  <g id="heading" data-pptx-bounds="64 36 1152 98" font-weight="bold">
+    <text x="64" y="58" font-size="18" fill="#C05B21">はじめに　／　アプリの役割</text>
+    <text x="64" y="112" font-size="40" fill="#24507F">入力を台帳にまとめ、確認結果を共有する</text>
+  </g>
+  <g id="workflow" data-pptx-bounds="64 176 1152 254">
+    <line x1="165" y1="228" x2="1100" y2="228" stroke="#CFD7DE" stroke-width="3" />
+    <g id="input-stage"><rect x="64" y="194" width="202" height="222" rx="12" fill="#F2F6FB" /><text x="88" y="235" font-size="26" fill="#C05B21" font-weight="bold">01</text><text x="88" y="286" font-size="26" fill="#24507F" font-weight="bold">入力ファイル</text><text x="88" y="336" font-size="22" fill="#1F2A37">CSV / XLSX<tspan x="88" dy="34">業務の元データ</tspan></text></g>
+    <g id="update-stage"><rect x="300" y="194" width="202" height="222" rx="12" fill="#F2F6FB" /><text x="324" y="235" font-size="26" fill="#C05B21" font-weight="bold">02</text><text x="324" y="286" font-size="26" fill="#24507F" font-weight="bold">データ更新</text><text x="324" y="336" font-size="22" fill="#1F2A37">結合・抽出など<tspan x="324" dy="34">設定した処理</tspan></text></g>
+    <g id="ledger-stage"><rect x="536" y="194" width="202" height="222" rx="12" fill="#24507F" /><text x="560" y="235" font-size="26" fill="#FFFFFF" font-weight="bold">03</text><text x="560" y="286" font-size="26" fill="#FFFFFF" font-weight="bold">統合台帳</text><text x="560" y="336" font-size="22" fill="#FFFFFF">情報を蓄積する<tspan x="560" dy="34">1つのExcel</tspan></text></g>
+    <g id="review-stage"><rect x="772" y="194" width="202" height="222" rx="12" fill="#F2F6FB" /><text x="796" y="235" font-size="26" fill="#C05B21" font-weight="bold">04</text><text x="796" y="286" font-size="26" fill="#24507F" font-weight="bold">検索・確認</text><text x="796" y="336" font-size="22" fill="#1F2A37">1件ずつ見て<tspan x="796" dy="34">状態を付ける</tspan></text></g>
+    <g id="send-stage"><rect x="1008" y="194" width="208" height="222" rx="12" fill="#F2F6FB" /><text x="1032" y="235" font-size="26" fill="#C05B21" font-weight="bold">05</text><text x="1032" y="286" font-size="26" fill="#24507F" font-weight="bold">まとめて送信</text><text x="1032" y="336" font-size="22" fill="#1F2A37">確認した状態を<tspan x="1032" dy="34">共有台帳へ反映</tspan></text></g>
+  </g>
+  <g id="two-operations" data-pptx-bounds="64 478 1152 158">
+    <text x="64" y="513" font-size="30" fill="#24507F" font-weight="bold">「元データを更新する」と「確認状態を送る」は別の操作。</text>
+    <text x="64" y="567" font-size="22" fill="#1F2A37">どの表を結び、何を表示するかは設定で変えられます。<tspan x="64" dy="34">この説明書では、同梱された業務サンプルの使い方を追います。</tspan></text>
+  </g>
+  <g id="footer" data-pptx-bounds="64 664 1152 26" fill="#5D6B7A" font-size="14"><text x="64" y="682">出典：README「まずこの設定を写して」「台帳の更新と確認状態」</text><text x="1216" y="682" text-anchor="end">02 / 24</text></g>
+</svg>
