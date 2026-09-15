@@ -1,0 +1,57 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 720" width="1280" height="720" data-pptx-page-role="content" font-family="'Yu Gothic UI','Segoe UI',sans-serif">
+  <rect id="page-bg" x="0" y="0" width="1280" height="720" fill="#FFFFFF" data-pptx-role="background"/>
+  <rect id="page-rule" x="0" y="0" width="1280" height="6" fill="#24507F" data-pptx-role="decoration"/>
+
+  <g id="page-head" data-pptx-bounds="64 44 1152 140">
+    <rect x="64" y="50" width="76" height="28" rx="14" fill="#24507F"/>
+    <text x="102" y="69" font-size="15" fill="#FFFFFF" text-anchor="middle">手順 3</text>
+    <text x="64" y="124" font-size="40" font-weight="700" fill="#1F2A37">番号で検索します</text>
+    <text x="64" y="160" font-size="21" fill="#5D6B7A">1 件だけ見つかると、その行がすぐ表示されます。</text>
+    <rect x="64" y="178" width="1152" height="1" fill="#CFD7DE"/>
+  </g>
+
+  <g id="shot-found" data-pptx-bounds="64 192 520 458">
+    <rect x="64" y="196" width="520" height="452" rx="12" fill="#FAFBFC" stroke="#E2E7EC" stroke-width="1"/>
+    <image href="../images/05-main-found.png" x="80" y="212" width="488" height="420.3" preserveAspectRatio="xMidYMid meet"/>
+  </g>
+
+  <g id="search-steps" data-pptx-bounds="616 196 600 334">
+    <line x1="640" y1="226" x2="640" y2="478" stroke="#CFD7DE" stroke-width="2"/>
+    <g id="search-step-input">
+      <circle cx="640" cy="226" r="15" fill="#24507F"/>
+      <text x="640" y="232" font-size="16" font-weight="700" fill="#FFFFFF" text-anchor="middle">1</text>
+      <text x="670" y="232" font-size="18" font-weight="700" fill="#1F2A37">入力欄に番号を入れる</text>
+      <text x="670" y="256" font-size="16" fill="#5D6B7A">サンプルは会員番号か受付番号</text>
+    </g>
+    <g id="search-step-button">
+      <circle cx="640" cy="310" r="15" fill="#24507F"/>
+      <text x="640" y="316" font-size="16" font-weight="700" fill="#FFFFFF" text-anchor="middle">2</text>
+      <text x="670" y="316" font-size="18" font-weight="700" fill="#1F2A37">［検索］を押す</text>
+      <text x="670" y="340" font-size="16" fill="#5D6B7A">番号の形式に合わない値は、検索しない（P13）</text>
+    </g>
+    <g id="search-step-shown">
+      <circle cx="640" cy="394" r="15" fill="#24507F"/>
+      <text x="640" y="400" font-size="16" font-weight="700" fill="#FFFFFF" text-anchor="middle">3</text>
+      <text x="670" y="400" font-size="18" font-weight="700" fill="#1F2A37">1 件なら、すぐ表示される</text>
+      <text x="670" y="424" font-size="16" fill="#5D6B7A">読取値に番号、決済状況に判定（写真は「済」）</text>
+    </g>
+    <g id="search-step-not-recorded">
+      <circle cx="640" cy="478" r="15" fill="#24507F"/>
+      <text x="640" y="484" font-size="16" font-weight="700" fill="#FFFFFF" text-anchor="middle">4</text>
+      <text x="670" y="484" font-size="18" font-weight="700" fill="#1F2A37">まだ何も記録されていない</text>
+      <text x="670" y="508" font-size="16" fill="#5D6B7A">状態ボタンは「未処理」のまま（P14）</text>
+    </g>
+  </g>
+
+  <g id="search-note" data-pptx-bounds="616 536 600 114">
+    <rect x="616" y="540" width="600" height="108" rx="12" fill="#FFFFFF" stroke="#CFD7DE" stroke-width="1"/>
+    <rect x="616" y="540" width="5" height="108" rx="2.5" fill="#24507F"/>
+    <text x="640" y="570" font-size="16" font-weight="700" fill="#1F2A37">探す列と一致のしかたは、設定で決まります。</text>
+    <text x="640" y="596" font-size="16" fill="#5D6B7A">完全一致か部分一致。サンプルは会員番号照合用と<tspan x="640" dy="22">申請番号照合用の 2 列を、完全一致で探します。</tspan></text>
+  </g>
+
+  <g id="page-footer" data-pptx-bounds="64 656 1152 30" data-pptx-role="footer" fill="#5D6B7A" font-size="14">
+    <text x="64" y="676">P10</text>
+    <text x="1216" y="676" text-anchor="end">同梱サンプルで一通り使う</text>
+  </g>
+</svg>

@@ -1,0 +1,50 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 720" width="1280" height="720" data-pptx-page-role="content" font-family="'Yu Gothic UI','Segoe UI',sans-serif">
+  <rect id="page-bg" x="0" y="0" width="1280" height="720" fill="#FFFFFF" data-pptx-role="background" />
+  <rect id="page-rule" x="0" y="0" width="1280" height="6" fill="#24507F" data-pptx-role="decoration" />
+
+  <g id="page-head" data-pptx-bounds="64 60 1152 116">
+    <text x="64" y="108" font-size="40" font-weight="700" fill="#1F2A37">この本の読み方</text>
+    <text x="64" y="148" font-size="21" fill="#5D6B7A">写真はすべて、同梱サンプルで動かした実際の画面です。</text>
+    <rect x="64" y="168" width="1152" height="1" fill="#CFD7DE" />
+  </g>
+
+  <g id="read-ways" data-pptx-bounds="64 194 560 344">
+    <text x="64" y="214" font-size="20" font-weight="700" fill="#24507F">どこから読むか</text>
+    <g id="read-first">
+      <rect x="64" y="232" width="560" height="112" rx="12" fill="#F2F6FB" />
+      <text x="88" y="268" font-size="20" font-weight="700" fill="#1F2A37">はじめて使う</text>
+      <text font-size="18" fill="#5D6B7A" x="88" y="300">P03〜P06 で仕組みをつかみ、</text><text font-size="18" fill="#5D6B7A" x="88" y="326">P07 から順に操作します。</text></g>
+    <g id="read-lost">
+      <rect x="64" y="356" width="560" height="84" rx="12" fill="#F2F6FB" />
+      <text x="88" y="392" font-size="20" font-weight="700" fill="#1F2A37">画面で迷った</text>
+      <text x="88" y="422" font-size="18" fill="#5D6B7A">P04 の画面の一覧から、その画面のページを開きます。</text>
+    </g>
+    <g id="read-shared">
+      <rect x="64" y="452" width="560" height="84" rx="12" fill="#F2F6FB" />
+      <text x="88" y="488" font-size="20" font-weight="700" fill="#1F2A37">複数の PC で使う・困ったとき</text>
+      <text x="88" y="518" font-size="18" fill="#5D6B7A">P20〜P22 を読みます。</text>
+    </g>
+  </g>
+
+  <g id="book-rules" data-pptx-bounds="656 194 560 344">
+    <text x="656" y="214" font-size="20" font-weight="700" fill="#24507F">この本の約束</text>
+    <rect x="656" y="232" width="560" height="304" rx="12" fill="none" stroke="#E2E7EC" stroke-width="1" />
+    <text font-size="18" fill="#1F2A37" x="680" y="272">画面写真は、2026-09-15 に同梱サンプルで撮影した</text><text font-size="18" fill="#1F2A37" x="680" y="298">実際の画面です。</text><rect x="680" y="318" width="512" height="1" fill="#E2E7EC" />
+    <text x="680" y="354" font-size="18" fill="#1F2A37">ボタン名と案内文は、画面の表示どおりに書きます。</text>
+    <rect x="680" y="378" width="512" height="1" fill="#E2E7EC" />
+    <text x="680" y="414" font-size="18" fill="#1F2A37">サンプルの氏名・番号は、架空のものです。</text>
+    <rect x="680" y="438" width="512" height="1" fill="#E2E7EC" />
+    <text font-size="18" fill="#1F2A37" x="680" y="474">設定の書き方は扱いません。README.md と</text><text font-size="18" fill="#1F2A37" x="680" y="500">docs/settings.md を読みます。</text></g>
+
+  <g id="screen-note" data-pptx-bounds="64 554 1152 84">
+    <rect x="64" y="558" width="1152" height="76" rx="12" fill="#FFFFFF" stroke="#CFD7DE" stroke-width="1" />
+    <rect x="64" y="558" width="5" height="76" rx="2.5" fill="#24507F" />
+    <text x="92" y="590" font-size="18" font-weight="700" fill="#1F2A37">見出しや項目の並びは、settings.json の設定で決まります。</text>
+    <text x="92" y="618" font-size="18" fill="#5D6B7A">業務に合わせて設定した画面では、見出しや項目が写真と違います。</text>
+  </g>
+
+  <g id="page-footer" data-pptx-bounds="64 656 1152 30" data-pptx-role="footer" fill="#5D6B7A" font-size="14">
+    <text x="64" y="676">P02</text>
+    <text x="1216" y="676" text-anchor="end">このアプリがすること</text>
+  </g>
+</svg>

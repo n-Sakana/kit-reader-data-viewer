@@ -1,0 +1,70 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 720" width="1280" height="720" data-pptx-page-role="content" font-family="'Yu Gothic UI','Segoe UI',sans-serif">
+  <rect id="page-bg" x="0" y="0" width="1280" height="720" fill="#FFFFFF" data-pptx-role="background" />
+  <rect id="page-rule" x="0" y="0" width="1280" height="6" fill="#24507F" data-pptx-role="decoration" />
+
+  <g id="page-head" data-pptx-bounds="64 60 1152 116">
+    <text x="64" y="108" font-size="40" font-weight="700" fill="#1F2A37">このアプリがすること、しないこと</text>
+    <text x="64" y="148" font-size="21" fill="#5D6B7A">表をまとめるのは設定、1 件ずつ確かめるのは人です。</text>
+    <rect x="64" y="168" width="1152" height="1" fill="#CFD7DE" />
+  </g>
+
+  <g id="does" data-pptx-bounds="64 190 560 324">
+    <rect x="64" y="192" width="560" height="318" rx="12" fill="#F2F6FB" />
+    <!-- icon: tabler-filled/circle-check -->
+  <g transform="translate(88, 208) scale(1.25)" fill="#24507F">
+    <path d="M17 3.34a10 10 0 1 1 -14.995 8.984l-.005 -.324l.005 -.324a10 10 0 0 1 14.995 -8.336zm-1.293 5.953a1 1 0 0 0 -1.32 -.083l-.094 .083l-3.293 3.292l-1.293 -1.292l-.094 -.083a1 1 0 0 0 -1.403 1.403l.083 .094l2 2l.094 .083a1 1 0 0 0 1.226 0l.094 -.083l4 -4l.083 -.094a1 1 0 0 0 -.083 -1.32z" />
+  </g>
+    <text x="128" y="233" font-size="20" font-weight="700" fill="#24507F">します</text>
+    <g id="does-items" fill="#1F2A37">
+      <circle cx="95" cy="267" r="3.5" fill="#24507F" />
+      <text x="108" y="273" font-size="18">CSV / XLSX を読み、設定の手順で 1 つの台帳にする</text>
+      <circle cx="95" cy="301" r="3.5" fill="#24507F" />
+      <text x="108" y="307" font-size="18">番号で台帳を検索し、1 件を画面に出す</text>
+      <circle cx="95" cy="335" r="3.5" fill="#24507F" />
+      <text x="108" y="341" font-size="18">1 件ずつ、確認の状態（未処理 / 処理済など）を付ける</text>
+      <circle cx="95" cy="369" r="3.5" fill="#24507F" />
+      <text x="108" y="375" font-size="18">付けた状態を手元に溜め、まとめて共有台帳へ送る</text>
+      <circle cx="95" cy="403" r="3.5" fill="#24507F" />
+      <text x="108" y="409" font-size="18">条件に合う行を、台帳から削除する</text>
+      <circle cx="95" cy="437" r="3.5" fill="#24507F" />
+      <text x="108" y="443" font-size="18">台帳から選んだ項目を、CSV に書き出す</text>
+      <circle cx="95" cy="471" r="3.5" fill="#24507F" />
+      <text x="108" y="477" font-size="18">設定すれば、ほかのアプリの欄を読んで自動で検索する</text>
+    </g>
+  </g>
+
+  <g id="does-not" data-pptx-bounds="656 190 560 324">
+    <rect x="656" y="192" width="560" height="318" rx="12" fill="none" stroke="#E2E7EC" stroke-width="1" />
+    <!-- icon: tabler-filled/circle-x -->
+  <g transform="translate(680, 208) scale(1.25)" fill="#C05B21">
+    <path d="M17 3.34a10 10 0 1 1 -14.995 8.984l-.005 -.324l.005 -.324a10 10 0 0 1 14.995 -8.336zm-6.489 5.8a1 1 0 0 0 -1.218 1.567l1.292 1.293l-1.292 1.293l-.083 .094a1 1 0 0 0 1.497 1.32l1.293 -1.292l1.293 1.292l.094 .083a1 1 0 0 0 1.32 -1.497l-1.292 -1.293l1.292 -1.293l.083 -.094a1 1 0 0 0 -1.497 -1.32l-1.293 1.292l-1.293 -1.292l-.094 -.083z" />
+  </g>
+    <text x="720" y="233" font-size="20" font-weight="700" fill="#C05B21">しません</text>
+    <g id="does-not-items" fill="#1F2A37">
+      <circle cx="687" cy="267" r="3.5" fill="#5D6B7A" />
+      <text x="700" y="273" font-size="18">実物のカードリーダーを制御する</text>
+      <circle cx="687" cy="301" r="3.5" fill="#5D6B7A" />
+      <text x="700" y="307" font-size="18">ファイルが届いたのを合図に、自動で更新する</text>
+      <circle cx="687" cy="335" r="3.5" fill="#5D6B7A" />
+      <text x="700" y="341" font-size="18">複数の行の状態を、まとめて変える</text>
+      <circle cx="687" cy="369" r="3.5" fill="#5D6B7A" />
+      <text x="700" y="375" font-size="18">任意のプログラムや SQL を実行する</text>
+      <circle cx="687" cy="403" r="3.5" fill="#5D6B7A" />
+      <text x="700" y="409" font-size="18">データベースへ接続する</text>
+      <circle cx="687" cy="437" r="3.5" fill="#5D6B7A" />
+      <text x="700" y="443" font-size="18">Excel の書式や数式を、台帳に残す</text>
+    </g>
+  </g>
+
+  <g id="settings-note" data-pptx-bounds="64 530 1152 104">
+    <rect x="64" y="534" width="1152" height="96" rx="12" fill="#FFFFFF" stroke="#CFD7DE" stroke-width="1" />
+    <rect x="64" y="534" width="5" height="96" rx="2.5" fill="#24507F" />
+    <text x="92" y="572" font-size="18" font-weight="700" fill="#1F2A37">業務の流れは、プログラムではなく settings.json に書きます。</text>
+    <text x="92" y="606" font-size="18" fill="#5D6B7A">結合・抽出・計算・マージ・削除などの一般的な表の操作を、設定で組み合わせます。</text>
+  </g>
+
+  <g id="page-footer" data-pptx-bounds="64 656 1152 30" data-pptx-role="footer" fill="#5D6B7A" font-size="14">
+    <text x="64" y="676">P03</text>
+    <text x="1216" y="676" text-anchor="end">このアプリがすること</text>
+  </g>
+</svg>

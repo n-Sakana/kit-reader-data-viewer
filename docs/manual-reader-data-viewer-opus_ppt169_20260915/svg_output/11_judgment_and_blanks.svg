@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 720" width="1280" height="720" data-pptx-page-role="content" font-family="'Yu Gothic UI','Segoe UI',sans-serif">
+  <rect id="page-bg" x="0" y="0" width="1280" height="720" fill="#FFFFFF" data-pptx-role="background"/>
+  <rect id="page-rule" x="0" y="0" width="1280" height="6" fill="#24507F" data-pptx-role="decoration"/>
+
+  <g id="page-head" data-pptx-bounds="64 44 1152 140">
+    <rect x="64" y="50" width="76" height="28" rx="14" fill="#24507F"/>
+    <text x="102" y="69" font-size="15" fill="#FFFFFF" text-anchor="middle">手順 3</text>
+    <text x="64" y="124" font-size="40" font-weight="700" fill="#1F2A37">判定と空欄を読みます</text>
+    <text x="64" y="160" font-size="21" fill="#5D6B7A">判定の帯と空欄は、設定の規則どおりに出ます。</text>
+    <rect x="64" y="178" width="1152" height="1" fill="#CFD7DE"/>
+  </g>
+
+  <g id="shot-unpaid" data-pptx-bounds="64 192 560 412">
+    <rect x="64" y="196" width="560" height="356" rx="12" fill="#FAFBFC" stroke="#E2E7EC" stroke-width="1"/>
+    <image href="../images/07-main-unpaid.png" x="80" y="212" width="528" height="324" preserveAspectRatio="xMidYMid meet"/>
+    <text x="64" y="576" font-size="16" fill="#1F2A37">UQ10005480SY: ①が未完了なので「未決済」。<tspan x="64" dy="22" fill="#5D6B7A">申請情報・備考欄・変更内容は空欄（利用者情報は出る）。</tspan></text>
+  </g>
+
+  <g id="shot-no-application" data-pptx-bounds="656 192 560 412">
+    <rect x="656" y="196" width="560" height="356" rx="12" fill="#FAFBFC" stroke="#E2E7EC" stroke-width="1"/>
+    <image href="../images/08-main-no-application.png" x="672" y="212" width="528" height="324" preserveAspectRatio="xMidYMid meet"/>
+    <text x="656" y="576" font-size="16" fill="#1F2A37">ZZ20000080ZZ: ③は無いが、①②とも決済済なので「済」。<tspan x="656" dy="22" fill="#5D6B7A">③から来る項目だけ空欄（受付番号・会員番号は出る）。</tspan></text>
+  </g>
+
+  <g id="judgment-note" data-pptx-bounds="64 612 1152 38">
+    <rect x="64" y="614" width="1152" height="34" rx="8" fill="#F2F6FB"/>
+    <text x="84" y="637" font-size="16" fill="#1F2A37">判定の帯の色と文字は、見た目の設定です。変えても処理の意味は変わりません。</text>
+  </g>
+
+  <g id="page-footer" data-pptx-bounds="64 656 1152 30" data-pptx-role="footer" fill="#5D6B7A" font-size="14">
+    <text x="64" y="676">P11</text>
+    <text x="1216" y="676" text-anchor="end">同梱サンプルで一通り使う</text>
+  </g>
+</svg>

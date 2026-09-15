@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 720" width="1280" height="720" data-pptx-page-role="content" font-family="'Yu Gothic UI','Segoe UI',sans-serif">
+  <rect id="page-bg" x="0" y="0" width="1280" height="720" fill="#FFFFFF" data-pptx-role="background"/>
+  <rect id="page-rule" x="0" y="0" width="1280" height="6" fill="#24507F" data-pptx-role="decoration"/>
+
+  <g id="page-head" data-pptx-bounds="64 44 1152 140">
+    <rect x="64" y="50" width="76" height="28" rx="14" fill="#24507F"/>
+    <text x="102" y="69" font-size="15" fill="#FFFFFF" text-anchor="middle">手順 4</text>
+    <text x="64" y="124" font-size="40" font-weight="700" fill="#1F2A37">確かめたら、処理済にします</text>
+    <text x="64" y="160" font-size="21" fill="#5D6B7A">印はまずこの PC に保存され、まだ共有台帳には書かれません。</text>
+    <rect x="64" y="178" width="1152" height="1" fill="#CFD7DE"/>
+  </g>
+
+  <g id="shot-before" data-pptx-bounds="64 192 560 378">
+    <rect x="64" y="196" width="560" height="344" rx="12" fill="#FAFBFC" stroke="#E2E7EC" stroke-width="1"/>
+    <image href="../images/05-main-found.png" x="80" y="212" width="528" height="312" preserveAspectRatio="xMidYMid meet"/>
+    <text x="64" y="564" font-size="16" fill="#5D6B7A">押す前: 状態ボタン［未処理］、未送信 0 件</text>
+  </g>
+
+<g id="p14-before-after-arrow" data-pptx-authoring="preset" data-pptx-object="shape" data-pptx-prst="rightArrow" data-pptx-frame="627 352 26 32" fill="#24507F" stroke="none">
+<path d="M 627 360 L 640 360 L 640 352 L 653 368 L 640 384 L 640 376 L 627 376 Z"/>
+</g>
+
+  <g id="shot-after" data-pptx-bounds="656 192 560 378">
+    <rect x="656" y="196" width="560" height="344" rx="12" fill="#FAFBFC" stroke="#E2E7EC" stroke-width="1"/>
+    <image href="../images/06-main-marked-done.png" x="672" y="212" width="528" height="312" preserveAspectRatio="xMidYMid meet"/>
+    <text x="656" y="564" font-size="16" fill="#1F2A37">押した後: ［処理済］、未送信 1 件（まだこの PC だけ）</text>
+  </g>
+
+  <g id="state-notes" data-pptx-bounds="64 580 1152 70">
+    <rect x="64" y="584" width="1152" height="64" rx="10" fill="#F2F6FB"/>
+    <text x="84" y="609" font-size="16" fill="#1F2A37">処理済から未処理へ戻すときは「表示中の案件を未処理に戻します。よろしいですか。」と確かめられます。<tspan x="84" dy="24">自動読み取りで 1 件に決まったときは、サンプル設定では自動で処理済へ進みます（手入力の検索では進みません）。</tspan></text>
+  </g>
+
+  <g id="page-footer" data-pptx-bounds="64 656 1152 30" data-pptx-role="footer" fill="#5D6B7A" font-size="14">
+    <text x="64" y="676">P14</text>
+    <text x="1216" y="676" text-anchor="end">同梱サンプルで一通り使う</text>
+  </g>
+</svg>
