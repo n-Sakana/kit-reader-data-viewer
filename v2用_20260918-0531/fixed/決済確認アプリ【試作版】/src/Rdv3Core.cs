@@ -191,7 +191,9 @@ public sealed class Rdv3Table
         t.Enc = enc;
         t.Delimiter = delimiter;
         List<string> notes = t.InputCounts.Notes;
-        if (Rdv3Csv.NeedsDecoded(t.Buf, enc)) { return ReadDecoded(path, name, enc, new string[] { keyName }, validation, false, encodingSetting, references, headerRow, delimiter, "", notes); }
+        // The byte path treats every control character as noise, which a tab
+        // separator is not: a tab-separated file takes the decoded path.
+        if (delimiter == '\t' || Rdv3Csv.NeedsDecoded(t.Buf, enc)) { return ReadDecoded(path, name, enc, new string[] { keyName }, validation, false, encodingSetting, references, headerRow, delimiter, "", notes); }
         Rdv3Input.ValidateEncoding(t.Buf, enc, path, encodingSetting, delimiter);
         string file = System.IO.Path.GetFileName(path);
 
