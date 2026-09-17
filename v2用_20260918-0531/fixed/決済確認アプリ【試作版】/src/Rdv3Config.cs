@@ -240,7 +240,7 @@ public sealed class Rdv3TableFile
     public string Id = "";
     public string Label = "";
     public string File = "";
-    public string Match = "exact";
+    public string Match = "prefix";
 
     public Rdv3TableFile Clone()
     {

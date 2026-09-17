@@ -525,9 +525,6 @@ public static class Rdv3Text
     public const string BizJudgment = "決済状況";
     public const string BizPaidText = "支払済の表示";
     public const string BizUnpaidText = "未決済の表示";
-    public const string BizDetails = "詳細欄の表示";
-    public const string BizDetailsAlways = "常に";
-    public const string BizDetailsPaidOnly = "支払済のときだけ";
     public const string BizCandidates = "候補一覧";
     public const string BizHeader = "見出し";
     public const string BizExportDefaults = "帳票出力の初期項目";
@@ -577,7 +574,6 @@ public static class Rdv3Text
     public const string BizScreenRows = "画面.{box} の行は {max} 行までです。実際: {n} 行";
     public const string BizScreenCandidates = "画面.候補一覧 は {max} 列までです（決済状況の列は自動で付きます）。実際: {n} 列";
     public const string BizDateConflict = "列「{ref}」の CSVの日付 が 2 通り書かれています（{a} と {b}）。同じ書き方にそろえてください。";
-    public const string BizDetailsWord = "詳細欄の表示 は「{always}」か「{paidOnly}」です。実際: 「{value}」";
     public const string BizExportUnknown = "帳票出力の初期項目 の「{ref}」は台帳に残る列ではありません（画面・候補一覧・識別・検索に使う列か「確認状態」）。";
     public const string BizTableIdForm = "入力ファイルの表の名前に . と空白は使えません。実際: 「{table}」";
     // path words used when a generated-definition message is shown to the operator

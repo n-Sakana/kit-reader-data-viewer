@@ -22,7 +22,7 @@ public sealed class Rdv3TableDef
     public string File = "";
     // exact: the file named (a same name in other width/spacing/case is also
     // accepted); prefix: the newest file whose name starts with the stem
-    public string FileMatch = "exact";
+    public string FileMatch = "prefix";
     public int HeaderRow = 1;                 // the line/row that holds the header
     public string Sheet = "";                 // xlsx: which worksheet (empty = the first)
     public char Delimiter = ',';              // the CSV field separator
@@ -151,7 +151,7 @@ public sealed class Rdv3ProcessInputDef
     public string Label = "";
     public string Table = "";
     public string File = "";
-    public string FileMatch = "exact";
+    public string FileMatch = "prefix";
     public string Column = "";
     public string Key = "";
     public int HeaderRow = 1;
@@ -383,7 +383,7 @@ public sealed class Rdv3Data
             int before = to.ErrorCount;
             to.Check(delegate { t.Label = to.StrOr("label", id); });
             to.Check(delegate { t.File = to.Need("file").Trim(); });
-            to.Check(delegate { t.FileMatch = to.Word("fileMatch", "exact", "exact", "prefix"); });
+            to.Check(delegate { t.FileMatch = to.Word("fileMatch", "prefix", "exact", "prefix"); });
             to.Check(delegate { t.HeaderRow = to.IntOr("headerRow", 1, 1, 1000000); });
             t.Sheet = to.StrOr("sheet", "");
             to.Check(delegate { t.Delimiter = ReadDelimiter(to); });
@@ -639,7 +639,7 @@ public sealed class Rdv3Data
                 input.Id = io.Need("id");
                 input.Label = io.StrOr("label", input.Id);
                 input.File = io.Need("file").Trim();
-                input.FileMatch = io.Word("fileMatch", "exact", "exact", "prefix");
+                input.FileMatch = io.Word("fileMatch", "prefix", "exact", "prefix");
                 input.HeaderRow = io.IntOr("headerRow", 1, 1, 1000000);
                 input.Sheet = io.StrOr("sheet", "");
                 input.Delimiter = ReadDelimiter(io);

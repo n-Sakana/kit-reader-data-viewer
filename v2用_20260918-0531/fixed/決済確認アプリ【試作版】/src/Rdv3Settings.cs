@@ -78,7 +78,7 @@ public static class Rdv3SettingsForm
             Rdv3Json item = tables.At(i);
             string id = Rdv3Form.Text(item, "id");
             string file = Rdv3Form.Text(item, "file").Trim();
-            string match = string.Equals(Rdv3Form.Text(item, "match").Trim(), "prefix", StringComparison.OrdinalIgnoreCase) ? "prefix" : "exact";
+            string match = string.Equals(Rdv3Form.Text(item, "match").Trim(), "exact", StringComparison.OrdinalIgnoreCase) ? "exact" : "prefix";
             Rdv3TableFile entry = null;
             for (int k = 0; k < working.TableFiles.Count; k++) { if (working.TableFiles[k].Id == id) { entry = working.TableFiles[k]; } }
             if (entry == null) { continue; }

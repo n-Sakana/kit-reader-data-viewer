@@ -706,7 +706,7 @@
       row.appendChild(element('label', '', table.label || table.id));
       row.appendChild(editable(table.file, 'table:' + table.id));
       var select = selectNode([{ value: 'exact', text: '全部一致' }, { value: 'prefix', text: '前方一致' }]);
-      select.value = table.match === 'prefix' ? 'prefix' : 'exact';
+      select.value = table.match === 'exact' ? 'exact' : 'prefix';
       select.style.width = '104px';
       select.style.flex = 'none';
       select.setAttribute('data-match', table.id);
