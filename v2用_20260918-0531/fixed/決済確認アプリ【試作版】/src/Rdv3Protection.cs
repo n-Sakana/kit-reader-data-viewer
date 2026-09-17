@@ -33,17 +33,16 @@ public static class Rdv3BusinessDefinition
             {
                 bool input = path.StartsWith("data.tables.", StringComparison.Ordinal)
                     && path.Split('.').Length == 3 || path == "data.jobs[].inputs[]";
-                // Where an input file lives and how its name is matched is a
-                // location, like the file name itself: not part of the definition.
+                // Where an input file lives, what it is called and how its name
+                // is matched are locations, not the definition: the settings
+                // dialog changes them without making the ledger unusable.
                 if ((path == "data" && key == "labels") || (path == "data.ledger" && key == "search")
                     || (path == "data.jobs[]" && key == "name") || (input && key == "label")
-                    || (input && key == "fileMatch")
+                    || (input && key == "file") || (input && key == "fileMatch")
                     || (!policy && path == "data.ledger" && key == "protectStates")) { continue; }
                 Rdv3Json value = node.Members[key];
                 string text;
-                if (input && key == "file")
-                { text = Rdv3Json.Quote(System.IO.Path.GetExtension(value.Str).ToLowerInvariant()); }
-                else if ((input && key == "key") || (path == "data.ledger" && key == "identity"))
+                if ((input && key == "key") || (path == "data.ledger" && key == "identity"))
                 { text = value.IsArray ? Canonical(value, path + "." + key, policy) : "[" + Canonical(value, path + "." + key, policy) + "]"; }
                 else { text = Canonical(value, path + "." + key, policy); }
                 parts.Add(Rdv3Json.Quote(key) + ":" + text);
