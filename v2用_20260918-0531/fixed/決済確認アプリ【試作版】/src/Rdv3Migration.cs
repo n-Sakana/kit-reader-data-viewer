@@ -40,7 +40,8 @@ public static class Rdv3Migration
         for (int i = 0; i < heads.Length; i++)
         {
             Rdv3TableDef table = current.Data.Tables[i];
-            heads[i] = Rdv3Table.ReadHead(Rdv3Files.Full(table.File, dataDir), table.Enc, table.EncodingSetting,
+            string resolvedNote;
+            heads[i] = Rdv3Table.ReadHead(Rdv3Files.ResolveInput(table.File, table.FileMatch, dataDir, out resolvedNote), table.Enc, table.EncodingSetting,
                 current.Data.SourceReferences(table.Id), table.HeaderRow, table.Delimiter, table.Sheet);
         }
         current.Data.Bind(heads);

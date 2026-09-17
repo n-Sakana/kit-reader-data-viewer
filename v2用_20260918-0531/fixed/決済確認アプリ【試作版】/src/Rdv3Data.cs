@@ -67,8 +67,34 @@ public sealed class Rdv3ColumnTypeDef
 
     public bool TryDate(string value, out DateTime parsed)
     {
-        return DateTime.TryParseExact(Rdv3Input.Cell(value), Format, CultureInfo.InvariantCulture,
-            DateTimeStyles.None, out parsed);
+        return Rdv3Dates.TryParse(value, Format, out parsed);
+    }
+}
+
+// A column declared as a date is a date whatever notation the source used
+// for it. The declared format is tried first; the common Japanese office
+// notations follow, so a file that writes 2026/4/10 where the definition
+// says yyyyMMdd keeps its rows. What a column IS is still declared, never
+// guessed from its shape.
+public static class Rdv3Dates
+{
+    private static readonly string[] Alternates =
+    {
+        "yyyyMMdd", "yyyy/MM/dd", "yyyy/M/d", "yyyy-MM-dd", "yyyy-M-d", "yyyy.MM.dd", "yyyy.M.d",
+        "yyyy/MM/dd HH:mm", "yyyy/M/d H:mm", "yyyy/MM/dd HH:mm:ss", "yyyy/M/d H:mm:ss",
+        "yyyy-MM-dd HH:mm", "yyyy-MM-dd HH:mm:ss", "yyyy年M月d日", "yyyy年MM月dd日"
+    };
+
+    public static bool TryParse(string value, string format, out DateTime parsed)
+    {
+        string text = Rdv3Input.Fold(value);
+        if (DateTime.TryParseExact(text, format, CultureInfo.InvariantCulture, DateTimeStyles.None, out parsed)) { return true; }
+        for (int i = 0; i < Alternates.Length; i++)
+        {
+            if (Alternates[i] == format) { continue; }
+            if (DateTime.TryParseExact(text, Alternates[i], CultureInfo.InvariantCulture, DateTimeStyles.None, out parsed)) { return true; }
+        }
+        return false;
     }
 
     public bool TryNumber(string value, out decimal parsed)

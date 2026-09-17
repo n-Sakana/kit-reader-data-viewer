@@ -212,9 +212,14 @@ public static class Rdv3ProcessForm
                             table.InvalidEncodingRow.ToString(CultureInfo.InvariantCulture)));
                     }
                     table.AddWarnings(warnings);
+                    List<string> notes = new List<string>();
+                    if (resolvedNote != null) { notes.Add(resolvedNote); }
+                    table.AddNotes(notes);
+                    shownFile = Path.GetFileName(path);
                     validation = warnings.Count == 0
                         ? Rdv3Text.ValidationColumnsMatch
                         : string.Join(" / ", warnings.ToArray());
+                    if (notes.Count > 0) { validation += " / " + string.Join(" / ", notes.ToArray()); }
                 }
                 catch (Exception exception)
                 {
@@ -224,7 +229,7 @@ public static class Rdv3ProcessForm
                 }
             }
             sb.Append("{\"id\":").Append(Rdv3WebJson.Q(input.Id));
-            sb.Append(",\"file\":").Append(Rdv3WebJson.Q(input.File));
+            sb.Append(",\"file\":").Append(Rdv3WebJson.Q(shownFile));
             sb.Append(",\"key\":").Append(Rdv3WebJson.Q(input.Column));
             sb.Append(",\"rows\":").Append(Rdv3WebJson.Q(rows));
             sb.Append(",\"validation\":").Append(Rdv3WebJson.Q(validation));

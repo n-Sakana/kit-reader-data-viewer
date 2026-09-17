@@ -77,6 +77,10 @@ public sealed class Rdv3Form
     private string keyText = "";
     private string notice = "";
     private bool noticeError;
+    // what the judgment band says while there is no record: a key outside
+    // the configured form, or a key the ledger does not hold
+    private string judgmentNotice = "";
+    private string judgmentLook = "";
     private readonly DispatcherTimer noticeTimer = new DispatcherTimer();
     private Rdv3Data exportFilterData;
     private int modalToken;
@@ -211,12 +215,24 @@ public sealed class Rdv3Form
         Ui(delegate { workEnabled = on; RefreshValues(); });
     }
 
+    public void SetJudgmentNotice(string text, string look)
+    {
+        Ui(delegate
+        {
+            judgmentNotice = text ?? "";
+            judgmentLook = look ?? "";
+            RefreshValues();
+        });
+    }
+
     public void ShowCandidates(string key, List<Rdv3CandRow> rows, int totalHits)
     {
         Ui(delegate
         {
             View.SearchKey = key ?? "";
             keyText = View.SearchKey;
+            judgmentNotice = "";
+            judgmentLook = "";
             candidates = rows ?? new List<Rdv3CandRow>();
             candidateTotal = totalHits;
             View.CandidateCount = totalHits;
@@ -265,6 +281,8 @@ public sealed class Rdv3Form
         Ui(delegate
         {
             if (!keepKey) { keyText = ""; }
+            judgmentNotice = "";
+            judgmentLook = "";
             View.SearchKey = "";
             candidates = new List<Rdv3CandRow>();
             candidateTotal = 0;
@@ -773,8 +791,9 @@ public sealed class Rdv3Form
             sb.Append(Rdv3WebJson.Q(judgment.Key)).Append(":{");
             if (!View.HasRecord || verdict.Result == null)
             {
-                sb.Append("\"text\":").Append(Rdv3WebJson.Q(Rdv3Text.Unsearched));
-                sb.Append(",\"look\":\"unsearched\",\"icon\":\"\"");
+                bool noticed = judgmentNotice.Length > 0;
+                sb.Append("\"text\":").Append(Rdv3WebJson.Q(noticed ? judgmentNotice : Rdv3Text.Unsearched));
+                sb.Append(",\"look\":").Append(Rdv3WebJson.Q(noticed ? judgmentLook : "unsearched")).Append(",\"icon\":\"\"");
             }
             else
             {

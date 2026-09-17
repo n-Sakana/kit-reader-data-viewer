@@ -150,7 +150,7 @@ public sealed class Rdv3App
         form.OnSearch = ManualSearch;
         form.OnKeyChanged = delegate(string value)
         {
-            if (!string.Equals(Rdv3Input.Cell((value ?? "").Trim()), activeSearchKey, StringComparison.Ordinal)) { ClearShown(); }
+            if (!string.Equals(Rdv3Input.SearchKey(value ?? ""), activeSearchKey, StringComparison.Ordinal)) { ClearShown(); }
         };
         form.OnClear = DoClear;
         form.OnWorkState = DoWorkState;
@@ -257,8 +257,10 @@ public sealed class Rdv3App
 
         for (int i = 0; i < dataDef.Tables.Count; i++)
         {
-            log.Write(rid, "read", "table=" + dataDef.Tables[i].Id + " ms=" + Rdv3Log.F(mr.ReadMs[i]));
+            log.Write(rid, "read", "table=" + dataDef.Tables[i].Id + " file=" + dataDef.Tables[i].File
+                + " rows=" + mr.TableRows[i].ToString(CultureInfo.InvariantCulture) + " ms=" + Rdv3Log.F(mr.ReadMs[i]));
         }
+        for (int i = 0; i < mr.Notes.Count; i++) { log.Write(rid, "input", mr.Notes[i]); }
         for (int i = 0; i < dataDef.Tables.Count; i++)
         {
             log.Write(rid, "index", "table=" + dataDef.Tables[i].Id + " keys=" + mr.Keys[i].ToString(CultureInfo.InvariantCulture)
@@ -385,6 +387,9 @@ public sealed class Rdv3App
             log.Write(rid, "decision", "no difference");
             // No source-content change does NOT mean the shared states are old.
             AdoptLedger(rid, oldLines, oldStates, mr.Head, Rdv3Text.NoteNoDiff);
+            // The read result is shown on the screen, not only in the log. An
+            // exclusion notice, when there is one, keeps its place.
+            if (mr.Warnings.Count == 0 || startupLogged) { form.Notice(Rdv3Text.NoteNoDiff); }
             return;
         }
 
@@ -664,7 +669,7 @@ public sealed class Rdv3App
     // ---- search ------------------------------------------------------------
     private void ManualSearch(string key)
     {
-        key = Rdv3Input.Cell(key);
+        key = Rdv3Input.SearchKey(key);
         long t0 = Rdv3Clock.Now();
         if (state != StReady)
         {
@@ -680,7 +685,11 @@ public sealed class Rdv3App
         }
         if (!cfg.IsKey(key))
         {
-            form.Error(Rdv3Text.ErrBadKeyFmt.Replace("{label}", LabelOrRef(dataDef.SearchRefs[0]))
+            // A key outside the configured form is answered on the judgment
+            // band, where the operator is looking, with the form in the status bar.
+            ClearShown();
+            form.SetJudgmentNotice(Rdv3Text.JudgeInvalidKey, "invalid");
+            form.Notice(Rdv3Text.ErrBadKeyFmt.Replace("{label}", LabelOrRef(dataDef.SearchRefs[0]))
                 .Replace("{pattern}", cfg.KeyPattern));
             log.Write("-", "search", "ignored length=" + key.Length.ToString(CultureInfo.InvariantCulture) + " reason=bad-key");
             return;
@@ -696,6 +705,7 @@ public sealed class Rdv3App
         bool accepted = false;
         bool foreground = false;
         string foregroundError = "";
+        key = Rdv3Input.SearchKey(key);
         form.RunOnUi(delegate
         {
             if (writes.Closing || state != StReady || writes.Pending || form.IsModalOpen) { return; }
@@ -767,7 +777,8 @@ public sealed class Rdv3App
             shownKey = key;
             shownCands = candRows;
             shownRow = -1;
-            if (n == 0) { form.Notice(Rdv3Text.NoteNotFound); }
+            // Nothing in the ledger for this key: said on the judgment band.
+            if (n == 0) { form.SetJudgmentNotice(Rdv3Text.JudgeNotFound, "notfound"); }
             else if (n == 1)
             {
                 // one hit is selected at once, the way the reference does it
@@ -1287,6 +1298,7 @@ public sealed class Rdv3App
             t = Rdv3Clock.Now();
             result = Rdv3Ledger.ApplyDelete(dataDef, process, dataDir, latestLines, latestStates,
                                             work.InitialStored);
+            for (int i = 0; i < result.Notes.Count; i++) { log.Write(tag, "input", result.Notes[i]); }
             for (int i = 0; i < result.Warnings.Count; i++) { log.Write(tag, "warning", result.Warnings[i]); }
             string[] afterEffective = pending.Overlay(result.Lines, result.States, dataDef.IdentityCols);
             List<Rdv3CandRow> resetRows = ResetCandidates(resetNotice.ChangedRows(latestLines, beforeEffective,
@@ -1534,8 +1546,20 @@ public sealed class Rdv3App
             log.Write("-", "settings", "save failed: " + err);
             return;
         }
+        bool filesChanged = cfg.TableFilesDiffer(edited);
         cfg.AdoptRuntimeFrom(edited);
         cfg.AdoptSavedFrom(edited);
+        if (filesChanged)
+        {
+            // The running definition reads the files just named; the update
+            // check that follows compares them with the saved ledger.
+            cfg.ApplyTableFiles();
+            for (int i = 0; i < cfg.TableFiles.Count; i++)
+            {
+                log.Write("-", "settings", "input " + cfg.TableFiles[i].Id + " file=" + cfg.TableFiles[i].File
+                    + " match=" + cfg.TableFiles[i].Match);
+            }
+        }
         watchdog.Interval = TimeSpan.FromMilliseconds(cfg.PumpMs);
         form.SetWatch(WatchName(), watchDetail);
         watch.Rebind();
@@ -1548,7 +1572,8 @@ public sealed class Rdv3App
                 log.Write("-", "settings", "target [" + cfg.Targets[i].Name + "] is not watched: " + why);
             }
         }
-        form.Notice(Rdv3Text.NoteSettingsApplied);
+        form.Notice(filesChanged ? Rdv3Text.NoteSettingsFilesApplied : Rdv3Text.NoteSettingsApplied);
+        if (filesChanged && state == StReady && !writes.Pending) { RefreshLedger(); }
     }
 
     // ---- watch / timeout / shutdown ---------------------------------------

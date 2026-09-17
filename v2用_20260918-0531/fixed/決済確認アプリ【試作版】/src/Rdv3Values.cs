@@ -232,7 +232,7 @@ public static class Rdv3Eval
         if (fmt.Kind == "date")
         {
             DateTime t;
-            if (DateTime.TryParseExact(raw.Trim(), fmt.From, CultureInfo.InvariantCulture, DateTimeStyles.None, out t))
+            if (Rdv3Dates.TryParse(raw, fmt.From, out t))
             {
                 try { return t.ToString(fmt.To, CultureInfo.InvariantCulture); }
                 catch (FormatException) { return raw; }

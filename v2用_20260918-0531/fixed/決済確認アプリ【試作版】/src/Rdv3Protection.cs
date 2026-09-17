@@ -94,8 +94,11 @@ public static class Rdv3BusinessDefinition
             foreach (Rdv3ProcessInputDef input in job.Inputs)
             {
                 if (!input.IsTable)
-                { input.Head = Rdv3Table.ReadHead(Rdv3Files.Full(input.File, directory), input.Enc, input.EncodingSetting,
-                    data.SourceReferences(input), input.HeaderRow, input.Delimiter, input.Sheet); }
+                {
+                    string resolvedNote;
+                    input.Head = Rdv3Table.ReadHead(Rdv3Files.ResolveInput(input.File, input.FileMatch, directory, out resolvedNote), input.Enc, input.EncodingSetting,
+                        data.SourceReferences(input), input.HeaderRow, input.Delimiter, input.Sheet);
+                }
             }
         }
     }

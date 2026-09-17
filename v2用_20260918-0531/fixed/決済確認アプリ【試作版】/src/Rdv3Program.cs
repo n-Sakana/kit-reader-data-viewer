@@ -78,9 +78,11 @@ public static class Rdv3Program
             string[][] heads = new string[cfg.Data.Tables.Count][];
             for (int t = 0; t < cfg.Data.Tables.Count; t++)
             {
-                string p = Path.Combine(dataDir, cfg.Data.Tables[t].File);
+                string resolvedNote;
+                string p = Rdv3Files.ResolveInput(cfg.Data.Tables[t].File, cfg.Data.Tables[t].FileMatch, dataDir, out resolvedNote);
                 Rdv3Log.Phase("window input header " + p);
-                if (!File.Exists(p)) { throw new Rdv3DataError(Rdv3Text.ErrNoData + p); }
+                if (!File.Exists(p))
+                { throw new Rdv3DataError(Rdv3Text.ErrNoData + p + "\r\n" + Rdv3Files.MissingInputMessage(cfg.Data.Tables[t].File, cfg.Data.Tables[t].FileMatch, dataDir)); }
                 heads[t] = Rdv3Table.ReadHead(p, cfg.Data.Tables[t].Enc, cfg.Data.Tables[t].EncodingSetting,
                     cfg.Data.SourceReferences(cfg.Data.Tables[t].Id), cfg.Data.Tables[t].HeaderRow, cfg.Data.Tables[t].Delimiter,
                     cfg.Data.Tables[t].Sheet);
@@ -96,7 +98,8 @@ public static class Rdv3Program
                     // a type on a column the update job makes has no file to check here
                     if (tableOrd < 0 || typedTables[tableOrd] != null) { continue; }
                     Rdv3TableDef table = cfg.Data.Tables[tableOrd];
-                    typedTables[tableOrd] = Rdv3Table.Read(Path.Combine(dataDir, table.File),
+                    string typedNote;
+                    typedTables[tableOrd] = Rdv3Table.Read(Rdv3Files.ResolveInput(table.File, table.FileMatch, dataDir, out typedNote),
                         table.Id, table.Enc, table.KeyColumns, table.KeyValidation, table.EncodingSetting, cfg.Data.SourceReferences(table.Id),
                         table.HeaderRow, table.Delimiter, table.Sheet);
                 }
