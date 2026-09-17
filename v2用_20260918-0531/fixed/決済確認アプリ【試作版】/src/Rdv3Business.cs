@@ -64,6 +64,7 @@ public static class Rdv3Business
         public readonly List<string> ConditionValues = new List<string>();
         public readonly List<Ref> Identity = new List<Ref>();
         public readonly List<Ref> Search = new List<Ref>();
+        public readonly List<Ref> Extras = new List<Ref>();          // kept in the ledger for the person who opens it
         public string DeleteTable = "";
         public readonly List<List<Ref>> DeleteLedgerSides = new List<List<Ref>>();
         public readonly List<Ref> DeleteSides = new List<Ref>();
@@ -81,13 +82,15 @@ public static class Rdv3Business
     {
         Model m = new Model();
         block.Only(Rdv3Text.BizFiles, Rdv3Text.BizExtract, Rdv3Text.BizJoins, Rdv3Text.BizPaid, Rdv3Text.BizIdentity,
-                   Rdv3Text.BizSearch, Rdv3Text.BizDelete, Rdv3Text.BizScreen);
+                   Rdv3Text.BizSearch, Rdv3Text.BizExtraColumns, Rdv3Text.BizDelete, Rdv3Text.BizScreen);
         ReadFiles(m, block.Obj(Rdv3Text.BizFiles, true));
         ReadExtracts(m, block.Obj(Rdv3Text.BizExtract, false));
         ReadJoins(m, block.Member(Rdv3Text.BizJoins), block);
         ReadConditions(m, block.Member(Rdv3Text.BizPaid), block);
         ReadRefList(m, block.Member(Rdv3Text.BizIdentity), block, Rdv3Text.BizIdentity, m.Identity, Rdv3Text.BizNoIdentity);
         ReadRefList(m, block.Member(Rdv3Text.BizSearch), block, Rdv3Text.BizSearch, m.Search, Rdv3Text.BizNoSearch);
+        if (block.Has(Rdv3Text.BizExtraColumns))
+        { ReadRefList(m, block.Member(Rdv3Text.BizExtraColumns), block, Rdv3Text.BizExtraColumns, m.Extras, ""); }
         ReadDelete(m, block.Obj(Rdv3Text.BizDelete, true));
         ReadScreen(m, block.Obj(Rdv3Text.BizScreen, true));
         foreach (Extract e in m.Extracts)
@@ -439,14 +442,20 @@ public static class Rdv3Business
         return Rdv3Text.BizLabelOfFmt.Replace("{table}", reference.Substring(0, dot)).Replace("{column}", reference.Substring(dot + 1));
     }
 
+    // What the ledger keeps: the extra columns named for it, everything the
+    // screen and the candidate list show, what identifies and finds a row,
+    // what the deletion matches, the columns the paid conditions look at, the
+    // export defaults, and the judgment itself. Nothing is written twice.
     private static List<string> SavedColumns(Model m)
     {
         List<string> saved = new List<string>();
+        foreach (Ref r in m.Extras) { if (!saved.Contains(r.Text)) { saved.Add(r.Text); } }
         foreach (ScreenRow row in m.Rows) { if (!row.Hidden && !saved.Contains(row.Field)) { saved.Add(row.Field); } }
         foreach (ScreenRow row in m.Candidates) { if (!row.Hidden && !saved.Contains(row.Field)) { saved.Add(row.Field); } }
         foreach (Ref r in m.Identity) { if (!saved.Contains(r.Text)) { saved.Add(r.Text); } }
         foreach (Ref r in m.Search) { if (!saved.Contains(r.Text)) { saved.Add(r.Text); } }
         foreach (List<Ref> alternatives in m.DeleteLedgerSides) { foreach (Ref r in alternatives) { if (!saved.Contains(r.Text)) { saved.Add(r.Text); } } }
+        foreach (Ref[] condition in m.Conditions) { if (!saved.Contains(condition[0].Text)) { saved.Add(condition[0].Text); } }
         foreach (string e in m.ExportDefaults) { if (e != "$work" && !saved.Contains(e)) { saved.Add(e); } }
         if (!saved.Contains(m.JudgeRef)) { saved.Add(m.JudgeRef); }
         return saved;

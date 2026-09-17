@@ -505,6 +505,7 @@ public static class Rdv3Text
     public const string BizCondValue = "値";
     public const string BizIdentity = "台帳の1件を決める列";
     public const string BizSearch = "検索に使う列";
+    public const string BizExtraColumns = "台帳に追加で残す列";
     public const string BizDelete = "削除の条件";
     public const string BizDeleteFile = "ファイル";
     public const string BizDeleteKeys = "一致させる列";
@@ -583,7 +584,7 @@ public static class Rdv3Text
     public const string BizPathSource = "台帳に残す列（画面・候補一覧・識別・検索の列から自動で決まります）";
     public const string BizPathScreen = "業務設定.画面";
     // ---- where the settings do not line up (which member, and what to align) ----
-    public const string SettingsStepPrefix = "data.jobs「{job}」の手順 {n}（{operation}: {target}）: ";
+    public const string SettingsStepPrefix = "処理「{job}」の手順 {n}（{operation}: {target}）: ";
     public const string SettingsStepColumnHint = " 列は「表ID.列名」で書きます。入力表の列は CSV の見出しどおり、作った列は calculate の column / aggregate の as / select の as と同じ名前です。この手順より前の手順で作られていない列は使えません。";
     public const string SettingsIdentityNotSaved = "data.ledger.identity の「{name}」が data.ledger.columns.source にありません。台帳の行を識別する列は、保存する列（columns.source）にも並べてください。";
     public const string SettingsSearchNotSaved = "data.ledger.search.columns の「{name}」が data.ledger.columns.source にありません。検索に使う列は、保存する列（columns.source）にも並べてください。";
