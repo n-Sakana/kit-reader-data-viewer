@@ -181,11 +181,9 @@ public static class Rdv3Csv
                     try { cells = Record(reader, path, ref physical, out blank, delimiter); }
                     catch (DecoderFallbackException)
                     {
-                        // Use the same open file to locate the invalid byte; a
-                        // decoder's buffered read may run ahead of this record.
-                        stream.Position = 0;
-                        using (MemoryStream copy = new MemoryStream())
-                        { stream.CopyTo(copy); Rdv3Input.ValidateEncoding(copy.ToArray(), encoding, path, encodingSetting, delimiter); }
+                        // Locate the invalid byte in the whole file; a decoder's
+                        // buffered read may run ahead of this record.
+                        Rdv3Input.ValidateEncoding(bytes, encoding, path, encodingSetting, delimiter);
                         throw;
                     }
                     if (cells == null) { break; }
