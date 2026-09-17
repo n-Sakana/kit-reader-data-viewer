@@ -778,7 +778,33 @@ public sealed class Rdv3Form
             comma = true;
             sb.Append(Rdv3WebJson.Q(action.Key)).Append(':').Append(Rdv3WebJson.Q(action.Value));
         }
-        sb.Append("}},\"state\":").Append(BuildStateBody()).Append('}');
+        // Captions the definition sets: the page keeps its own for the rest.
+        sb.Append("},\"labels\":{");
+        comma = false;
+        foreach (KeyValuePair<string, Rdv3Bind> binding in Screen.Bindings)
+        {
+            if (binding.Value.Label.Length == 0) { continue; }
+            if (comma) { sb.Append(','); }
+            comma = true;
+            sb.Append(Rdv3WebJson.Q(binding.Key)).Append(':').Append(Rdv3WebJson.Q(binding.Value.Label));
+        }
+        sb.Append("},\"judgmentLabels\":{");
+        comma = false;
+        foreach (KeyValuePair<string, Rdv3Judgment> judgment in Screen.Judgments)
+        {
+            if (judgment.Value.Label.Length == 0) { continue; }
+            if (comma) { sb.Append(','); }
+            comma = true;
+            sb.Append(Rdv3WebJson.Q(judgment.Key)).Append(':').Append(Rdv3WebJson.Q(judgment.Value.Label));
+        }
+        sb.Append("},\"candidateHeaders\":[");
+        List<Rdv3ColumnDef> columns = (Screen.Candidates == null) ? new List<Rdv3ColumnDef>() : Screen.Candidates.Columns;
+        for (int i = 0; i < columns.Count; i++)
+        {
+            if (i > 0) { sb.Append(','); }
+            sb.Append(Rdv3WebJson.Q(columns[i].Header ?? ""));
+        }
+        sb.Append("]},\"state\":").Append(BuildStateBody()).Append('}');
         return sb.ToString();
     }
 

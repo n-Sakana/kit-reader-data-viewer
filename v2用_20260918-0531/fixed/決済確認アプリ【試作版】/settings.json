@@ -470,18 +470,22 @@
   "screen": {
     "bindings": {
       "userId": {
+        "label": "利用者ID",
         "field": "PAY.利用者ID",
         "empty": ""
       },
       "userName": {
+        "label": "利用者氏名",
         "field": "PAY.利用者氏名",
         "empty": ""
       },
       "userCategory": {
+        "label": "利用者区分",
         "field": "PAY.利用者区分",
         "empty": ""
       },
       "applicationDate": {
+        "label": "申込日",
         "field": "APP.申込日",
         "empty": "",
         "format": {
@@ -491,18 +495,22 @@
         }
       },
       "applicationNumber": {
+        "label": "受付番号",
         "field": "PAY.受付番号照合用",
         "empty": ""
       },
       "cardNumber": {
+        "label": "識別番号",
         "field": "PAY.識別番号照合用",
         "empty": ""
       },
       "applicantName": {
+        "label": "申込者氏名",
         "field": "APP.申込者氏名",
         "empty": ""
       },
       "birthDate": {
+        "label": "生年月日",
         "field": "PAY.生年月日",
         "empty": "",
         "format": {
@@ -512,24 +520,29 @@
         }
       },
       "qualification": {
+        "label": "契約区分（期間）",
         "field": "APP.変更後の契約区分期間",
         "empty": ""
       },
       "office": {
+        "label": "受付拠点",
         "field": "PAY.受付拠点",
         "empty": ""
       },
       "remarks": {
+        "label": "意見欄",
         "field": "APP.意見欄",
         "empty": ""
       },
       "plan": {
+        "label": "変更後の計画",
         "field": "APP.変更後の計画",
         "empty": ""
       }
     },
     "judgments": {
       "paymentStatus": {
+        "label": "決済状況",
         "source": {
           "field": "PAIRED.決済確認済",
           "requires": [
@@ -631,24 +644,28 @@
     },
     "candidates": {
       "applicationNumber": {
+        "header": "受付番号",
         "value": {
           "field": "PAY.受付番号照合用",
           "empty": ""
         }
       },
       "cardNumber": {
+        "header": "識別番号",
         "value": {
           "field": "PAY.識別番号照合用",
           "empty": ""
         }
       },
       "applicant": {
+        "header": "申込者氏名",
         "value": {
           "field": "APP.申込者氏名",
           "empty": ""
         }
       },
       "applicationDate": {
+        "header": "申込日",
         "value": {
           "field": "APP.申込日",
           "empty": "",
@@ -660,6 +677,7 @@
         }
       },
       "payment": {
+        "header": "決済状況",
         "value": {
           "field": "PAIRED.決済確認済",
           "empty": "未決済"

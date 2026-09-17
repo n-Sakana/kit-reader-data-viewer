@@ -513,7 +513,8 @@ public sealed class Rdv3Data
             Rdv3ColumnRef identityRef = ParseLedgerRef(d, identityRefs[k], ledger.Member("identity"));
             identityRefs[k] = identityRef.Ref;
             d.IdentityCols[k] = d.IndexOf(identityRef.Ref);
-            if (d.IdentityCols[k] < 0) { throw colsNode.Fail("must include the update key " + identityRef.Ref + " (the row identity)"); }
+            if (d.IdentityCols[k] < 0)
+            { throw colsNode.Fail("must include the update key " + identityRef.Ref + " (the row identity). " + Rdv3Text.SettingsIdentityNotSaved.Replace("{name}", identityRef.Ref)); }
         }
         d.Spine = "";
         d.SpineOrd = -1;
@@ -550,7 +551,7 @@ public sealed class Rdv3Data
         {
             Rdv3ColumnRef c = ParseLedgerRef(d, searchRefs[i], search.Member("columns").At(i));
             int col = d.IndexOf(c.Ref);
-            if (col < 0) { throw search.Member("columns").At(i).Fail(c.Ref + " must be one of the ledger source columns"); }
+            if (col < 0) { throw search.Member("columns").At(i).Fail(c.Ref + " must be one of the ledger source columns. " + Rdv3Text.SettingsSearchNotSaved.Replace("{name}", c.Ref)); }
             if (d.SearchRefs.Contains(c.Ref)) { throw search.Member("columns").At(i).Fail(c.Ref + " is listed twice"); }
             d.SearchRefs.Add(c.Ref);
             searchCols.Add(col);
@@ -1489,8 +1490,11 @@ public sealed class Rdv3Data
 
     private static Rdv3DataError Missing(Rdv3TableDef t, string column, string where)
     {
+        string hint = where.EndsWith(".key", StringComparison.Ordinal)
+            ? " " + Rdv3Text.SettingsKeyNotInHead.Replace("{id}", t.Id).Replace("{name}", column).Replace("{file}", t.File)
+            : "";
         return new Rdv3DataError(Rdv3Text.DataNoColumn.Replace("{file}", t.File).Replace("{row}", "1")
-            .Replace("{name}", column) + " (data." + where + ")");
+            .Replace("{name}", column) + " (data." + where + ")" + hint);
     }
 
     private Rdv3DataError MissingRef(int tableOrd, string owner, string column, string where)

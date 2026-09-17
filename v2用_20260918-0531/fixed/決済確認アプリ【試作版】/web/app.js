@@ -144,6 +144,36 @@
   }
 
   var fixedScreenBound = false;
+  // Captions the settings name: a field's row label (or, for a text
+  // section, its legend), the judgment band's label, the candidate headers.
+  // Anything the settings leave out keeps the page's own wording.
+  function applyLabels(definition) {
+    var labels = definition.labels || {};
+    Object.keys(labels).forEach(function (id) {
+      Array.prototype.forEach.call(stage.querySelectorAll('[data-bind="' + cssEscape(id) + '"]'), function (node) {
+        var row = node.closest('.row');
+        var caption = row ? row.querySelector('label') : null;
+        if (!caption) {
+          var section = node.closest('fieldset');
+          caption = section ? section.querySelector('legend') : null;
+        }
+        if (caption) { caption.textContent = labels[id]; }
+      });
+    });
+    var judgmentLabels = definition.judgmentLabels || {};
+    Object.keys(judgmentLabels).forEach(function (id) {
+      var band = stage.querySelector('[data-judgment="' + cssEscape(id) + '"] .band-label');
+      if (band) { band.textContent = judgmentLabels[id]; }
+    });
+    var headers = definition.candidateHeaders || [];
+    var template = document.querySelector('#fixed-candidate-columns');
+    if (template) {
+      Array.prototype.forEach.call(template.content.querySelectorAll('th'), function (th, index) {
+        if (headers[index]) { th.textContent = headers[index]; }
+      });
+    }
+  }
+
   function renderScreen(definition) {
     if (!definition || definition.fixed !== true) { throw new Error('The fixed HTML screen requires compact settings.'); }
     stage.classList.add('runtime');
@@ -151,6 +181,7 @@
       var action = node.getAttribute('data-action');
       node.setAttribute('data-job', definition.actions[action] || '');
     });
+    applyLabels(definition);
     if (fixedScreenBound) { return; }
     fixedScreenBound = true;
     input = stage.querySelector('#input');

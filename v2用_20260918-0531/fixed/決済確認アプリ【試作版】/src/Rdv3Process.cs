@@ -261,6 +261,47 @@ public static class Rdv3Process
             object left = values[step.Target1];
             object right = (step.Target2.Length == 0) ? null : values[step.Target2];
             object output;
+            try { output = RunStep(data, job, step, left, right, initialStored, result, directReset, ref directUpdated); }
+            catch (InvalidDataException error)
+            {
+                // Say which step of which job did not line up, in the words of
+                // the settings file, so a misspelt column is found where it was written.
+                string where = Rdv3Text.SettingsStepPrefix.Replace("{job}", job.Id)
+                    .Replace("{n}", (i + 1).ToString(CultureInfo.InvariantCulture))
+                    .Replace("{operation}", Rdv3Text.OperationLabel(step.Operation)).Replace("{target}", step.Target1);
+                string hint = error.Message.StartsWith(Rdv3Text.ProcessMissingColumn.Substring(0, 4), StringComparison.Ordinal) ? Rdv3Text.SettingsStepColumnHint : "";
+                throw new InvalidDataException(where + error.Message + hint);
+            }
+            Rdv3Relation outputTable = output as Rdv3Relation;
+            if (outputTable != null && outputTable.Kind != "ledger")
+            { output = ValidResultTypes(data, outputTable, step, result); }
+            values[step.Output] = output;
+            last = output;
+        }
+
+        Rdv3Relation finalLedger = last as Rdv3Relation;
+        if (finalLedger != null && finalLedger.Kind == "ledger")
+        {
+            ValidateLedgerIdentity(data, job, finalLedger);
+        }
+        FillResult(result, last);
+        if (result.Update == null && last is Rdv3Relation) { result.Update = new Rdv3UpdateResult(); }
+        if (result.Update != null)
+        {
+            result.Update.Lines = result.Lines;
+            result.Update.States = result.States;
+            result.Update.Deleted = result.Deleted;
+            result.Update.Updated += directUpdated;
+            result.Update.ResetLines.AddRange(directReset);
+        }
+        if (capture) { Capture(values, result); }
+        return result;
+    }
+
+    private static object RunStep(Rdv3Data data, Rdv3ProcessJobDef job, Rdv3ProcessStepDef step, object left, object right,
+                                  string initialStored, Rdv3ProcessResult result, List<string> directReset, ref int directUpdated)
+    {
+            object output;
             if (step.Operation == "join")
             {
                 Rdv3JoinResult joined;
@@ -317,30 +358,7 @@ public static class Rdv3Process
                 result.Deleted += update.Deleted;
             }
             else { throw new InvalidOperationException(Rdv3Text.Format(Rdv3Text.ProcessUnknownOperation, step.Operation)); }
-            Rdv3Relation outputTable = output as Rdv3Relation;
-            if (outputTable != null && outputTable.Kind != "ledger")
-            { output = ValidResultTypes(data, outputTable, step, result); }
-            values[step.Output] = output;
-            last = output;
-        }
-
-        Rdv3Relation finalLedger = last as Rdv3Relation;
-        if (finalLedger != null && finalLedger.Kind == "ledger")
-        {
-            ValidateLedgerIdentity(data, job, finalLedger);
-        }
-        FillResult(result, last);
-        if (result.Update == null && last is Rdv3Relation) { result.Update = new Rdv3UpdateResult(); }
-        if (result.Update != null)
-        {
-            result.Update.Lines = result.Lines;
-            result.Update.States = result.States;
-            result.Update.Deleted = result.Deleted;
-            result.Update.Updated += directUpdated;
-            result.Update.ResetLines.AddRange(directReset);
-        }
-        if (capture) { Capture(values, result); }
-        return result;
+            return output;
     }
 
     private static Rdv3Relation RelationOfTable(Rdv3ProcessInputDef input, Rdv3Table table)

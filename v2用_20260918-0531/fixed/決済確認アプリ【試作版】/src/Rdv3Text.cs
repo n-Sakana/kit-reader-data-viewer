@@ -483,6 +483,13 @@ public static class Rdv3Text
     public const string PickNoRead = "\u3053\u306E\u8981\u7D20\u304B\u3089\u306F\u5024\u3092\u8AAD\u3081\u307E\u305B\u3093";
 
     public const string ProcessMissingColumn = "表に列「{0}」がありません。設定の参照列と入力の見出しを確認してください。";
+    // ---- where the settings do not line up (which member, and what to align) ----
+    public const string SettingsStepPrefix = "data.jobs「{job}」の手順 {n}（{operation}: {target}）: ";
+    public const string SettingsStepColumnHint = " 列は「表ID.列名」で書きます。入力表の列は CSV の見出しどおり、作った列は calculate の column / aggregate の as / select の as と同じ名前です。この手順より前の手順で作られていない列は使えません。";
+    public const string SettingsIdentityNotSaved = "data.ledger.identity の「{name}」が data.ledger.columns.source にありません。台帳の行を識別する列は、保存する列（columns.source）にも並べてください。";
+    public const string SettingsSearchNotSaved = "data.ledger.search.columns の「{name}」が data.ledger.columns.source にありません。検索に使う列は、保存する列（columns.source）にも並べてください。";
+    public const string SettingsScreenNotSaved = "画面に出す列「{name}」が data.ledger.columns.source にありません。画面（screen.bindings / candidates / judgments）の field は、保存する列（columns.source）のどれかにしてください。";
+    public const string SettingsKeyNotInHead = "data.tables.{id}.key の「{name}」が {file} の見出しにありません。CSV の 1 行目の列名と同じ文字で書いてください（前後の空白・全角半角の違いは吸収します）。";
     public const string ProcessUnknownOperation = "未対応の操作「{0}」です。";
     public const string LedgerRowColumns = "台帳の {0} 行目の列数が違います。必要 {1} 列、実際 {2} 列。";
     public const string ProcessDuplicateColumn = "出力の列「{0}」が重複しています。設定の列名を区別してください。";
