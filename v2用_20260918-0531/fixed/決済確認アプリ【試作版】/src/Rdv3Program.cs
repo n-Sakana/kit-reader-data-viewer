@@ -109,8 +109,9 @@ public static class Rdv3Program
         }
         catch (Exception ex)
         {
-            Stop(logPath, "data", "not started: " + ex.Message,
-                Rdv3Text.FatalDataTitle, Rdv3Text.FatalData.Replace("{reason}", ex.Message));
+            string reason = Rdv3Business.Localize(ex.Message);
+            Stop(logPath, "data", "not started: " + reason,
+                Rdv3Text.FatalDataTitle, Rdv3Text.FatalData.Replace("{reason}", reason));
             return 3;
         }
 

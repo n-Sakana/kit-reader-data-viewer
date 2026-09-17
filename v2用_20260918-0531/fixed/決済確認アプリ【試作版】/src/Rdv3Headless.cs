@@ -66,7 +66,7 @@ public static class Rdv3Headless
             if (validation == null)
             {
                 feedback.AppendLine("FAIL 1 error");
-                feedback.AppendLine("  " + configPath + ": " + error.Message);
+                feedback.AppendLine("  " + configPath + ": " + Rdv3Business.Localize(error.Message));
                 feedback.AppendLine("STOP " + stage + "; subsequent checks were not performed.");
             }
             else

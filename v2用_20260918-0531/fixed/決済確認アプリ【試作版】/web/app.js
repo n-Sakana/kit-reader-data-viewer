@@ -172,7 +172,23 @@
         if (headers[index]) { th.textContent = headers[index]; }
       });
     }
+    // frames the definition leaves unused stay out of sight
+    (definition.hidden || []).forEach(function (id) {
+      Array.prototype.forEach.call(stage.querySelectorAll('[data-bind="' + cssEscape(id) + '"]'), function (node) {
+        var row = node.closest('.row') || node.closest('fieldset');
+        if (row) { row.hidden = true; }
+      });
+    });
+    var boxNames = definition.boxNames || {};
+    [['user', '.fixed-user legend'], ['application', '.fixed-application legend']].forEach(function (entry) {
+      var legend = stage.querySelector(entry[1]);
+      if (legend && boxNames[entry[0]]) { legend.textContent = boxNames[entry[0]]; }
+    });
+    var searchLabel = stage.querySelector('label[for=input]');
+    if (searchLabel && definition.searchLabel) { searchLabel.textContent = definition.searchLabel; }
+    candidateHidden = (definition.candidateHidden || []).map(Number);
   }
+  var candidateHidden = [];
 
   function renderScreen(definition) {
     if (!definition || definition.fixed !== true) { throw new Error('The fixed HTML screen requires compact settings.'); }
@@ -471,6 +487,11 @@
     content.rowHeight = presentation.rowHeight;
     content.headerHeight = presentation.headerHeight;
     content.columns = presentation.columns;
+    if (candidateHidden.length) {
+      var keep = function (cell, index) { return candidateHidden.indexOf(index) < 0; };
+      content.columns = content.columns.filter(keep);
+      content.rows = (content.rows || []).map(function (row) { return row.filter(keep); });
+    }
     var shell = modalShell(shared ? 'v-shared' : 'v-cand', content.title);
     shell.dialog.style.width = px(content.width || 744);
     var hint = content.hint || '';

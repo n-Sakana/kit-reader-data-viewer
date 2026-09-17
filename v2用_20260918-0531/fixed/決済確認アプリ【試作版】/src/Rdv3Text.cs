@@ -445,7 +445,7 @@ public static class Rdv3Text
 
     // ---- the settings modal -----------------------------------------------------
     public const string SettingsTitle = "\u8A2D\u5B9A";
-    public const string SettingsHint = "\u66F8\u304D\u623B\u3059\u306E\u306F paths / search / watch \u3068\u3001\u5165\u529B\u30D5\u30A1\u30A4\u30EB\u540D\uFF08data.tables \u306E file / fileMatch\uFF09\u3060\u3051\u3067\u3059\u3002";
+    public const string SettingsHint = "\u66F8\u304D\u623B\u3059\u306E\u306F \u5834\u6240\u30FB\u691C\u7D22\u30FB\u76E3\u8996\u5BFE\u8C61 \u3068 \u5165\u529B\u30D5\u30A1\u30A4\u30EB\u540D\uFF08\u4E00\u81F4\u65B9\u6CD5\uFF09\u3060\u3051\u3067\u3059\u3002\u307B\u304B\u306E\u9805\u76EE\u306F settings.json \u3092\u76F4\u63A5\u76F4\u3057\u307E\u3059\u3002";
     public const string SecFiles = "\u5165\u529B\u30D5\u30A1\u30A4\u30EB";
     public const string ErrFileBlank = "\u5165\u529B\u30D5\u30A1\u30A4\u30EB\u540D\u306F\u7A7A\u306B\u3067\u304D\u307E\u305B\u3093: ";
     public const string NoteSettingsFilesApplied = "\u8A2D\u5B9A\u3092\u4FDD\u5B58\u3057\u307E\u3057\u305F\u3002\u5165\u529B\u30D5\u30A1\u30A4\u30EB\u306E\u5909\u66F4\u3092\u78BA\u8A8D\u3057\u307E\u3059";

@@ -468,6 +468,10 @@ public static class Rdv3Business
         bool comma = false;
         foreach (KeyValuePair<string, string> date in m.DateFormats)
         {
+            // a cut-out column has no file to check; its notation is only a display format
+            bool derived = false;
+            foreach (Extract e in m.Extracts) { if (e.Name == date.Key) { derived = true; break; } }
+            if (derived) { continue; }
             if (comma) { sb.Append(','); }
             comma = true;
             sb.Append(Q(date.Key)).Append(":{\"type\":\"date\",\"format\":").Append(Q(date.Value)).Append('}');
@@ -483,14 +487,13 @@ public static class Rdv3Business
             comma = true;
             sb.Append(Q(reference)).Append(':').Append(Q(LabelOf(reference)));
         }
+        List<string> made = new List<string>();
+        string deleteJob = DeleteJob(m, made);
+        string updateJob = UpdateJob(m, made);
         string[][] fixedLabels =
         {
             new string[] { m.JudgeRef, LabelOf(m.JudgeRef) },
-            new string[] { Rdv3Text.BizJoined, Rdv3Text.BizJoined },
-            new string[] { Rdv3Text.BizPaidRows, Rdv3Text.BizPaidRows },
             new string[] { "ledger", Rdv3Text.BizLedgerLabel },
-            new string[] { Rdv3Text.BizProcessedRows, Rdv3Text.BizProcessedRows },
-            new string[] { Rdv3Text.BizTargetRows, Rdv3Text.BizTargetRows },
             new string[] { "$work", Rdv3Text.BizWorkLabel }
         };
         foreach (string[] pair in fixedLabels)
@@ -499,20 +502,13 @@ public static class Rdv3Business
             labelled.Add(pair[0]);
             sb.Append(',').Append(Q(pair[0])).Append(':').Append(Q(pair[1]));
         }
-        for (int i = 0; i < m.Conditions.Count; i++)
+        foreach (string name in made)
         {
-            string name = Rdv3Text.BizCondPrefix + (i + 1).ToString(CultureInfo.InvariantCulture);
+            if (labelled.Contains(name)) { continue; }
+            labelled.Add(name);
             sb.Append(',').Append(Q(name)).Append(':').Append(Q(name));
         }
-        int combos = 1;
-        foreach (List<Ref> alternatives in m.DeleteLedgerSides) { combos *= alternatives.Count; }
-        for (int i = 0; i < combos; i++)
-        {
-            string name = Rdv3Text.BizMatchedPrefix + (i + 1).ToString(CultureInfo.InvariantCulture);
-            sb.Append(',').Append(Q(name)).Append(':').Append(Q(name));
-        }
-        if (combos > 1) { sb.Append(',').Append(Q(Rdv3Text.BizMatchedPrefix)).Append(':').Append(Q(Rdv3Text.BizMatchedPrefix)); }
-        sb.Append("},\"jobs\":[").Append(DeleteJob(m, combos)).Append(',').Append(UpdateJob(m)).Append(']');
+        sb.Append("},\"jobs\":[").Append(deleteJob).Append(',').Append(updateJob).Append(']');
         sb.Append(",\"ledger\":{\"identity\":").Append(Arr(RefTexts(m.Identity)));
         sb.Append(",\"search\":{\"columns\":").Append(Arr(RefTexts(m.Search))).Append(",\"match\":\"exact\"}");
         sb.Append(",\"columns\":{\"source\":").Append(Arr(SavedColumns(m)));
@@ -533,8 +529,9 @@ public static class Rdv3Business
             + ",\"expression\":" + Q(e.Expression) + ",\"output\":" + Q(table) + "}";
     }
 
-    private static string UpdateJob(Model m)
+    private static string UpdateJob(Model m, List<string> made)
     {
+        made.Add(Rdv3Text.BizJoined);
         StringBuilder sb = new StringBuilder(4096);
         sb.Append("{\"id\":").Append(Q(Rdv3Text.BizUpdateJob)).Append(",\"name\":").Append(Q(Rdv3Text.BizUpdateJobName)).Append(",\"kind\":\"update\",\"inputs\":[");
         for (int i = 0; i < m.JoinedTables.Count; i++) { if (i > 0) { sb.Append(','); } sb.Append("{\"table\":").Append(Q(m.JoinedTables[i])).Append('}'); }
@@ -555,15 +552,18 @@ public static class Rdv3Business
         for (int i = 0; i < m.Conditions.Count; i++)
         {
             string name = Rdv3Text.BizCondPrefix + (i + 1).ToString(CultureInfo.InvariantCulture);
+            made.Add(name);
             steps.Add("{\"operation\":\"extract\",\"target1\":" + Q(joined) + ",\"where\":{\"column\":" + Q(m.Conditions[i][0].Text)
                 + ",\"operator\":\"equals\",\"value\":" + Q(m.ConditionValues[i]) + "},\"output\":" + Q(name) + "}");
             if (i == 0) { rows = name; continue; }
-            string both = (i == m.Conditions.Count - 1) ? Rdv3Text.BizPaidRows : name + "&";
+            string both = (i == m.Conditions.Count - 1) ? Rdv3Text.BizPaidRows : Rdv3Text.BizCondPrefix + "1-" + (i + 1).ToString(CultureInfo.InvariantCulture);
+            made.Add(both);
             steps.Add("{\"operation\":\"extract\",\"target1\":" + Q(rows) + ",\"target2\":" + Q(name) + ",\"condition\":\"both\",\"output\":" + Q(both) + "}");
             rows = both;
         }
         if (m.Conditions.Count == 1)
         {
+            made.Add(Rdv3Text.BizPaidRows);
             steps.Add("{\"operation\":\"extract\",\"target1\":" + Q(rows) + ",\"target2\":" + Q(rows) + ",\"condition\":\"both\",\"output\":" + Q(Rdv3Text.BizPaidRows) + "}");
         }
         steps.Add("{\"operation\":\"update\",\"target1\":" + Q(joined) + ",\"target2\":" + Q(Rdv3Text.BizPaidRows)
@@ -575,8 +575,12 @@ public static class Rdv3Business
         return sb.ToString();
     }
 
-    private static string DeleteJob(Model m, int combos)
+    private static string DeleteJob(Model m, List<string> made)
     {
+        int combos = 1;
+        foreach (List<Ref> alternatives in m.DeleteLedgerSides) { combos *= alternatives.Count; }
+        made.Add(Rdv3Text.BizProcessedRows);
+        made.Add(Rdv3Text.BizTargetRows);
         StringBuilder sb = new StringBuilder(4096);
         sb.Append("{\"id\":").Append(Q(Rdv3Text.BizDeleteJob)).Append(",\"name\":").Append(Q(Rdv3Text.BizDeleteJobName));
         sb.Append(",\"kind\":\"delete\",\"inputs\":[{\"table\":").Append(Q(m.DeleteTable)).Append("}],\"steps\":[");
@@ -592,6 +596,7 @@ public static class Rdv3Business
             List<string> deleteSide = new List<string>();
             for (int g = 0; g < m.DeleteLedgerSides.Count; g++) { ledgerSide.Add(m.DeleteLedgerSides[g][choice[g]].Text); deleteSide.Add(m.DeleteSides[g].Text); }
             string name = Rdv3Text.BizMatchedPrefix + (c + 1).ToString(CultureInfo.InvariantCulture);
+            made.Add(name);
             steps.Add("{\"operation\":\"extract\",\"target1\":\"ledger\",\"target2\":" + Q(m.DeleteTable) + ",\"keys\":[" + Arr(ledgerSide) + "," + Arr(deleteSide)
                 + "],\"condition\":\"match\",\"output\":" + Q(name) + "}");
             matched.Add(name);
@@ -605,7 +610,8 @@ public static class Rdv3Business
         string all = matched[0];
         for (int i = 1; i < matched.Count; i++)
         {
-            string name = (i == matched.Count - 1) ? Rdv3Text.BizMatchedPrefix : matched[i] + "|";
+            string name = (i == matched.Count - 1) ? Rdv3Text.BizMatchedPrefix : Rdv3Text.BizMatchedPrefix + "1-" + (i + 1).ToString(CultureInfo.InvariantCulture);
+            made.Add(name);
             steps.Add("{\"operation\":\"extract\",\"target1\":" + Q(all) + ",\"target2\":" + Q(matched[i]) + ",\"condition\":\"either\",\"output\":" + Q(name) + "}");
             all = name;
         }

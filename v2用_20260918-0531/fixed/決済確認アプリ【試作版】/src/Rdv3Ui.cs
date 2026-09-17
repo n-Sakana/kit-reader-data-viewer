@@ -807,12 +807,22 @@ public sealed class Rdv3Form
         }
         sb.Append("},\"candidateHeaders\":[");
         List<Rdv3ColumnDef> columns = (Screen.Candidates == null) ? new List<Rdv3ColumnDef>() : Screen.Candidates.Columns;
+        List<string> hiddenColumns = new List<string>();
         for (int i = 0; i < columns.Count; i++)
         {
             if (i > 0) { sb.Append(','); }
             sb.Append(Rdv3WebJson.Q(columns[i].Header ?? ""));
+            if (columns[i].Value != null && columns[i].Value.Hidden) { hiddenColumns.Add(i.ToString(CultureInfo.InvariantCulture)); }
         }
-        sb.Append("]},\"state\":").Append(BuildStateBody()).Append('}');
+        sb.Append("],\"candidateHidden\":[").Append(string.Join(",", hiddenColumns.ToArray())).Append(']');
+        // frames the definition does not use, and captions that are not a binding's
+        List<string> hidden = new List<string>();
+        foreach (KeyValuePair<string, Rdv3Bind> binding in Screen.Bindings) { if (binding.Value.Hidden) { hidden.Add(binding.Key); } }
+        sb.Append(",\"hidden\":").Append(Rdv3WebJson.S(hidden.ToArray()));
+        sb.Append(",\"searchLabel\":").Append(Rdv3WebJson.Q(Rdv3Business.SearchLabel));
+        sb.Append(",\"boxNames\":{\"user\":").Append(Rdv3WebJson.Q(Rdv3Business.UserBoxName));
+        sb.Append(",\"application\":").Append(Rdv3WebJson.Q(Rdv3Business.AppBoxName)).Append('}');
+        sb.Append("},\"state\":").Append(BuildStateBody()).Append('}');
         return sb.ToString();
     }
 

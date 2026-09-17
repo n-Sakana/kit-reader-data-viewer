@@ -1891,13 +1891,13 @@ public sealed class Rdv3App
             form.PostOnUi(delegate
             {
                 if (writes.Pending) { EndWriteGuard(job.RunId, false); }
-                form.Fatal(Rdv3Text.FatalDataTitle, Rdv3Text.FatalData.Replace("{reason}", ex.Message));
+                form.Fatal(Rdv3Text.FatalDataTitle, Rdv3Text.FatalData.Replace("{reason}", Rdv3Business.Localize(ex.Message)));
             });
             return;
         }
         form.RunOnUi(delegate
         {
-            form.Error(Rdv3Text.ErrCheckFailed + ex.Message);
+            form.Error(Rdv3Text.ErrCheckFailed + Rdv3Business.Localize(ex.Message));
             // a state job that threw anywhere is still a decided save (failed):
             // the guard must never outlive the job that armed it
             if (job.Kind == "state" || job.Kind == "apply" || job.Kind == "delete" || job.Kind == "restore" || job.Kind == "send" || job.Kind == "export")
