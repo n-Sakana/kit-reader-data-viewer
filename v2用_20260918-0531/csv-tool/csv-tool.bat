@@ -62,8 +62,9 @@ public static class CsvTool
             string outputPath = ResolveOutputPath(inputs, outputBaseName, date);
             if (outputPath == null) return Cancel();
 
-            long rowCount = MergeAndWrite(inputs, outputPath);
-            ShowCompleted(inputs.Count, rowCount, outputPath);
+            long duplicateCount;
+            long rowCount = MergeAndWrite(inputs, outputPath, out duplicateCount);
+            ShowCompleted(inputs.Count, rowCount, duplicateCount, outputPath);
             Pause();
             return 0;
         }
@@ -216,11 +217,15 @@ public static class CsvTool
         return value.Normalize(NormalizationForm.FormKC).Trim();
     }
 
-    private static long MergeAndWrite(List<InputInfo> inputs, string outputPath)
+    private static long MergeAndWrite(
+        List<InputInfo> inputs, string outputPath, out long duplicateCount)
     {
         // \u30A8\u30E9\u30FC\u6642\u306B\u65E2\u5B58\u51FA\u529B\u3092\u58CA\u3055\u306A\u3044\u3088\u3046\u3001\u4E00\u6642\u30D5\u30A1\u30A4\u30EB\u30781\u30D1\u30B9\u3067\u66F8\u3044\u3066\u304B\u3089\u7F6E\u63DB\u3059\u308B\u3002
         string temporaryPath = outputPath + ".tmp";
         long totalRows = 0;
+        duplicateCount = 0;
+        // \u5168\u5217\u304C\u5B8C\u5168\u306B\u540C\u3058\u884C\u306F\u3001\u30D5\u30A1\u30A4\u30EB\u3092\u307E\u305F\u3044\u3067\u3082\u6700\u521D\u306E1\u884C\u3060\u3051\u6B8B\u3059\u3002
+        var seenRows = new HashSet<string>(StringComparer.Ordinal);
 
         try
         {
@@ -230,7 +235,7 @@ public static class CsvTool
                 WriteCsvRow(writer, inputs[0].Header);
 
                 foreach (InputInfo input in inputs)
-                    totalRows += AppendDataRows(input, writer);
+                    totalRows += AppendDataRows(input, writer, seenRows, ref duplicateCount);
             }
 
             if (File.Exists(outputPath)) File.Delete(outputPath);
@@ -244,7 +249,9 @@ public static class CsvTool
         }
     }
 
-    private static long AppendDataRows(InputInfo input, TextWriter writer)
+    private static long AppendDataRows(
+        InputInfo input, TextWriter writer,
+        HashSet<string> seenRows, ref long duplicateCount)
     {
         long rowNumber = 0;
         using (var reader = new CsvReader(
@@ -261,8 +268,14 @@ public static class CsvTool
                 lineNumber++;
                 if (IsBlankRow(row)) continue; // \u672B\u5C3E\u3084\u9014\u4E2D\u306E\u7A7A\u884C\u306F\u30C7\u30FC\u30BF\u3067\u306F\u306A\u3044\u3002
 
-                rowNumber++;
                 ValidateColumnCount(input, row, lineNumber);
+                if (!seenRows.Add(string.Join("\u001F", row)))
+                {
+                    duplicateCount++;
+                    continue;
+                }
+
+                rowNumber++;
                 WriteCsvRow(writer, row);
             }
         }
@@ -392,13 +405,15 @@ public static class CsvTool
     }
 
     private static void ShowCompleted(
-        int fileCount, long rowCount, string outputPath)
+        int fileCount, long rowCount, long duplicateCount, string outputPath)
     {
         Console.WriteLine();
         Console.ForegroundColor = ConsoleColor.Green;
         Console.WriteLine("OK: " + outputPath);
         Console.WriteLine(fileCount + "\u30D5\u30A1\u30A4\u30EB / \u30C7\u30FC\u30BF" + rowCount +
             "\u884C / UTF-8 BOM\u4ED8\u304DCSV");
+        if (duplicateCount > 0)
+            Console.WriteLine("\u5B8C\u5168\u306B\u540C\u3058\u884C\u3092 " + duplicateCount + "\u884C \u9664\u304D\u307E\u3057\u305F\u3002");
         Console.ResetColor();
     }
 
