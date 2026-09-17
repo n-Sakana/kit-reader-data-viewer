@@ -667,6 +667,22 @@
       var edit = editable(content[entry[0]], entry[0]);
       row.appendChild(edit); row.appendChild(browseButton(entry[0], entry[1], edit));
     });
+    // One row per input table: the file name in the data folder and how it
+    // is matched (the whole name, or the newest file starting with it).
+    var tablesSlot = shell.body.querySelector('[data-slot=tables]');
+    (content.tables || []).forEach(function (table) {
+      var row = element('div', 'kv');
+      row.appendChild(element('label', '', table.label || table.id));
+      row.appendChild(editable(table.file, 'table:' + table.id));
+      var select = selectNode([{ value: 'exact', text: '全部一致' }, { value: 'prefix', text: '前方一致' }]);
+      select.value = table.match === 'prefix' ? 'prefix' : 'exact';
+      select.style.width = '104px';
+      select.style.flex = 'none';
+      select.setAttribute('data-match', table.id);
+      select.setAttribute('aria-label', (table.label || table.id) + ' のファイル名の一致方法');
+      row.appendChild(select);
+      tablesSlot.appendChild(row);
+    });
     shell.body.querySelector('[data-row=pattern]').appendChild(editable(content.pattern, 'pattern'));
     var candidateEditor = numberEditor(content.candidateRows, 'candidateRows', 1, 1000);
     shell.body.querySelector('[data-row=candidateRows]').appendChild(candidateEditor);
@@ -688,12 +704,16 @@
     var ledger = value('ledger');
     var log = value('log');
     var pattern = value('pattern');
+    var tables = ((settingsContent && settingsContent.tables) || []).map(function (table) {
+      var select = body.querySelector('select[data-match="' + cssEscape(table.id) + '"]');
+      return { id: table.id, file: value('table:' + table.id), match: select ? select.value : 'exact' };
+    });
     pendingSettings = { ok: true, dataDir: dataDir, ledger: ledger, log: log,
-      pattern: pattern, candidateRows: Number(value('candidateRows')) };
+      pattern: pattern, candidateRows: Number(value('candidateRows')), tables: tables };
     error.hidden = true;
     post({ type: 'settingsSubmit', token: currentToken, dataDir: dataDir,
       ledger: ledger, log: log, pattern: pattern,
-      candidateRows: pendingSettings.candidateRows });
+      candidateRows: pendingSettings.candidateRows, tables: tables });
   }
 
   function settingsValidation(message) {

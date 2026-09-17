@@ -173,7 +173,7 @@ main,.page{max-width:none;padding:0;background:#d4d0c8}
       <div class="btn" id="b-set" role="button" data-action="settings" aria-disabled="true" tabindex="0">設定</div>
     </div><div class="sep"></div>
     <div class="sendbar"><div class="sendn" id="sn" data-bind="pendingCount"></div>
-      <div class="btn def" id="b-send" role="button" data-action="sendChanges" title="この端末に蓄積した未送信の確認状態を共有台帳へ送信します" aria-disabled="true" tabindex="0">確認状態を一括送信</div>
+      <div class="btn def" id="b-send" role="button" data-action="sendChanges" title="この端末に蓄積した未送信の確認状態を共有台帳へ送信します" aria-disabled="true" tabindex="0">確認状態を台帳に送信</div>
     </div>
   </div></div>
   <div class="sb" role="status" aria-live="polite"><div class="sp" data-bind="appState"></div><div class="sp" data-bind="ledgerRows" data-prefix="台帳件数 "></div><div class="sp" data-bind="clock" data-clock="true"></div><div class="grip"></div></div>
@@ -217,6 +217,8 @@ main,.page{max-width:none;padding:0;background:#d4d0c8}
     <div class="kv" data-row="ledger"><label>統合台帳</label></div>
     <div class="kv" data-row="log"><label>ログ</label></div>
   </fieldset>
+  <div class="process-gap"></div>
+  <fieldset class="gb"><legend>入力ファイル（データ フォルダー内のファイル名と一致方法）</legend><div data-slot="tables"></div></fieldset>
   <div class="process-gap"></div>
   <fieldset class="gb"><legend>検索</legend>
     <div class="kv" data-row="pattern"><label>番号の形式</label></div>

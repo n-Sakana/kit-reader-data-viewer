@@ -580,6 +580,21 @@ public sealed class Rdv3Form
             error = Rdv3Text.LblCandidateRows;
             field = "candidateRows";
         }
+        else
+        {
+            Rdv3Json tables = root.Member("tables");
+            for (int i = 0; tables != null && tables.Kind == Rdv3Json.TArray && i < tables.Count; i++)
+            {
+                Rdv3Json item = tables.At(i);
+                string id = Text(item, "id");
+                if (Text(item, "file").Trim().Length == 0)
+                {
+                    error = Rdv3Text.ErrFileBlank + id;
+                    field = "table:" + id;
+                    break;
+                }
+            }
+        }
         host.PostSurfaceJson("{\"type\":\"settingsValidation\",\"token\":" +
             token.ToString(CultureInfo.InvariantCulture) +
             ",\"ok\":" + Rdv3WebJson.B(error.Length == 0) +
