@@ -1,0 +1,36 @@
+## join-right-typo
+   FAIL 1 error
+   C:\Users\ynisi\AppData\Local\Temp\claude\C--repos\06669e18-efe0-4909-aeb5-daf89690e383\scratchpad\variants\F_diag\join-right-typo.json: 処理「台帳の更新」の手順 12（結合: 照合結果）: 表に列「受付.識別番」がありません。設定の参照列と入力の見出しを確認してください。 列は「表ID.列名」で書きます。入力表の列は CSV の見出しどおり、作った列は calculate の column / aggregate の as / select の as と同じ名前です。この手順より前の手順で作られていない列は使えません。
+   STOP paths, input files and job preparation; subsequent checks were not performed.
+## screen-table-typo
+   FAIL 1 errors
+   C:\Users\ynisi\AppData\Local\Temp\claude\C--repos\06669e18-efe0-4909-aeb5-daf89690e383\scratchpad\variants\F_diag\screen-table-typo.json: 業務設定.画面.受付情報.行[0].列: 表「受付け」が 業務設定.入力ファイル にありません。入力ファイルに書いた名前（取引 / 決済 / 受付 / 削除用）のどれかにしてください。 (line 55)
+   STOP settings
+## keep-word-typo
+   FAIL 1 errors
+   C:\Users\ynisi\AppData\Local\Temp\claude\C--repos\06669e18-efe0-4909-aeb5-daf89690e383\scratchpad\variants\F_diag\keep-word-typo.json: 業務設定.つなぎ方[1]: 残す行 は「両方にある行」「左は全部」「両方全部」のどれかです。実際: 「左を全部」 (line 26)
+   STOP settings
+## key-not-in-csv
+   FAIL 1 errors
+   C:\Users\ynisi\AppData\Local\Temp\claude\C--repos\06669e18-efe0-4909-aeb5-daf89690e383\scratchpad\variants\F_diag\key-not-in-csv.json: 02_決済データ.csv に列 オーダーIDX がありません 業務設定.入力ファイル.決済.識別する列 の「オーダーIDX」が 02_決済データ.csv の見出しにありません。CSV の 1 行目の列名と同じ文字で書いてください（前後の空白・全角半角の違いは吸収します）。
+   STOP input files
+## delete-file-joined
+   FAIL 1 errors
+   C:\Users\ynisi\AppData\Local\Temp\claude\C--repos\06669e18-efe0-4909-aeb5-daf89690e383\scratchpad\variants\F_diag\delete-file-joined.json: 業務設定.削除の条件.ファイル: 削除の条件.ファイル「受付」は つなぎ方 でつながれた表です。削除用の一覧は、つないでいない表にしてください。 (line 36)
+   STOP settings
+## extract-other-table
+   FAIL 1 errors
+   C:\Users\ynisi\AppData\Local\Temp\claude\C--repos\06669e18-efe0-4909-aeb5-daf89690e383\scratchpad\variants\F_diag\extract-other-table.json: 業務設定.切り出し.決済.利用者ID: 切り出し「決済.利用者ID」の式は表「決済」の列だけを使えます。式の中の「取引.氏名」は別の表です。 (line 14)
+   STOP settings
+## condition-typo
+   FAIL 1 error
+   C:\Users\ynisi\AppData\Local\Temp\claude\C--repos\06669e18-efe0-4909-aeb5-daf89690e383\scratchpad\variants\F_diag\condition-typo.json: 処理「台帳の更新」の手順 15（抽出: 照合結果）: 表に列「決済.決済ステイタス」がありません。設定の参照列と入力の見出しを確認してください。 列は「表ID.列名」で書きます。入力表の列は CSV の見出しどおり、作った列は calculate の column / aggregate の as / select の as と同じ名前です。この手順より前の手順で作られていない列は使えません。
+   STOP paths, input files and job preparation; subsequent checks were not performed.
+## identity-not-joined
+   FAIL 1 errors
+   C:\Users\ynisi\AppData\Local\Temp\claude\C--repos\06669e18-efe0-4909-aeb5-daf89690e383\scratchpad\variants\F_diag\identity-not-joined.json: 業務設定.台帳の1件を決める列[0]: 台帳の1件を決める列 の「削除用.識別番号」の表「削除用」は つなぎ方 でつながれていません。台帳に入るのは、つなぎ方でつないだ表の列だけです。 (line 32)
+   STOP settings
+## unknown-member
+   FAIL 1 errors
+   C:\Users\ynisi\AppData\Local\Temp\claude\C--repos\06669e18-efe0-4909-aeb5-daf89690e383\scratchpad\variants\F_diag\unknown-member.json: 業務設定.画面.検索欄ラベル: はこの場所に書ける項目ではありません。書けるのは: 検索欄のラベル, 利用者情報, 受付情報, 意見欄, 変更後の計画, 決済状況, 候補一覧, 帳票出力の初期項目。綴りを確かめてください。 (line 43)
+   STOP settings
