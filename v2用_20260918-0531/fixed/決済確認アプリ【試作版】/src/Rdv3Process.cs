@@ -28,6 +28,7 @@ public sealed class Rdv3ProcessResult
 {
     public readonly List<Rdv3JoinResult> Joins = new List<Rdv3JoinResult>();
     public readonly List<string> Warnings = new List<string>();
+    public readonly List<string> Notes = new List<string>();
     public string Kind = "";
     public string[] Columns = new string[0];
     public string[] Lines = new string[0];
@@ -118,6 +119,7 @@ internal sealed class Rdv3PreparedProcess
 {
     public readonly List<Rdv3InputResult> InputResults = new List<Rdv3InputResult>();
     public readonly List<string> Warnings = new List<string>();
+    public readonly List<string> Notes = new List<string>();
     public Rdv3Data Data;
     public Rdv3ProcessJobDef Job;
     public Dictionary<string, object> Inputs = new Dictionary<string, object>(StringComparer.Ordinal);
@@ -152,11 +154,15 @@ public static class Rdv3Process
             Rdv3Table table = (input.IsTable && tables != null) ? tables[input.TableOrd] : null;
             if (table == null)
             {
-                string path = Path.IsPathRooted(input.File) ? input.File : Path.Combine(dataDir, input.File);
+                string note;
+                string path = Rdv3Files.ResolveInput(input.File, input.FileMatch, dataDir, out note);
+                if (note != null) { prepared.Notes.Add(note); }
+                if (!Rdv3Files.Exists(path)) { throw new Rdv3DataError(Rdv3Files.MissingInputMessage(input.File, input.FileMatch, dataDir)); }
                 table = Rdv3Table.Read(path, input.Id, input.Enc, input.Columns ?? new string[] { input.Column }, input.KeyValidation, input.EncodingSetting, data.SourceReferences(input), input.HeaderRow, input.Delimiter, input.Sheet);
                 if (input.IsTable) { data.ValidateInput(table, input.TableOrd); }
                 new Rdv3Index(table);                    // enforce the configured duplicate rule
                 table.AddWarnings(prepared.Warnings);
+                table.AddNotes(prepared.Notes);
             }
             prepared.InputResults.Add(new Rdv3InputResult(input.Id, table));
             if (input.IsTable) { data.Tables[input.TableOrd].Head = table.Head; }
@@ -246,6 +252,7 @@ public static class Rdv3Process
         object last = null;
         Rdv3ProcessResult result = new Rdv3ProcessResult();
         result.Warnings.AddRange(prepared.Warnings);
+        result.Notes.AddRange(prepared.Notes);
         int directUpdated = 0;
         List<string> directReset = new List<string>();
         for (int i = 0; i < job.Steps.Count; i++)
@@ -578,11 +585,16 @@ public static class Rdv3Process
 
     private static bool Matches(string value, Rdv3ProcessWhereDef where)
     {
-        if (where.Operator == "equals") { return value == where.Value; }
-        if (where.Operator == "notEquals") { return value != where.Value; }
-        if (where.Operator == "contains") { return value.IndexOf(where.Value, StringComparison.Ordinal) >= 0; }
-        if (where.Operator == "startsWith") { return value.StartsWith(where.Value, StringComparison.Ordinal); }
-        if (where.Operator == "endsWith") { return value.EndsWith(where.Value, StringComparison.Ordinal); }
+        // A text predicate compares the folded forms (width, hyphen, ASCII
+        // case, padding): "success" in the definition meets "SUCCESS " in the
+        // file. The characters themselves still have to be the same.
+        string actual = Rdv3Input.Fold(value);
+        string wanted = Rdv3Input.Fold(where.Value);
+        if (where.Operator == "equals") { return string.Equals(actual, wanted, StringComparison.OrdinalIgnoreCase); }
+        if (where.Operator == "notEquals") { return !string.Equals(actual, wanted, StringComparison.OrdinalIgnoreCase); }
+        if (where.Operator == "contains") { return actual.IndexOf(wanted, StringComparison.OrdinalIgnoreCase) >= 0; }
+        if (where.Operator == "startsWith") { return actual.StartsWith(wanted, StringComparison.OrdinalIgnoreCase); }
+        if (where.Operator == "endsWith") { return actual.EndsWith(wanted, StringComparison.OrdinalIgnoreCase); }
         if (where.Operator == "empty") { return value.Length == 0; }
         if (where.Operator == "notEmpty") { return value.Length > 0; }
         if (value.Length == 0) { return false; }

@@ -46,6 +46,11 @@ public static class Rdv3Headless
                     + " unmatchedRight=" + join.Member("unmatchedRight").Num.ToString(CultureInfo.InvariantCulture));
             }
             Rdv3Log configuredLog = new Rdv3Log(Rdv3Files.Full(cfg.Log, appDir));
+            foreach (Rdv3Json note in parsed.Member("notes").Items)
+            {
+                configuredLog.Write(execute ? "RunUpdate" : "ValidateOnly", "input", note.Str);
+                Console.WriteLine("NOTE " + note.Str);
+            }
             foreach (Rdv3Json warning in parsed.Member("warnings").Items)
             {
                 configuredLog.Write(execute ? "RunUpdate" : "ValidateOnly", "warning", warning.Str);
@@ -87,13 +92,18 @@ public static class Rdv3Headless
         Rdv3Table[] tables = new Rdv3Table[data.Tables.Count];
         string[][] heads = new string[tables.Length][];
         List<string> warnings = new List<string>();
+        List<string> notes = new List<string>();
         Rdv3Validation validation = execute ? null : new Rdv3Validation();
         for (int i = 0; i < tables.Length; i++)
         {
             Rdv3TableDef def = data.Tables[i];
             Action read = delegate {
-            Rdv3Log.Phase("reading input " + def.Id + " " + Rdv3Files.Full(def.File, dataDir));
-            tables[i] = Rdv3Table.Read(Rdv3Files.Full(def.File, dataDir), def.Id, def.Enc,
+            string note;
+            string path = Rdv3Files.ResolveInput(def.File, def.FileMatch, dataDir, out note);
+            if (note != null) { notes.Add(note); }
+            Rdv3Log.Phase("reading input " + def.Id + " " + path);
+            if (!Rdv3Files.Exists(path)) { throw new Rdv3DataError(Rdv3Files.MissingInputMessage(def.File, def.FileMatch, dataDir)); }
+            tables[i] = Rdv3Table.Read(path, def.Id, def.Enc,
                 def.KeyColumns, def.KeyValidation, def.EncodingSetting, data.SourceReferences(def.Id), def.HeaderRow, def.Delimiter, def.Sheet);
             heads[i] = tables[i].Head;
             };
@@ -105,7 +115,7 @@ public static class Rdv3Headless
         data.Bind(heads, validation);
         data.ConvertWorkbookDates(tables);
         data.ValidateTypes(tables, validation);
-        foreach (Rdv3Table table in tables) { new Rdv3Index(table); table.AddWarnings(warnings); }
+        foreach (Rdv3Table table in tables) { new Rdv3Index(table); table.AddWarnings(warnings); table.AddNotes(notes); }
         if (validation != null) { validation.Finish("input types", "job preparation"); }
         Rdv3PreparedProcess update = null;
         List<Rdv3InputResult> inputs = new List<Rdv3InputResult>();
@@ -115,6 +125,7 @@ public static class Rdv3Headless
             Rdv3Log.Phase("preparing job " + data.Jobs[j].Id);
             Rdv3PreparedProcess prepared = Rdv3Process.Prepare(data, data.Jobs[j], dataDir, tables);
             warnings.AddRange(prepared.Warnings);
+            foreach (string note in prepared.Notes) { if (!notes.Contains(note)) { notes.Add(note); } }
             if (data.Jobs[j] == data.UpdateJob) { update = prepared; inputs.AddRange(prepared.InputResults); }
             };
             if (validation == null) { prepare(); }
@@ -172,6 +183,7 @@ public static class Rdv3Headless
             sb.Append(",\"skippedInvalid\":").Append(N(input.SkippedInvalid)).Append('}');
         }
         sb.Append("],\"warnings\":").Append(Rdv3WebJson.S(new List<string>(new HashSet<string>(warnings)).ToArray()));
+        sb.Append(",\"notes\":").Append(Rdv3WebJson.S(notes.ToArray()));
         sb.Append(",\"joins\":[");
         if (result != null)
         {

@@ -174,16 +174,17 @@ public static class Rdv3ProcessForm
         {
             if (i > 0) { sb.Append(','); }
             Rdv3ProcessInputDef input = job.Inputs[i];
-            string path = Path.IsPathRooted(input.File)
-                ? input.File : Path.Combine(dataDir, input.File);
+            string resolvedNote;
+            string path = Rdv3Files.ResolveInput(input.File, input.FileMatch, dataDir, out resolvedNote);
+            string shownFile = input.File;
             string rows = "";
             string validation;
             bool valid = true;
-            if (!File.Exists(path))
+            if (!Rdv3Files.Exists(path))
             {
                 valid = false;
                 inputsOk = false;
-                validation = Rdv3Text.ValidationMissing;
+                validation = Rdv3Text.ValidationMissing + " (" + Rdv3Files.MissingInputMessage(input.File, input.FileMatch, dataDir) + ")";
             }
             else
             {
