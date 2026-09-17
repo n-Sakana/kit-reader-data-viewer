@@ -33,8 +33,11 @@ public static class Rdv3BusinessDefinition
             {
                 bool input = path.StartsWith("data.tables.", StringComparison.Ordinal)
                     && path.Split('.').Length == 3 || path == "data.jobs[].inputs[]";
+                // Where an input file lives and how its name is matched is a
+                // location, like the file name itself: not part of the definition.
                 if ((path == "data" && key == "labels") || (path == "data.ledger" && key == "search")
                     || (path == "data.jobs[]" && key == "name") || (input && key == "label")
+                    || (input && key == "fileMatch")
                     || (!policy && path == "data.ledger" && key == "protectStates")) { continue; }
                 Rdv3Json value = node.Members[key];
                 string text;

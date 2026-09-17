@@ -20,6 +20,9 @@ public sealed class Rdv3TableDef
     public string Id = "";
     public string Label = "";
     public string File = "";
+    // exact: the file named (a same name in other width/spacing/case is also
+    // accepted); prefix: the newest file whose name starts with the stem
+    public string FileMatch = "exact";
     public int HeaderRow = 1;                 // the line/row that holds the header
     public string Sheet = "";                 // xlsx: which worksheet (empty = the first)
     public char Delimiter = ',';              // the CSV field separator
@@ -121,6 +124,7 @@ public sealed class Rdv3ProcessInputDef
     public string Label = "";
     public string Table = "";
     public string File = "";
+    public string FileMatch = "exact";
     public string Column = "";
     public string Key = "";
     public int HeaderRow = 1;
@@ -246,6 +250,23 @@ public sealed class Rdv3Data
         return null;
     }
 
+    // The settings dialog changed where a table's file is. Every job input
+    // that reads the table carries a copy of the name, so both are updated.
+    public void SetTableFile(string id, string file, string match)
+    {
+        Rdv3TableDef table = TableOf(id);
+        if (table == null) { return; }
+        table.File = file;
+        table.FileMatch = match;
+        foreach (Rdv3ProcessJobDef job in Jobs)
+        {
+            foreach (Rdv3ProcessInputDef input in job.Inputs)
+            {
+                if (input.IsTable && input.Table == id) { input.File = file; input.FileMatch = match; }
+            }
+        }
+    }
+
     public Rdv3ProcessJobDef JobOf(string id)
     {
         for (int i = 0; i < Jobs.Count; i++) { if (Jobs[i].Id == id) { return Jobs[i]; } }
@@ -329,12 +350,13 @@ public sealed class Rdv3Data
             }
             if (id == "ledger") { throw to.Fail("ledger is a reserved value name"); }
             if (to.Kind != Rdv3Json.TObject) { throw to.Fail("must be an object { label, file, key }"); }
-            to.Only("label", "file", "key", "keyValidation", "encoding", "headerRow", "delimiter", "sheet");
+            to.Only("label", "file", "fileMatch", "key", "keyValidation", "encoding", "headerRow", "delimiter", "sheet");
             Rdv3TableDef t = new Rdv3TableDef();
             t.Id = id;
             int before = to.ErrorCount;
             to.Check(delegate { t.Label = to.StrOr("label", id); });
-            to.Check(delegate { t.File = to.Need("file"); });
+            to.Check(delegate { t.File = to.Need("file").Trim(); });
+            to.Check(delegate { t.FileMatch = to.Word("fileMatch", "exact", "exact", "prefix"); });
             to.Check(delegate { t.HeaderRow = to.IntOr("headerRow", 1, 1, 1000000); });
             t.Sheet = to.StrOr("sheet", "");
             to.Check(delegate { t.Delimiter = ReadDelimiter(to); });
@@ -571,6 +593,7 @@ public sealed class Rdv3Data
                 input.Label = table.Label;
                 input.Table = table.Id;
                 input.File = table.File;
+                input.FileMatch = table.FileMatch;
                 input.HeaderRow = table.HeaderRow;
                 input.Sheet = table.Sheet;
                 input.Delimiter = table.Delimiter;
@@ -584,10 +607,11 @@ public sealed class Rdv3Data
             }
             else
             {
-                io.Only("id", "label", "file", "column", "key", "keyValidation", "encoding", "headerRow", "delimiter", "sheet");
+                io.Only("id", "label", "file", "fileMatch", "column", "key", "keyValidation", "encoding", "headerRow", "delimiter", "sheet");
                 input.Id = io.Need("id");
                 input.Label = io.StrOr("label", input.Id);
-                input.File = io.Need("file");
+                input.File = io.Need("file").Trim();
+                input.FileMatch = io.Word("fileMatch", "exact", "exact", "prefix");
                 input.HeaderRow = io.IntOr("headerRow", 1, 1, 1000000);
                 input.Sheet = io.StrOr("sheet", "");
                 input.Delimiter = ReadDelimiter(io);

@@ -73,6 +73,18 @@ public static class Rdv3Text
     public const string InputExpectHeader = "空でなく重複しない列名";
     public const string InputFixHeader = "Use non-empty source column names. Duplicate headers used by a key, type, job or ledger reference are ambiguous: rename them in the source and update the references in data.tables, data.jobs, data.types, data.ledger and screen. JSON labels or select cannot disambiguate repeated source headers. Unreferenced duplicate name groups are excluded automatically with a warning; empty cells do not make a referenced duplicate safe.";
     public const string InputShapeSkipped = "{file}: 見出しより列が少ない {short} 行と空行 {blank} 行を除外しました。不足セルの補完はしていません。";
+    // ---- what the reader absorbed on its own (logged, never an error) ------
+    public const string InputHeaderAlias = "列名「{actual}」を設定の列名「{name}」として読みました。";
+    public const string InputEncodingBom = "ファイル先頭の BOM により文字コード {encoding} で読みました（設定の文字コードとは異なります）。";
+    public const string InputEncodingFallback = "設定の文字コード {configured} では読めないため、{encoding} として読みました。";
+    public const string InputDelimiterDetected = "見出し行に区切り文字（{configured}）が無いため、{delimiter} 区切りとして読みました。";
+    public const string InputFileResolved = "ファイル名「{configured}」（{mode}）により「{actual}」を読みました。";
+    public const string InputFileNotFound = "ファイル「{configured}」（{mode}）に当たるファイルが {dir} にありません。";
+    public const string FileMatchExact = "全部一致";
+    public const string FileMatchPrefix = "前方一致";
+    public const string InputReadSummary = "CSVファイルを読み込みました: {files}";
+    public const string InputReadItemFmt = "{label} {n} 件";
+    public const string InputNoticeLog = "入力の読取結果は実行ログに記録しました。";
     public const string InputHeaderOffset = "{file}: headerRow の指定により、見出し行より前の {n} 行を読み飛ばしました。";
     public const string DataNoDerivedColumn = "更新ジョブの結果に列 {name} がありません ({where})。入力表の見出し、または calculate の column / aggregate の as / select の as で作った参照を指定してください。";
     public const string LedgerColumnNotProduced = "台帳の保存列 {name} は、更新ジョブの最後の書込み段 ({step}) の入力にありません。その列を持つ表を結合していないか、select で外したか、綴りが違います。";
@@ -129,7 +141,7 @@ public static class Rdv3Text
     public const string MsUnit = " ms";
 
     // ---- notices (shown in the status bar) ----------------------------------
-    public const string NoteNoDiff = "\u66F4\u65B0\u306F\u3042\u308A\u307E\u305B\u3093 (\u53F0\u5E33\u306F\u6700\u65B0\u3067\u3059)";
+    public const string NoteNoDiff = "CSV\u30D5\u30A1\u30A4\u30EB\u3092\u8AAD\u307F\u8FBC\u307F\u307E\u3057\u305F\u3002\u53F0\u5E33\u306E\u66F4\u65B0\u306F\u3042\u308A\u307E\u305B\u3093";
     public const string NoteUpdated = "\u53F0\u5E33\u3092\u66F4\u65B0\u3057\u307E\u3057\u305F";
     public const string NoteRejected = "\u66F4\u65B0\u3092\u898B\u9001\u308A\u307E\u3057\u305F (\u4FDD\u5B58\u6E08\u307F\u53F0\u5E33\u306E\u307E\u307E)";
     public const string NoteSettingsApplied = "\u8A2D\u5B9A\u3092\u4FDD\u5B58\u3057\u307E\u3057\u305F";
@@ -202,7 +214,7 @@ public static class Rdv3Text
     public const string FatalTitle = "\u8D77\u52D5\u3067\u304D\u307E\u305B\u3093";
     public const string FatalSettings = "\u8A2D\u5B9A\u30D5\u30A1\u30A4\u30EB\u306B\u554F\u984C\u304C\u3042\u308B\u305F\u3081\u8D77\u52D5\u3067\u304D\u307E\u305B\u3093\u3002\n\n\u30D5\u30A1\u30A4\u30EB: {file}\n{reason}\n\n\u76F4\u3057\u3066\u304B\u3089\u8D77\u52D5\u3057\u76F4\u3057\u3066\u304F\u3060\u3055\u3044\u3002";
     public const string FatalDataTitle = "\u30C7\u30FC\u30BF\u3092\u8AAD\u3081\u307E\u305B\u3093";
-    public const string FatalData = "\u30C7\u30FC\u30BF\u306B\u554F\u984C\u304C\u3042\u308B\u305F\u3081\u7D9A\u884C\u3067\u304D\u307E\u305B\u3093\u3002\n\n{reason}\n\n\u76F4\u3057\u3066\u304B\u3089\u8D77\u52D5\u3057\u76F4\u3057\u3066\u304F\u3060\u3055\u3044\u3002";
+    public const string FatalData = "\u683C\u7D0D\u3055\u308C\u3066\u3044\u308BCSV\u30D5\u30A1\u30A4\u30EB\u304C\u6307\u5B9A\u5916\u306E\u5F62\u5F0F\u3067\u3059\u3002\u30C7\u30FC\u30BF\u306B\u554F\u984C\u304C\u3042\u308B\u305F\u3081\u7D9A\u884C\u3067\u304D\u307E\u305B\u3093\u3002\n\n{reason}\n\n\u76F4\u3057\u3066\u304B\u3089\u8D77\u52D5\u3057\u76F4\u3057\u3066\u304F\u3060\u3055\u3044\u3002";
 
     // ---- why a CSV or the ledger is refused ({file} / {row} / {name} ...) ----
     public const string DataNoRows = "{file}: \u30D8\u30C3\u30C0\u30FC\u884C\u3068\u30C7\u30FC\u30BF\u884C\u304C\u3042\u308A\u307E\u305B\u3093";
@@ -238,6 +250,10 @@ public static class Rdv3Text
     public const string BtnOk = "OK";
     public const string BtnBrowse = "\u53C2\u7167...";
     public const string Unsearched = "\u672A\u691C\u7D22";
+    // the judgment band when there is no record to judge: a key that is not
+    // in the configured form, and a key the ledger does not hold
+    public const string JudgeInvalidKey = "\u5165\u529B\u5185\u5BB9\u3092\u78BA\u8A8D\u3057\u3066\u304F\u3060\u3055\u3044";
+    public const string JudgeNotFound = "\u5BFE\u8C61\u30C7\u30FC\u30BF\u304C\u898B\u3064\u304B\u308A\u307E\u305B\u3093";
     public const string CandidateHitsFmt = "\u8A72\u5F53 {n} \u4EF6";
 
     // ---- shared-ledger notices ------------------------------------------------
@@ -429,7 +445,10 @@ public static class Rdv3Text
 
     // ---- the settings modal -----------------------------------------------------
     public const string SettingsTitle = "\u8A2D\u5B9A";
-    public const string SettingsHint = "\u66F8\u304D\u623B\u3059\u306E\u306F paths / search / watch \u306E 3 \u3064\u3060\u3051\u3067\u3059\u3002";
+    public const string SettingsHint = "\u66F8\u304D\u623B\u3059\u306E\u306F paths / search / watch \u3068\u3001\u5165\u529B\u30D5\u30A1\u30A4\u30EB\u540D\uFF08data.tables \u306E file / fileMatch\uFF09\u3060\u3051\u3067\u3059\u3002";
+    public const string SecFiles = "\u5165\u529B\u30D5\u30A1\u30A4\u30EB";
+    public const string ErrFileBlank = "\u5165\u529B\u30D5\u30A1\u30A4\u30EB\u540D\u306F\u7A7A\u306B\u3067\u304D\u307E\u305B\u3093: ";
+    public const string NoteSettingsFilesApplied = "\u8A2D\u5B9A\u3092\u4FDD\u5B58\u3057\u307E\u3057\u305F\u3002\u5165\u529B\u30D5\u30A1\u30A4\u30EB\u306E\u5909\u66F4\u3092\u78BA\u8A8D\u3057\u307E\u3059";
     public const string SecPlaces = "\u5834\u6240";
     public const string SecSearch = "\u691C\u7D22";
     public const string LblDataShort = "\u30C7\u30FC\u30BF";

@@ -408,7 +408,7 @@ public sealed class Rdv3Config
 
     public bool IsKey(string s)
     {
-        s = Rdv3Input.Cell(s);
+        s = Rdv3Input.SearchKey(s);
         if (string.IsNullOrEmpty(s) || s.Length > 4096) { return false; }
         try
         {

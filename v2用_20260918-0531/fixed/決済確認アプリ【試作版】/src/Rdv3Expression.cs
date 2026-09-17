@@ -108,22 +108,24 @@ internal abstract class Rdv3Expression
         public override string Evaluate(string[] row)
         {
             string value = source.Evaluate(row);
+            if (name == "splitPart")
+            {
+                // A part that is missing or empty is an empty value, not a
+                // lost record: the record is identified by other columns and
+                // the screen shows the blank. Only the separator is exact.
+                string[] parts = value.Split(new string[] { separator }, StringSplitOptions.None);
+                return position < parts.Length ? Rdv3Input.Cell(parts[position]) : "";
+            }
             if (value.Length == 0) { throw Failure(value); }
             string result;
             if (name == "regexExtract")
             {
-                Match match = pattern.Match(value);
+                // Width and hyphen variants are folded before matching, so a
+                // number typed in full width reads as the same number; the
+                // pattern itself decides what a number looks like.
+                Match match = pattern.Match(Rdv3Input.Fold(value));
                 if (!match.Success) { throw Failure(value); }
                 result = match.Value;
-            }
-            else if (name == "splitPart")
-            {
-                string[] parts = value.Split(new string[] { separator }, StringSplitOptions.None);
-                if (position >= parts.Length)
-                {
-                    throw Failure(value);
-                }
-                result = parts[position];
             }
             else
             {
