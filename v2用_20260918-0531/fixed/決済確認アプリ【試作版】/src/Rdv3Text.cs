@@ -589,7 +589,8 @@ public static class Rdv3Text
     public const string SettingsIdentityNotSaved = "data.ledger.identity の「{name}」が data.ledger.columns.source にありません。台帳の行を識別する列は、保存する列（columns.source）にも並べてください。";
     public const string SettingsSearchNotSaved = "data.ledger.search.columns の「{name}」が data.ledger.columns.source にありません。検索に使う列は、保存する列（columns.source）にも並べてください。";
     public const string SettingsScreenNotSaved = "画面に出す列「{name}」が data.ledger.columns.source にありません。画面（screen.bindings / candidates / judgments）の field は、保存する列（columns.source）のどれかにしてください。";
-    public const string SettingsKeyNotInHead = "data.tables.{id}.key の「{name}」が {file} の見出しにありません。CSV の 1 行目の列名と同じ文字で書いてください（前後の空白・全角半角の違いは吸収します）。";
+    public const string SettingsUnknownMember = "はこの場所に書ける項目ではありません。書けるのは: {names}。綴りを確かめてください。";
+    public const string SettingsKeyNotInHead ="data.tables.{id}.key の「{name}」が {file} の見出しにありません。CSV の 1 行目の列名と同じ文字で書いてください（前後の空白・全角半角の違いは吸収します）。";
     public const string ProcessUnknownOperation = "未対応の操作「{0}」です。";
     public const string LedgerRowColumns = "台帳の {0} 行目の列数が違います。必要 {1} 列、実際 {2} 列。";
     public const string ProcessDuplicateColumn = "出力の列「{0}」が重複しています。設定の列名を区別してください。";

@@ -72,7 +72,7 @@ public static class Rdv3Headless
             else
             {
                 feedback.AppendLine("FAIL " + N(validation.Errors.Length) + " errors");
-                foreach (string detail in validation.Errors) { feedback.AppendLine("  " + configPath + ": " + detail); }
+                foreach (string detail in validation.Errors) { feedback.AppendLine("  " + configPath + ": " + Rdv3Business.Localize(detail)); }
                 feedback.AppendLine("STOP " + validation.Stage);
                 foreach (string remaining in validation.Unchecked) { feedback.AppendLine("NOT CHECKED " + remaining); }
             }

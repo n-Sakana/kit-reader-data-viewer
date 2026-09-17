@@ -246,7 +246,7 @@ public sealed class Rdv3Table
         int cols = t.Head.Length;
         t.KeyCol = -1;
         for (int i = 0; i < cols; i++) { if (t.Head[i] == keyName) { t.KeyCol = i; } }
-        if (t.KeyCol < 0) { throw new Rdv3DataError(Fmt(Rdv3Text.DataNoColumn, file, 1).Replace("{name}", keyName)); }
+        if (t.KeyCol < 0) { throw new Rdv3DataError(KeyNotInHead(file, name, keyName)); }
         t.KeyCols = new int[] { t.KeyCol };
 
         int sourceRows = rows - 1;
@@ -410,7 +410,7 @@ public sealed class Rdv3Table
         {
             t.KeyCols[k] = t.ColumnOf(keyNames[k]);
             if (t.KeyCols[k] < 0)
-            { throw new Rdv3DataError(Fmt(Rdv3Text.DataNoColumn, System.IO.Path.GetFileName(path), 1).Replace("{name}", keyNames[k])); }
+            { throw new Rdv3DataError(KeyNotInHead(System.IO.Path.GetFileName(path), name, keyNames[k])); }
         }
         t.KeyCol = t.KeyCols[0];
         string[][] source = t.Cells;
@@ -628,6 +628,14 @@ public sealed class Rdv3Table
         string path = KeyValidation.SettingsPath.Length == 0 ? "data.tables." + Name + ".keyValidation" : KeyValidation.SettingsPath;
         return Rdv3Input.Error(Path, row, Head[column < 0 ? KeyCol : column], expected, actual,
             Rdv3Text.InputFixKey.Replace("{path}", path + "." + rule).Replace("{choice}", choice));
+    }
+
+    // The key column the definition names is not in the header: say which
+    // setting names it, so the fix is made where it was written.
+    private static string KeyNotInHead(string file, string table, string keyName)
+    {
+        return Fmt(Rdv3Text.DataNoColumn, file, 1).Replace("{name}", keyName) + " "
+            + Rdv3Text.SettingsKeyNotInHead.Replace("{id}", table).Replace("{name}", keyName).Replace("{file}", file);
     }
 
     // A tab, a carriage return or any other control character, named by code.
