@@ -54,7 +54,9 @@ const readMain = `(() => {
   const v = (id) => { const n = s.querySelector('[data-bind="' + id + '"]'); return n ? n.textContent : null; };
   const band = s.querySelector('.band .ok');
   const sp = Array.from(s.querySelectorAll('.sb .sp')).map((n) => n.textContent);
-  return { band: band ? band.textContent : null, bandClass: band ? band.className : null,
+  const labels = Array.from(s.querySelectorAll('.row.dynamic-row')).map((r) => (r.hidden ? '(hidden)' : r.querySelector('label').textContent));
+  const legends = Array.from(s.querySelectorAll('fieldset legend')).map((l) => l.textContent);
+  return { band: band ? band.textContent : null, bandClass: band ? band.className : null, labels, legends, searchLabel: s.querySelector('label[for=input]').textContent, bandLabel: s.querySelector('.band-label').textContent,
     status: sp, key: v('searchKey'), input: s.querySelector('#input').textContent,
     work: s.querySelector('#b-work').textContent, send: s.querySelector('#b-send').textContent,
     fields: { userId: v('userId'), userName: v('userName'), userCategory: v('userCategory'), applicationDate: v('applicationDate'),
@@ -110,16 +112,16 @@ async function main() {
   note('settings shot', await shot(dialogPage, 'settings'));
   // a name nothing answers to is refused in the dialog, with the reason
   await dialogPage.evaluate(`(() => {
-    const app = document.querySelector('#v-set [data-field="table:APP"]'); app.textContent = '99_\u3042\u308a\u307e\u305b\u3093.csv';
+    const app = document.querySelector('#v-set [data-field="table:受付"]'); app.textContent = '99_\u3042\u308a\u307e\u305b\u3093.csv';
     document.querySelector('#v-set [data-command=execute]').click(); return true; })()`);
   await waitFor(dialogPage, `!document.querySelector('#v-set .setting-error').hidden`, 30000, 'settings error shown');
   note('settings refuses a missing file', await dialogPage.evaluate(`({ error: document.querySelector('#v-set .setting-error').textContent, stillOpen: document.querySelector('#v-set').classList.contains('show'), focused: document.activeElement && document.activeElement.getAttribute('data-field') })`));
   // change TXN to a prefix name, PAY to a name with other width, restore APP, and save
   await dialogPage.evaluate(`(() => {
-    const txn = document.querySelector('#v-set [data-field="table:TXN"]'); txn.textContent = '01_\u53d6\u5f15\u30c7\u30fc\u30bf';
-    document.querySelector('#v-set select[data-match="TXN"]').value = 'prefix';
-    const pay = document.querySelector('#v-set [data-field="table:PAY"]'); pay.textContent = ' \uff10\uff12_\u6c7a\u6e08\u30c7\u30fc\u30bf.CSV ';
-    const app = document.querySelector('#v-set [data-field="table:APP"]'); app.textContent = '03_\u53d7\u4ed8\u30c7\u30fc\u30bf.csv';
+    const txn = document.querySelector('#v-set [data-field="table:取引"]'); txn.textContent = '01_\u53d6\u5f15\u30c7\u30fc\u30bf';
+    document.querySelector('#v-set select[data-match="取引"]').value = 'prefix';
+    const pay = document.querySelector('#v-set [data-field="table:決済"]'); pay.textContent = ' \uff10\uff12_\u6c7a\u6e08\u30c7\u30fc\u30bf.CSV ';
+    const app = document.querySelector('#v-set [data-field="table:受付"]'); app.textContent = '03_\u53d7\u4ed8\u30c7\u30fc\u30bf.csv';
     document.querySelector('#v-set [data-command=execute]').click(); return true; })()`);
   await waitFor(dialogPage, `!document.querySelector('#v-set').classList.contains('show')`, 30000, 'settings closed');
   await delay(1500);
