@@ -11,7 +11,7 @@ shift
 goto collect
 
 :run
-powershell.exe -NoLogo -NoProfile -ExecutionPolicy Bypass -Command "try{$l=[IO.File]::ReadAllLines($env:CSV_TOOL_SELF,[Text.Encoding]::ASCII);$i=[Array]::IndexOf($l,'//__CSHARP__');$s=[string]::Join([Environment]::NewLine,$l[($i+1)..($l.Length-1)]);Add-Type -TypeDefinition $s -Language CSharp}catch{Write-Host ('ERROR: csv-tool could not start. '+$_.Exception.Message) -ForegroundColor Red;Read-Host 'Press Enter to close'|Out-Null;exit 2};exit [CsvTool]::Run($env:CSV_TOOL_ARGS)"
+powershell.exe -NoLogo -NoProfile -ExecutionPolicy Bypass -Command "try{$l=[IO.File]::ReadAllLines($env:CSV_TOOL_SELF,[Text.Encoding]::ASCII);$i=[Array]::IndexOf($l,'//__CSHARP__');$s=[string]::Join([Environment]::NewLine,$l[($i+1)..($l.Length-1)]);$c=$false;try{$h=[BitConverter]::ToString([Security.Cryptography.SHA1]::Create().ComputeHash([Text.Encoding]::ASCII.GetBytes($s))).Replace('-','');$d=Join-Path $env:LOCALAPPDATA 'csv-tool';$p=Join-Path $d ($h+'.dll');if(-not(Test-Path -LiteralPath $p)){[void](New-Item -ItemType Directory -Force $d);Get-ChildItem -LiteralPath $d -Filter *.dll|Remove-Item -Force -ErrorAction SilentlyContinue;Add-Type -TypeDefinition $s -Language CSharp -OutputAssembly $p -OutputType Library};Add-Type -LiteralPath $p;$c=$true}catch{};if(-not $c){Add-Type -TypeDefinition $s -Language CSharp}}catch{Write-Host ('ERROR: csv-tool could not start. '+$_.Exception.Message) -ForegroundColor Red;Read-Host 'Press Enter to close'|Out-Null;exit 2};exit [CsvTool]::Run($env:CSV_TOOL_ARGS)"
 exit /b %ERRORLEVEL%
 
 //__CSHARP__
@@ -159,15 +159,20 @@ public static class CsvTool
 
         for (int i = 0; i < OutputNames.Length; i++)
             Console.WriteLine("  " + (i + 1) + ") " + OutputNames[i] + "_" + date + ".csv");
+        Console.WriteLine("  0) \u4E2D\u6B62\u3059\u308B\uFF08\u4F55\u3082\u4FDD\u5B58\u3057\u307E\u305B\u3093\uFF09");
 
         while (true)
         {
-            Console.Write("\u756A\u53F7 (1-" + OutputNames.Length + "): ");
+            Console.Write("\u756A\u53F7 (1-" + OutputNames.Length + "\u30010\u3067\u4E2D\u6B62): ");
             string key = Console.ReadLine();
             if (key == null) return null; // \u5165\u529B\u304C\u9589\u3058\u3066\u3044\u308B\u3002\u5F85\u3061\u7D9A\u3051\u3066\u3082\u756A\u53F7\u306F\u6765\u306A\u3044\u3002
 
+            string answer = Normalize(key);
+            if (answer == "0" || answer.Equals("q", StringComparison.OrdinalIgnoreCase))
+                return null;
+
             int number;
-            if (int.TryParse(Normalize(key), out number) &&
+            if (int.TryParse(answer, out number) &&
                 number >= 1 && number <= OutputNames.Length)
                 return OutputNames[number - 1];
         }
