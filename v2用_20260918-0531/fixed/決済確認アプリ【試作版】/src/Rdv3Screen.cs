@@ -22,6 +22,7 @@ public sealed class Rdv3Bind
     public string Empty = "N/A";              // a record is shown but the value is blank
     public string[] Requires = new string[0]; // show only when these saved fields are populated
     public string Label = "";                 // fixed screen: the caption beside the value ("" = the page's own)
+    public bool Hidden;                       // fixed screen: the frame is not used and stays out of sight
     public int Line;                          // where it is written, for the column check
 
     public bool IsField { get { return Fields.Length > 0; } }
@@ -44,10 +45,11 @@ public sealed class Rdv3Bind
     public static Rdv3Bind Read(Rdv3Json o)
     {
         if (o == null) { throw new Rdv3LoadError("a value is required", 0); }
-        o.Only("field", "fields", "joiner", "state", "format", "empty", "requires", "label");
+        o.Only("field", "fields", "joiner", "state", "format", "empty", "requires", "label", "hidden");
         Rdv3Bind b = new Rdv3Bind();
         b.Line = o.Line;
         b.Label = o.StrOr("label", "").Trim();
+        if (o.BoolOr("hidden", false)) { b.Hidden = true; b.Empty = ""; return b; }
         string one = o.StrOr("field", "");
         string[] many = o.Strs("fields", false);
         string st = o.StrOr("state", "");

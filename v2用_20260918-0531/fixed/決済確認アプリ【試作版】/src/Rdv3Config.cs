@@ -258,6 +258,8 @@ public sealed class Rdv3Config
     // the input files, as the settings dialog shows and writes them
     public List<Rdv3TableFile> TableFiles = new List<Rdv3TableFile>();
     private Dictionary<string, Rdv3Json> tableNodes = new Dictionary<string, Rdv3Json>(StringComparer.Ordinal);
+    // the definition came from the business block, whose file entries use its words
+    private bool businessForm;
 
     // paths, as written in the file; resolved against the .cmd's folder
     public string DataDir = "data";
@@ -318,7 +320,7 @@ public sealed class Rdv3Config
         Rdv3Json root = Rdv3Json.Parse(text);
         if (!root.IsObject) { throw new Rdv3LoadError("the top level is not an object", root.Line); }
         if (collectErrors) { root.CollectErrors(new Rdv3Validation()); }
-        root.Only("schema", "paths", "search", "watch", "jobs", "data", "screen");
+        root.Only("schema", "paths", "search", "watch", "jobs", "data", "screen", Rdv3Text.BizRoot);
         Rdv3Config c = new Rdv3Config();
 
         root.Check(delegate {
@@ -388,11 +390,40 @@ public sealed class Rdv3Config
         j.Check(delegate { c.MarkerPollMs = j.IntOr("markerPollMs", c.MarkerPollMs, 500, 60000); });
         });
 
-        root.Check(delegate { c.Data = Rdv3Data.Read(root.Obj("data", true)); });
+        Rdv3Json business = root.Member(Rdv3Text.BizRoot);
+        Rdv3Json tables = null;
+        if (business != null)
+        {
+            // The business block is the definition: it is expanded into the
+            // generic data / screen members and those are read as always. A
+            // message about the generated members is turned back into the
+            // block's own words before anyone sees it.
+            c.businessForm = true;
+            root.Check(delegate {
+                if (root.Has("data") || root.Has("screen")) { throw root.Fail(Rdv3Text.BizConflict); }
+                if (business.Kind != Rdv3Json.TObject) { throw business.Fail("must be an object"); }
+                Rdv3Json generated = Rdv3Business.Expand(business);
+                if (root.Validation != null) { generated.CollectErrors(root.Validation); }
+                Rdv3Business.RememberCaptions(business);
+                try
+                {
+                    c.Data = Rdv3Data.Read(generated.Obj("data", true));
+                    c.Screen = Rdv3Screen.Read(generated.Obj("screen", true));
+                }
+                catch (Rdv3LoadError error) { throw new Rdv3LoadError(Rdv3Business.Localize(error.Message), error.Line); }
+            });
+            Rdv3Json files = business.Kind == Rdv3Json.TObject ? business.Member(Rdv3Text.BizFiles) : null;
+            tables = (files != null && files.Kind == Rdv3Json.TObject) ? files : null;
+        }
+        else
+        {
+            root.Check(delegate { c.Data = Rdv3Data.Read(root.Obj("data", true)); });
+            Rdv3Json dataNode = root.Member("data");
+            tables = (dataNode == null || dataNode.Kind != Rdv3Json.TObject) ? null : dataNode.Member("tables");
+            root.Check(delegate { c.Screen = Rdv3Screen.Read(root.Obj("screen", true)); });
+        }
         if (c.Data != null)
         {
-            Rdv3Json dataNode = root.Member("data");
-            Rdv3Json tables = (dataNode == null || dataNode.Kind != Rdv3Json.TObject) ? null : dataNode.Member("tables");
             for (int i = 0; i < c.Data.Tables.Count; i++)
             {
                 Rdv3TableDef table = c.Data.Tables[i];
@@ -403,7 +434,6 @@ public sealed class Rdv3Config
                 if (node != null && node.Kind == Rdv3Json.TObject) { c.tableNodes[table.Id] = node; }
             }
         }
-        root.Check(delegate { c.Screen = Rdv3Screen.Read(root.Obj("screen", true)); });
         // the screen names ledger columns; they have to be the data's
         if (c.Data != null && c.Screen != null)
         {
@@ -503,18 +533,22 @@ public sealed class Rdv3Config
             }
             // The input file names sit inside data.tables; only the file and
             // fileMatch members of each table are touched, in place.
+            string fileMember = now.businessForm ? Rdv3Text.BizFileName : "file";
+            string matchMember = now.businessForm ? Rdv3Text.BizFileMatch : "fileMatch";
             for (int i = 0; i < TableFiles.Count; i++)
             {
                 Rdv3TableFile entry = TableFiles[i];
+                string matchText = now.businessForm
+                    ? (entry.Match == "prefix" ? Rdv3Text.BizMatchPrefix : Rdv3Text.BizMatchExact) : entry.Match;
                 Rdv3Json tableNode;
-                if (!now.tableNodes.TryGetValue(entry.Id, out tableNode)) { throw new IOException("data.tables." + entry.Id + " is no longer in the file"); }
-                Rdv3Json fileNode = tableNode.Member("file");
-                if (fileNode == null || fileNode.Kind != Rdv3Json.TString) { throw new IOException("data.tables." + entry.Id + ".file is not text"); }
-                Rdv3Json matchNode = tableNode.Member("fileMatch");
+                if (!now.tableNodes.TryGetValue(entry.Id, out tableNode)) { throw new IOException(entry.Id + " is no longer in the file"); }
+                Rdv3Json fileNode = tableNode.Member(fileMember);
+                if (fileNode == null || fileNode.Kind != Rdv3Json.TString) { throw new IOException(entry.Id + "." + fileMember + " is not text"); }
+                Rdv3Json matchNode = tableNode.Member(matchMember);
                 if (matchNode != null && matchNode.Kind == Rdv3Json.TString)
-                { starts.Add(matchNode.Start); ends.Add(matchNode.End); bodies.Add(Q(entry.Match)); }
+                { starts.Add(matchNode.Start); ends.Add(matchNode.End); bodies.Add(Q(matchText)); }
                 else
-                { starts.Add(fileNode.End); ends.Add(fileNode.End); bodies.Add(", " + Q("fileMatch") + ": " + Q(entry.Match)); }
+                { starts.Add(fileNode.End); ends.Add(fileNode.End); bodies.Add(", " + Q(matchMember) + ": " + Q(matchText)); }
                 starts.Add(fileNode.Start); ends.Add(fileNode.End); bodies.Add(Q(entry.File));
             }
             for (int a = 0; a < starts.Count; a++)
@@ -705,6 +739,7 @@ public sealed class Rdv3Config
         c.TableFiles = new List<Rdv3TableFile>();
         for (int i = 0; i < TableFiles.Count; i++) { c.TableFiles.Add(TableFiles[i].Clone()); }
         c.tableNodes = tableNodes;
+        c.businessForm = businessForm;
         return c;
     }
 

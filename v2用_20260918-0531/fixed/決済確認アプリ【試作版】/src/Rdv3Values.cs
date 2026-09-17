@@ -111,7 +111,7 @@ public static class Rdv3Eval
     // ---- one binding -> text ----------------------------------------------
     public static Rdv3Value Evaluate(Rdv3Bind b, Rdv3View v, Rdv3Fields f, Rdv3WorkState w)
     {
-        if (b == null) { return new Rdv3Value("", Rdv3Value.Muted); }
+        if (b == null || b.Hidden) { return new Rdv3Value("", Rdv3Value.Muted); }
         int required = RequiredFields(b, v, f);
         if (required < 0) { return new Rdv3Value(Rdv3Text.FieldUnresolved, Rdv3Value.Error); }
         if (required == 0) { return new Rdv3Value("", Rdv3Value.Muted); }
