@@ -342,7 +342,9 @@ public static class CsvTool
             path, encoding, true, BufferSize))
         {
             string firstLine = reader.ReadLine();
-            if (string.IsNullOrWhiteSpace(firstLine))
+            while (firstLine != null && firstLine.Trim().Length == 0)
+                firstLine = reader.ReadLine();
+            if (firstLine == null)
                 throw new InvalidOperationException(
                     Path.GetFileName(path) + " \u306E\u5148\u982D\u884C\u304C\u7A7A\u3067\u3059\u3002");
 
