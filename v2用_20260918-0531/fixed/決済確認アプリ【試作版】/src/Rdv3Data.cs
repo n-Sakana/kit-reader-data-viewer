@@ -69,6 +69,11 @@ public sealed class Rdv3ColumnTypeDef
     {
         return Rdv3Dates.TryParse(value, Format, out parsed);
     }
+
+    public bool TryNumber(string value, out decimal parsed)
+    {
+        return Rdv3Input.TryNumber(value, out parsed);
+    }
 }
 
 // A column declared as a date is a date whatever notation the source used
@@ -82,6 +87,7 @@ public static class Rdv3Dates
     {
         "yyyyMMdd", "yyyy/MM/dd", "yyyy/M/d", "yyyy-MM-dd", "yyyy-M-d", "yyyy.MM.dd", "yyyy.M.d",
         "yyyy/MM/dd HH:mm", "yyyy/M/d H:mm", "yyyy/MM/dd HH:mm:ss", "yyyy/M/d H:mm:ss",
+        // yyyy年M月d日 and yyyy年MM月dd日, written as escapes: this file stays ASCII
         "yyyy-MM-dd HH:mm", "yyyy-MM-dd HH:mm:ss", "yyyy年M月d日", "yyyy年MM月dd日"
     };
 
@@ -95,11 +101,6 @@ public static class Rdv3Dates
             if (DateTime.TryParseExact(text, Alternates[i], CultureInfo.InvariantCulture, DateTimeStyles.None, out parsed)) { return true; }
         }
         return false;
-    }
-
-    public bool TryNumber(string value, out decimal parsed)
-    {
-        return Rdv3Input.TryNumber(value, out parsed);
     }
 }
 

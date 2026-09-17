@@ -6,7 +6,7 @@
     "log": "data/操作ログ.log"
   },
   "search": {
-    "pattern": "^(?:[A-Z]{2}[0-9]{8}[A-Z]{2}|受付[A-Z]{2}[0-9]{2}-[0-9]+)$",
+    "pattern": "^(?:[A-Z]{2}[0-9]{8}[A-Z]{2}|(?:[\\p{IsCJKUnifiedIdeographs}\\p{IsKatakana}\\p{IsHiragana}]{1,5})?[A-Z]{1,4}[0-9]{1,4}-[0-9]{1,10})$",
     "candidateRowsShown": 100
   },
   "watch": {
@@ -42,7 +42,7 @@
       "TXN": {
         "label": "①取引データ",
         "file": "01_取引データ.csv",
-        "encoding": "shift_jis",
+        "fileMatch": "exact",
         "key": "【共通】取引ID",
         "keyValidation": {
           "characters": "unicode",
@@ -54,7 +54,7 @@
       "PAY": {
         "label": "②決済データ",
         "file": "02_決済データ.csv",
-        "encoding": "shift_jis",
+        "fileMatch": "exact",
         "key": "オーダーID",
         "keyValidation": {
           "characters": "unicode",
@@ -66,18 +66,19 @@
       "APP": {
         "label": "③受付データ",
         "file": "03_受付データ.csv",
-        "key": "受付番号",
+        "fileMatch": "exact",
+        "key": "受付時＿識別番号",
         "keyValidation": {
           "characters": "unicode",
           "length": "variable",
           "duplicates": "error",
           "empty": "error"
-        },
-        "encoding": "shift_jis"
+        }
       },
       "DEL": {
         "label": "削除用・手続完了データ",
         "file": "04_削除用_手続完了.csv",
+        "fileMatch": "exact",
         "key": [
           "識別番号",
           "受付番号"
@@ -87,8 +88,7 @@
           "length": "variable",
           "duplicates": "error",
           "empty": "error"
-        },
-        "encoding": "shift_jis"
+        }
       }
     },
     "types": {
@@ -100,7 +100,7 @@
       },
       "APP.申込日": {
         "type": "date",
-        "format": "yyyy/MM/dd"
+        "format": "yyyyMMdd"
       }
     },
     "labels": {
@@ -118,6 +118,8 @@
       "PAY.受付番号照合用": "決済受付番号",
       "APP.受付番号": "受付番号",
       "APP.受付時＿識別番号": "識別番号",
+      "APP.識別番号照合用": "受付識別番号",
+      "APP.受付番号照合用": "受付データの受付番号",
       "APP.変更後の契約区分期間": "契約区分（期間）",
       "PAY.受付拠点": "受付拠点",
       "APP.意見欄": "意見欄",
@@ -135,10 +137,14 @@
       "target": "削除対象",
       "DEL.識別番号": "削除対象の識別番号",
       "DEL.受付番号": "削除対象の受付番号",
+      "DEL.識別番号照合用": "削除対象の識別番号（照合用）",
+      "DEL.受付番号照合用": "削除対象の受付番号（照合用）",
       "PAIRED.決済確認済": "決済確認済",
       "mapPaid": "①決済完了の取引",
       "payPaid": "②決済済の取引",
       "bothPaid": "①②とも決済済の取引",
+      "matchedApp": "受付データ側の受付番号で一致する案件",
+      "matchedPay": "決済データ側の受付番号で一致する案件",
       "targetMatched": "削除用台帳に一致する案件",
       "targetProcessed": "台帳の確認済案件",
       "$work": "台帳確認状態（アプリ付与）"
@@ -155,6 +161,37 @@
         ],
         "steps": [
           {
+            "operation": "calculate",
+            "target1": "DEL",
+            "column": "識別番号照合用",
+            "expression": "regexExtract(DEL.識別番号, '[A-Z]{2}[0-9]{8}[A-Z]{2}')",
+            "output": "DEL"
+          },
+          {
+            "operation": "calculate",
+            "target1": "DEL",
+            "column": "受付番号照合用",
+            "expression": "regexExtract(DEL.受付番号, '(?:[\\p{IsCJKUnifiedIdeographs}\\p{IsKatakana}\\p{IsHiragana}]{1,5})?[A-Z]{1,4}[0-9]{1,4}-[0-9]{1,10}')",
+            "output": "DEL"
+          },
+          {
+            "operation": "extract",
+            "target1": "ledger",
+            "target2": "DEL",
+            "keys": [
+              [
+                "PAY.識別番号照合用",
+                "APP.受付番号照合用"
+              ],
+              [
+                "DEL.識別番号照合用",
+                "DEL.受付番号照合用"
+              ]
+            ],
+            "condition": "match",
+            "output": "matchedApp"
+          },
+          {
             "operation": "extract",
             "target1": "ledger",
             "target2": "DEL",
@@ -164,11 +201,18 @@
                 "PAY.受付番号照合用"
               ],
               [
-                "DEL.識別番号",
-                "DEL.受付番号"
+                "DEL.識別番号照合用",
+                "DEL.受付番号照合用"
               ]
             ],
             "condition": "match",
+            "output": "matchedPay"
+          },
+          {
+            "operation": "extract",
+            "target1": "matchedApp",
+            "target2": "matchedPay",
+            "condition": "either",
             "output": "targetMatched"
           },
           {
@@ -230,7 +274,7 @@
             "operation": "calculate",
             "target1": "PAY",
             "column": "受付番号照合用",
-            "expression": "regexExtract(PAY.備考2, '受付[A-Z]{2}[0-9]{2}-[0-9]+')",
+            "expression": "regexExtract(PAY.備考2, '(?:[\\p{IsCJKUnifiedIdeographs}\\p{IsKatakana}\\p{IsHiragana}]{1,5})?[A-Z]{1,4}[0-9]{1,4}-[0-9]{1,10}')",
             "output": "PAY"
           },
           {
@@ -265,8 +309,22 @@
             "operation": "calculate",
             "target1": "PAY",
             "column": "受付拠点",
-            "expression": "splitPart(PAY.備考2, '/', 3)",
+            "expression": "splitPart(PAY.備考2, '/', 4)",
             "output": "PAY"
+          },
+          {
+            "operation": "calculate",
+            "target1": "APP",
+            "column": "識別番号照合用",
+            "expression": "regexExtract(APP.受付時＿識別番号, '[A-Z]{2}[0-9]{8}[A-Z]{2}')",
+            "output": "APP"
+          },
+          {
+            "operation": "calculate",
+            "target1": "APP",
+            "column": "受付番号照合用",
+            "expression": "regexExtract(APP.受付番号, '(?:[\\p{IsCJKUnifiedIdeographs}\\p{IsKatakana}\\p{IsHiragana}]{1,5})?[A-Z]{1,4}[0-9]{1,4}-[0-9]{1,10}')",
+            "output": "APP"
           },
           {
             "operation": "join",
@@ -320,7 +378,7 @@
             "set": [
               {
                 "column": "PAIRED.決済確認済",
-                "expression": "'済'"
+                "expression": "'支払済'"
               }
             ],
             "output": "PAIRED"
@@ -330,8 +388,8 @@
             "target1": "PAIRED",
             "target2": "APP",
             "keys": [
-              "PAY.受付番号照合用",
-              "APP.受付番号"
+              "PAY.識別番号照合用",
+              "APP.識別番号照合用"
             ],
             "condition": "left",
             "output": "INTEGRATED"
@@ -366,7 +424,8 @@
       "search": {
         "columns": [
           "PAY.識別番号照合用",
-          "PAY.受付番号照合用"
+          "PAY.受付番号照合用",
+          "APP.受付番号照合用"
         ],
         "match": "exact"
       },
@@ -385,6 +444,7 @@
           "TXN.【共通】ステータス",
           "TXN.【共通】取引結果",
           "APP.受付番号",
+          "APP.受付番号照合用",
           "APP.受付時＿識別番号",
           "APP.申込日",
           "APP.申込者氏名",
@@ -411,64 +471,40 @@
     "bindings": {
       "userId": {
         "field": "PAY.利用者ID",
-        "empty": "",
-        "requires": [
-          "PAIRED.決済確認済"
-        ]
+        "empty": ""
       },
       "userName": {
         "field": "PAY.利用者氏名",
-        "empty": "",
-        "requires": [
-          "PAIRED.決済確認済"
-        ]
+        "empty": ""
       },
       "userCategory": {
         "field": "PAY.利用者区分",
-        "empty": "",
-        "requires": [
-          "PAIRED.決済確認済"
-        ]
+        "empty": ""
       },
       "applicationDate": {
         "field": "APP.申込日",
         "empty": "",
-        "requires": [
-          "PAIRED.決済確認済"
-        ],
         "format": {
           "kind": "date",
-          "from": "yyyy/MM/dd",
+          "from": "yyyyMMdd",
           "to": "yyyy/MM/dd"
         }
       },
       "applicationNumber": {
         "field": "PAY.受付番号照合用",
-        "empty": "",
-        "requires": [
-          "PAIRED.決済確認済"
-        ]
+        "empty": ""
       },
       "cardNumber": {
         "field": "PAY.識別番号照合用",
-        "empty": "",
-        "requires": [
-          "PAIRED.決済確認済"
-        ]
+        "empty": ""
       },
       "applicantName": {
         "field": "APP.申込者氏名",
-        "empty": "",
-        "requires": [
-          "PAIRED.決済確認済"
-        ]
+        "empty": ""
       },
       "birthDate": {
         "field": "PAY.生年月日",
         "empty": "",
-        "requires": [
-          "PAIRED.決済確認済"
-        ],
         "format": {
           "kind": "date",
           "from": "yyyyMMdd",
@@ -477,31 +513,19 @@
       },
       "qualification": {
         "field": "APP.変更後の契約区分期間",
-        "empty": "",
-        "requires": [
-          "PAIRED.決済確認済"
-        ]
+        "empty": ""
       },
       "office": {
         "field": "PAY.受付拠点",
-        "empty": "",
-        "requires": [
-          "PAIRED.決済確認済"
-        ]
+        "empty": ""
       },
       "remarks": {
         "field": "APP.意見欄",
-        "empty": "",
-        "requires": [
-          "PAIRED.決済確認済"
-        ]
+        "empty": ""
       },
       "plan": {
         "field": "APP.変更後の計画",
-        "empty": "",
-        "requires": [
-          "PAIRED.決済確認済"
-        ]
+        "empty": ""
       }
     },
     "judgments": {
@@ -516,7 +540,7 @@
         "rules": [
           {
             "equals": [
-              "済"
+              "支払済"
             ],
             "result": "paid"
           },
@@ -527,7 +551,7 @@
         ],
         "results": {
           "paid": {
-            "text": "済",
+            "text": "支払済",
             "look": "ok"
           },
           "undefined": {
@@ -539,7 +563,7 @@
             "look": "error"
           },
           "unpaid": {
-            "text": "該当なし",
+            "text": "未決済",
             "look": "ng"
           }
         }
@@ -594,6 +618,7 @@
         "APP.申込者氏名",
         "PAY.生年月日",
         "PAY.決済ステータス",
+        "PAIRED.決済確認済",
         "$work",
         "PAY.利用者ID",
         "PAY.利用者氏名",
@@ -629,7 +654,7 @@
           "empty": "",
           "format": {
             "kind": "date",
-            "from": "yyyy/MM/dd",
+            "from": "yyyyMMdd",
             "to": "yyyy/MM/dd"
           }
         }
@@ -637,10 +662,10 @@
       "payment": {
         "value": {
           "field": "PAIRED.決済確認済",
-          "empty": "該当なし"
+          "empty": "未決済"
         },
         "looks": {
-          "済": "accent",
+          "支払済": "accent",
           "*": "neutral"
         }
       }
