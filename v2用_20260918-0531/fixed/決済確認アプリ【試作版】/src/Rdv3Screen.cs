@@ -21,6 +21,7 @@ public sealed class Rdv3Bind
     public Rdv3Format Format;                 // null = as is
     public string Empty = "N/A";              // a record is shown but the value is blank
     public string[] Requires = new string[0]; // show only when these saved fields are populated
+    public string Label = "";                 // fixed screen: the caption beside the value ("" = the page's own)
     public int Line;                          // where it is written, for the column check
 
     public bool IsField { get { return Fields.Length > 0; } }
@@ -43,9 +44,10 @@ public sealed class Rdv3Bind
     public static Rdv3Bind Read(Rdv3Json o)
     {
         if (o == null) { throw new Rdv3LoadError("a value is required", 0); }
-        o.Only("field", "fields", "joiner", "state", "format", "empty", "requires");
+        o.Only("field", "fields", "joiner", "state", "format", "empty", "requires", "label");
         Rdv3Bind b = new Rdv3Bind();
         b.Line = o.Line;
+        b.Label = o.StrOr("label", "").Trim();
         string one = o.StrOr("field", "");
         string[] many = o.Strs("fields", false);
         string st = o.StrOr("state", "");
@@ -130,6 +132,7 @@ public sealed class Rdv3Judgment
     public const string Error = "error";
 
     public string Id = "";
+    public string Label = "";                // fixed screen: the caption of the band ("" = the page's own)
     public Rdv3Bind Source;
     public List<Rdv3Rule> Rules = new List<Rdv3Rule>();
     public Dictionary<string, Rdv3Result> Results = new Dictionary<string, Rdv3Result>(StringComparer.Ordinal);
@@ -149,9 +152,10 @@ public sealed class Rdv3Judgment
     public static Rdv3Judgment Read(string id, Rdv3Json o)
     {
         if (o.Kind != Rdv3Json.TObject) { throw o.Fail("must be an object"); }
-        o.Only("source", "rules", "results");
+        o.Only("source", "rules", "results", "label");
         Rdv3Judgment j = new Rdv3Judgment();
         j.Id = id;
+        j.Label = o.StrOr("label", "").Trim();
         j.Source = Rdv3Bind.Read(o.Obj("source", true));
         List<Rdv3Json> rules = o.Objs("rules", true);
         for (int i = 0; i < rules.Count; i++)
@@ -796,7 +800,8 @@ public sealed class Rdv3Screen
             {
                 if (data.IndexOf(b.Requires[k]) < 0)
                 {
-                    Report(validation, new Rdv3LoadError("screen.requires: " + b.Requires[k] + " is not one of data.ledger.columns", b.Line));
+                    Report(validation, new Rdv3LoadError("screen.requires: " + b.Requires[k] + " is not one of data.ledger.columns. "
+                        + Rdv3Text.SettingsScreenNotSaved.Replace("{name}", b.Requires[k]), b.Line));
                 }
             }
             if (!b.IsField) { continue; }
@@ -804,7 +809,8 @@ public sealed class Rdv3Screen
             {
                 if (data.IndexOf(b.Fields[k]) < 0)
                 {
-                    Report(validation, new Rdv3LoadError("screen: " + b.Fields[k] + " is not one of data.ledger.columns", b.Line));
+                    Report(validation, new Rdv3LoadError("screen: " + b.Fields[k] + " is not one of data.ledger.columns. "
+                        + Rdv3Text.SettingsScreenNotSaved.Replace("{name}", b.Fields[k]), b.Line));
                 }
             }
         }

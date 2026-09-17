@@ -59,8 +59,9 @@ public static class Rdv3FixedScreen
             foreach (string name in CandidateFields)
             {
                 Rdv3Json entry = candidates.Obj(name, true);
-                entry.Only("value", "looks");
+                entry.Only("value", "looks", "header");
                 Rdv3ColumnDef column = new Rdv3ColumnDef { Value = Rdv3Bind.Read(entry.Obj("value", true)) };
+                column.Header = entry.StrOr("header", "").Trim();
                 if (name == "payment") { column.Render = "tag"; }
                 Rdv3Json looks = entry.Obj("looks", false);
                 if (looks != null)
