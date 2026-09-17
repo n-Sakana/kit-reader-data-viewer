@@ -11,7 +11,7 @@ shift
 goto collect
 
 :run
-powershell.exe -NoLogo -NoProfile -ExecutionPolicy Bypass -Command "try{$l=[IO.File]::ReadAllLines($env:CSV_TOOL_SELF,[Text.Encoding]::ASCII);$i=[Array]::IndexOf($l,'//__CSHARP__');$s=[string]::Join([Environment]::NewLine,$l[($i+1)..($l.Length-1)]);Add-Type -TypeDefinition $s -Language CSharp}catch{Write-Host ('ERROR: csv-tool could not start. '+$_.Exception.Message) -ForegroundColor Red;Read-Host 'Press Enter to close'|Out-Null;exit 2};exit [CsvTool]::Run($env:CSV_TOOL_ARGS)"
+powershell.exe -NoLogo -NoProfile -ExecutionPolicy Bypass -Command "try{$l=[IO.File]::ReadAllLines($env:CSV_TOOL_SELF,[Text.Encoding]::ASCII);$i=[Array]::IndexOf($l,'//__CSHARP__');$s=[string]::Join([Environment]::NewLine,$l[($i+1)..($l.Length-1)]);$c=$false;try{$h=[BitConverter]::ToString([Security.Cryptography.SHA1]::Create().ComputeHash([Text.Encoding]::ASCII.GetBytes($s))).Replace('-','');$d=Join-Path $env:LOCALAPPDATA 'csv-tool';$p=Join-Path $d ($h+'.dll');if(-not(Test-Path -LiteralPath $p)){[void](New-Item -ItemType Directory -Force $d);Get-ChildItem -LiteralPath $d -Filter *.dll|Remove-Item -Force -ErrorAction SilentlyContinue;Add-Type -TypeDefinition $s -Language CSharp -OutputAssembly $p -OutputType Library};Add-Type -LiteralPath $p;$c=$true}catch{};if(-not $c){Add-Type -TypeDefinition $s -Language CSharp}}catch{Write-Host ('ERROR: csv-tool could not start. '+$_.Exception.Message) -ForegroundColor Red;Read-Host 'Press Enter to close'|Out-Null;exit 2};exit [CsvTool]::Run($env:CSV_TOOL_ARGS)"
 exit /b %ERRORLEVEL%
 
 //__CSHARP__
