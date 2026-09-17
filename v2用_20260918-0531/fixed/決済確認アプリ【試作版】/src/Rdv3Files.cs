@@ -59,9 +59,23 @@ public static class Rdv3Files
         return new List<string>(seen);
     }
 
+    // extensionKey is a NameKey (upper-cased ASCII), so the constants are too.
     private static bool IsInputExtension(string extensionKey)
     {
-        return extensionKey == ".csv" || extensionKey == ".txt" || extensionKey == ".tsv" || extensionKey == ".xlsx";
+        return extensionKey == ".CSV" || extensionKey == ".TXT" || extensionKey == ".TSV" || extensionKey == ".XLSX";
+    }
+
+    // The settings dialog names a file: say now, not at the next start, when
+    // nothing in the data folder answers to that name. Returns null when it resolves.
+    public static string CheckInputName(string file, string match, string dataDirSetting, string appDir)
+    {
+        string dataDir;
+        try { dataDir = Full(dataDirSetting, appDir); }
+        catch (Exception) { return Rdv3Text.ErrDataDir + dataDirSetting; }
+        if (!Directory.Exists(dataDir)) { return Rdv3Text.ErrDataDir + dataDir; }
+        string note;
+        string path = ResolveInput(file, match, dataDir, out note);
+        return Exists(path) ? null : MissingInputMessage(file, match, dataDir);
     }
 
     // Where an input file is. "exact": the name as written when that file

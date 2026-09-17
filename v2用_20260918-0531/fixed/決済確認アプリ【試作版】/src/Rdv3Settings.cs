@@ -88,6 +88,15 @@ public static class Rdv3SettingsForm
                 owner.TakePickedTarget();
                 return null;
             }
+            // A name nothing answers to would stop the next start before the
+            // dialog could be reached again; refuse it here instead.
+            string missing = Rdv3Files.CheckInputName(file, match, dataDir, ReaderDataViewer.App.BaseDirectory);
+            if (missing != null)
+            {
+                owner.Error(missing);
+                owner.TakePickedTarget();
+                return null;
+            }
             entry.File = file;
             entry.Match = match;
         }

@@ -587,9 +587,17 @@ public sealed class Rdv3Form
             {
                 Rdv3Json item = tables.At(i);
                 string id = Text(item, "id");
-                if (Text(item, "file").Trim().Length == 0)
+                string file = Text(item, "file").Trim();
+                if (file.Length == 0)
                 {
                     error = Rdv3Text.ErrFileBlank + id;
+                    field = "table:" + id;
+                    break;
+                }
+                string missing = Rdv3Files.CheckInputName(file, Text(item, "match"), dataDir, ReaderDataViewer.App.BaseDirectory);
+                if (missing != null)
+                {
+                    error = missing;
                     field = "table:" + id;
                     break;
                 }
