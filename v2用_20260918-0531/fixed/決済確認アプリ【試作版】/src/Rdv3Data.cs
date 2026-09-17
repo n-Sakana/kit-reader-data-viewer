@@ -87,7 +87,7 @@ public static class Rdv3Dates
     {
         "yyyyMMdd", "yyyy/MM/dd", "yyyy/M/d", "yyyy-MM-dd", "yyyy-M-d", "yyyy.MM.dd", "yyyy.M.d",
         "yyyy/MM/dd HH:mm", "yyyy/M/d H:mm", "yyyy/MM/dd HH:mm:ss", "yyyy/M/d H:mm:ss",
-        // yyyy年M月d日 and yyyy年MM月dd日, written as escapes: this file stays ASCII
+        // the two kanji forms (year/month/day marks), written as escapes so this file stays ASCII
         "yyyy-MM-dd HH:mm", "yyyy-MM-dd HH:mm:ss", "yyyy年M月d日", "yyyy年MM月dd日"
     };
 
