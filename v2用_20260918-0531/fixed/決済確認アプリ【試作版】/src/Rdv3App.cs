@@ -692,6 +692,8 @@ public sealed class Rdv3App
             form.Notice(Rdv3Text.ErrBadKeyFmt.Replace("{label}", LabelOrRef(dataDef.SearchRefs[0]))
                 .Replace("{pattern}", cfg.KeyPattern));
             log.Write("-", "search", "ignored length=" + key.Length.ToString(CultureInfo.InvariantCulture) + " reason=bad-key");
+            string badKeyCapture = Environment.GetEnvironmentVariable("RDV_HEADLESS_SEARCH_CAPTURE_PATH");
+            if (badKeyCapture != null && badKeyCapture.Length > 0) { form.CaptureToFile(badKeyCapture); }
             return;
         }
         Search(key, "manual", "", 0, t0);
