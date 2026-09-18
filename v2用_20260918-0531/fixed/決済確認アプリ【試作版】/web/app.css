@@ -1,4 +1,4 @@
-:root{
+﻿:root{
   --card-width:780px;
   --card-gap:8px;
   --card-pad-t:8px;
@@ -168,6 +168,9 @@
   margin:0;padding:0;max-width:none;box-shadow:none;}
 .dialogmode .dlg>.tb{display:none;}
 .dialogmode .dlg>.body{padding:12px;max-height:none;overflow:visible;}
+/* 長い知らせは窓の中で本文だけが縦にスクロールし、釦は常に見える。
+   窓の高さは母体（WPF）が作業領域に収める。 */
+.dialogmode .modal-message>div:last-child{max-height:calc(100vh - 100px);overflow:auto;}
 .dialogmode .veil{background:transparent;}
 .runtime .archive-list{max-height:220px;overflow:auto;}
 .runtime .archive-list th:first-child{width:46px;}

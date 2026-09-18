@@ -233,9 +233,71 @@ public sealed class Rdv3App
         worker.Post(job);
     }
 
+    // "Reload ledger" reads the saved ledger again, as it is on disk now.
+    // The sources are not touched: importing them is the update button's
+    // job. Without an active ledger (BLOCKED) the button retries the check
+    // that creates one.
     private void RefreshLedger()
     {
-        RefreshLedger(dataDef.UpdateJob);
+        if (state == StBlocked || ledHead == null) { RefreshLedger(dataDef.UpdateJob); return; }
+        if (state != StReady) { form.Error(Rdv3Text.ErrNotReady); return; }
+        if (writes.Pending) { form.Error(Rdv3Text.ErrSaveInFlight); return; }
+        log.Write("-", "decision", "ledger reload requested from the screen");
+        ClearShown();
+        activeSearchId = "";
+        state = StReloading;
+        form.EnableOps(false);
+        form.SetState(Rdv3Text.StateReloading);
+        string tag = "L" + (++procSeq).ToString(CultureInfo.InvariantCulture);
+        string[] expectedHead = ledHead;
+        Rdv3Job job = new Rdv3Job();
+        job.RunId = tag;
+        job.Kind = "reload";
+        job.TimeoutMs = cfg.CheckTimeoutMs;
+        job.Work = delegate { ReloadLedgerJob(tag, expectedHead); };
+        worker.Post(job);
+    }
+
+    // worker thread; every exit re-enables the screen on the UI thread
+    private void ReloadLedgerJob(string tag, string[] expectedHead)
+    {
+        try
+        {
+            string[] lines;
+            string[] states;
+            long t = Rdv3Clock.Now();
+            ReadLedger(expectedHead, out lines, out states);
+            Rdv3Index index = BuildSearchIndex(lines);
+            string[] effective = pending.Overlay(lines, states, dataDef.IdentityCols);
+            log.Write(tag, "reload", "source=screen rows=" + lines.Length.ToString(CultureInfo.InvariantCulture)
+                + " ms=" + Rdv3Log.F(Rdv3Clock.MsSince(t)));
+            form.RunOnUi(delegate
+            {
+                if (writes.Closing) { return; }
+                ledLines = lines;
+                sharedStates = states;
+                ledStates = effective;
+                ledHead = expectedHead;
+                ledIndex = index;
+                ResumeReady();
+                string rowsText = lines.Length.ToString("N0", CultureInfo.InvariantCulture);
+                form.SetLedger(Rdv3Text.LedgerSegFmt.Replace("{file}", System.IO.Path.GetFileName(ledgerPath)).Replace("{n}", rowsText),
+                    rowsText, LedgerStamp());
+                form.SetPendingCount(pending.Count);
+                form.Notice(Rdv3Text.NoteReloaded.Replace("{n}", rowsText));
+                log.Write(tag, "decision", "ready rows=" + lines.Length.ToString(CultureInfo.InvariantCulture) + " note=reloaded");
+            });
+        }
+        catch (Exception ex)
+        {
+            log.Write(tag, "error", "stage=reload msg=" + ex.Message);
+            form.RunOnUi(delegate
+            {
+                if (writes.Closing) { return; }
+                ResumeReady();
+                form.Error(Rdv3Text.ErrLedgerRead + ex.Message);
+            });
+        }
     }
 
     // From READY, and from BLOCKED: the operator who has just put the files
