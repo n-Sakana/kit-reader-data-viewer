@@ -7,9 +7,13 @@ public static class Rdv3FixedScreen
 {
     public static readonly string[] MainFields = { "userId", "userName", "userCategory",
         "applicationDate", "applicationNumber", "cardNumber", "applicantName",
-        "birthDate", "qualification", "office", "remarks", "plan" };
+        "birthDate", "qualification", "office", "remarks", "plan", "usageState" };
     public static readonly string[] CandidateFields = { "applicationNumber", "cardNumber",
         "applicant", "applicationDate", "payment" };
+
+    // the usage frame is the one frame the settings may leave out; it costs
+    // the record one more text frame and the gap above it
+    private const double UsageFrameHeight = 60;
 
     public static Rdv3Screen Read(Rdv3Json root)
     {
@@ -27,6 +31,11 @@ public static class Rdv3FixedScreen
                 bindings.Check(delegate { screen.Bindings.Add(name, Rdv3Bind.Read(bindings.Obj(name, true))); });
             }
         });
+        // with the frame on, the window opens that much taller, so every
+        // other frame keeps the height it has without it
+        Rdv3Bind usage;
+        if (screen.Bindings.TryGetValue("usageState", out usage) && !usage.Hidden)
+        { screen.StartHeight += UsageFrameHeight; }
         foreach (string name in new string[] { "searchKey", "pendingCount", "appState", "ledgerRows", "clock" })
         {
             screen.Bindings.Add(name, new Rdv3Bind { State = name, Empty = "" });

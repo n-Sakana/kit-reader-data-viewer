@@ -389,12 +389,14 @@ public static class Rdv3Business
     private static void ReadScreen(Model m, Rdv3Json screen)
     {
         screen.Only(Rdv3Text.BizSearchLabel, Rdv3Text.BizUserBox, Rdv3Text.BizAppBox, Rdv3Text.BizRemarks, Rdv3Text.BizPlan,
-                    Rdv3Text.BizJudgment, Rdv3Text.BizCandidates, Rdv3Text.BizExportDefaults);
+                    Rdv3Text.BizUsage, Rdv3Text.BizJudgment, Rdv3Text.BizCandidates, Rdv3Text.BizExportDefaults);
         m.SearchLabel = screen.StrOr(Rdv3Text.BizSearchLabel, "").Trim();
         ReadBox(m, screen.Obj(Rdv3Text.BizUserBox, true), Rdv3Text.BizUserBox, UserSlots, true);
         ReadBox(m, screen.Obj(Rdv3Text.BizAppBox, true), Rdv3Text.BizAppBox, AppSlots, false);
         ReadTextBox(m, screen.Obj(Rdv3Text.BizRemarks, true), "remarks");
         ReadTextBox(m, screen.Obj(Rdv3Text.BizPlan, true), "plan");
+        // the only frame the block may leave out: unwritten, it stays off the screen
+        ReadTextBox(m, screen.Obj(Rdv3Text.BizUsage, false), "usageState");
         Rdv3Json judge = screen.Obj(Rdv3Text.BizJudgment, true);
         judge.Only(Rdv3Text.BizBoxName, Rdv3Text.BizPaidText, Rdv3Text.BizUnpaidText);
         m.JudgeLabel = judge.StrOr(Rdv3Text.BizBoxName, "").Trim();
@@ -448,9 +450,10 @@ public static class Rdv3Business
 
     private static void ReadTextBox(Model m, Rdv3Json box, string slot)
     {
-        box.Only(Rdv3Text.BizBoxName, Rdv3Text.BizColumn);
         ScreenRow row = new ScreenRow();
         row.Slot = slot;
+        if (box == null) { row.Hidden = true; m.Rows.Add(row); return; }
+        box.Only(Rdv3Text.BizBoxName, Rdv3Text.BizColumn);
         row.Label = box.StrOr(Rdv3Text.BizBoxName, "").Trim();
         Ref r = ParseRef(m, box.Need(Rdv3Text.BizColumn), box.Member(Rdv3Text.BizColumn), Rdv3Text.BizScreen);
         RequireJoined(m, r, box.Member(Rdv3Text.BizColumn), Rdv3Text.BizScreen);

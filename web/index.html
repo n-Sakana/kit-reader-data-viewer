@@ -172,6 +172,7 @@ main,.page{max-width:none;padding:0;background:#d4d0c8}
     </div>
     <fieldset class="gb text-section fixed-remarks"><legend>意見欄</legend><div class="fld dynamic-text" data-bind="remarks"></div></fieldset>
     <fieldset class="gb text-section fixed-plan"><legend>変更後の計画</legend><div class="fld dynamic-text" data-bind="plan"></div></fieldset>
+    <fieldset class="gb text-section fixed-usage" data-help="表示中の案件の利用状態です。受付データの「利用状態」の列をそのまま出します。"><legend>利用状態</legend><div class="fld dynamic-text" data-bind="usageState"></div></fieldset>
     </div><fieldset class="gb band" data-judgment="paymentStatus" data-help="統合台帳の内容が、業務設定の「支払済の条件」を全部満たしたときだけ「支払済」になります。未決済のあいだは、検索しても自動で確認済にはなりません。"><legend class="band-label">決済状況</legend><div class="bandline"><div class="ok unsearched">未検索</div><span id="jsub"></span></div></fieldset>
     <div class="commandbar">
       <div class="btn" id="b-refresh" role="button" data-action="refreshLedger" aria-disabled="true" tabindex="0" data-help="共有の統合台帳を読み直して、他の端末が送った確認状態を取り込みます。">台帳再読込</div>

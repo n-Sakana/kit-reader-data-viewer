@@ -537,6 +537,7 @@ public static class Rdv3Text
     public const string BizAppBox = "受付情報";
     public const string BizRemarks = "意見欄";
     public const string BizPlan = "変更後の計画";
+    public const string BizUsage = "利用状態";
     public const string BizBoxName = "枠の名前";
     public const string BizRows = "行";
     public const string BizLabel = "ラベル";
