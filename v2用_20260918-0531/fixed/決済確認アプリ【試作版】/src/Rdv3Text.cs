@@ -180,6 +180,15 @@ public static class Rdv3Text
     public const string ErrNoData = "\u30C7\u30FC\u30BF\u30D5\u30A1\u30A4\u30EB\u304C\u898B\u3064\u304B\u308A\u307E\u305B\u3093: ";
     public const string ErrBadLedgerPath = "\u7D71\u5408\u53F0\u5E33\u306E\u30D1\u30B9\u304C\u4E0D\u6B63\u3067\u3059: ";
     public const string ErrNoLedger = "\u7D71\u5408\u53F0\u5E33\u304C\u3042\u308A\u307E\u305B\u3093\u3002\u691C\u7D22\u3067\u304D\u307E\u305B\u3093\u3002";
+    // ---- the sources are the update's business, not the window's ----------
+    public const string ErrNoLedgerNoSource = "統合台帳がありません。台帳を作るには、{files} を {dir} に置いて「データ更新」を押してください。";
+    public const string ErrNoLedgerSourceError = "統合台帳がありません。CSVファイルを読めなかったため作れません。\n\n{reason}\n\n直してから「データ更新」を押してください。";
+    public const string ErrNoLedgerDeclined = "統合台帳がありません。作るときは「データ更新」を押してください（{files} を読みます）。";
+    public const string NoteSourceMissing = "CSVが見つかりません: {files}（台帳はそのまま）";
+    public const string ErrSourceMissing = "CSVファイルが見つかりません:\n{files}\n{dir} に置いてから「データ更新」を押してください。台帳は更新していません。";
+    public const string ErrSourceError = "格納されているCSVファイルが指定外の形式です。台帳は更新していません。\n\n{reason}";
+    public const string DeleteFileMissing = "削除用のファイルが見つかりません。";
+    public const string HeadlessDeleteSkipped = "{file} が無いため、削除の定義は確認していません（削除を実行するときに確認します）。";
     public const string ErrCheckFailed = "\u66F4\u65B0\u78BA\u8A8D\u306B\u5931\u6557\u3057\u307E\u3057\u305F: ";
     public const string ErrCheckTimeout = "\u66F4\u65B0\u78BA\u8A8D\u304C\u30BF\u30A4\u30E0\u30A2\u30A6\u30C8\u3057\u307E\u3057\u305F (\u4FDD\u5B58\u6E08\u307F\u53F0\u5E33\u306E\u307E\u307E\u7D9A\u884C\u3057\u307E\u3059)";
     public const string ErrPersist = "\u53F0\u5E33\u3092\u66F8\u304D\u8FBC\u3081\u307E\u305B\u3093\u3067\u3057\u305F: ";

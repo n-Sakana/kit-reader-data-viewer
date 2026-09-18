@@ -184,7 +184,8 @@ public static class Rdv3ProcessForm
             {
                 valid = false;
                 inputsOk = false;
-                validation = Rdv3Text.ValidationMissing + " (" + Rdv3Files.MissingInputMessage(input.File, input.FileMatch, dataDir) + ")";
+                validation = (deleting ? Rdv3Text.DeleteFileMissing + " " : Rdv3Text.ValidationMissing + " ")
+                    + Rdv3Files.MissingInputMessage(input.File, input.FileMatch, dataDir);
             }
             else
             {

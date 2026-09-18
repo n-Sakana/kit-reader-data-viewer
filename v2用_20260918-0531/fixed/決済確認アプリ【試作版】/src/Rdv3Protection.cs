@@ -62,28 +62,13 @@ public static class Rdv3BusinessDefinition
         return "null";
     }
 
+    // The definition a ledger is bound to is the configuration alone. The
+    // headers of the input files are checked when the files are read, by the
+    // operation that reads them; the window does not need the files to open
+    // the ledger (the operator's decision, 2026-09-18).
     public static string Bound(Rdv3Data data)
     {
-        List<Rdv3TableDef> tables = new List<Rdv3TableDef>(data.Tables);
-        tables.Sort(delegate(Rdv3TableDef a, Rdv3TableDef b) { return StringComparer.Ordinal.Compare(a.Id, b.Id); });
-        StringBuilder result = new StringBuilder("{\"configuration\":").Append(data.Definition);
-        result.Append(",\"headers\":{");
-        for (int i = 0; i < tables.Count; i++)
-        {
-            if (i > 0) { result.Append(','); }
-            result.Append(Rdv3Json.Quote(tables[i].Id)).Append(':').Append(Rdv3WebJson.S(tables[i].Head));
-        }
-        result.Append("},\"fileInputs\":{");
-        List<string> entries = new List<string>();
-        foreach (Rdv3ProcessJobDef job in data.Jobs)
-        {
-            foreach (Rdv3ProcessInputDef input in job.Inputs)
-            {
-                if (!input.IsTable) { entries.Add(Rdv3Json.Quote(job.Id + "/" + input.Id) + ":" + Rdv3WebJson.S(input.Head)); }
-            }
-        }
-        entries.Sort(StringComparer.Ordinal);
-        return result.Append(string.Join(",", entries.ToArray())).Append("}}").ToString();
+        return "{\"configuration\":" + data.Definition + "}";
     }
 
     public static void BindFileInputs(Rdv3Data data, string directory)
@@ -127,8 +112,6 @@ public sealed class Rdv3LedgerProtection
 
     public static Rdv3LedgerProtection Create(Rdv3Data data)
     {
-        foreach (Rdv3TableDef table in data.Tables)
-        { if (table.Head == null) { throw new InvalidOperationException("Bind input headers before creating a ledger"); } }
         return new Rdv3LedgerProtection { Definition = Rdv3BusinessDefinition.Bound(data) };
     }
 

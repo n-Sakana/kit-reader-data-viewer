@@ -37,7 +37,8 @@ public static class Rdv3SettingsForm
             sb.Append("{\"id\":").Append(Rdv3WebJson.Q(entry.Id));
             sb.Append(",\"label\":").Append(Rdv3WebJson.Q(entry.Label.Length == 0 ? entry.Id : entry.Label));
             sb.Append(",\"file\":").Append(Rdv3WebJson.Q(entry.File));
-            sb.Append(",\"match\":").Append(Rdv3WebJson.Q(entry.Match)).Append('}');
+            sb.Append(",\"match\":").Append(Rdv3WebJson.Q(entry.Match));
+            sb.Append(",\"required\":").Append(Rdv3WebJson.B(entry.Required)).Append('}');
         }
         sb.Append("]");
         sb.Append(",\"target\":").Append(TargetJson(before, working.PollMs)).Append('}');
@@ -90,7 +91,7 @@ public static class Rdv3SettingsForm
             }
             // A name nothing answers to would stop the next start before the
             // dialog could be reached again; refuse it here instead.
-            string missing = Rdv3Files.CheckInputName(file, match, dataDir, ReaderDataViewer.App.BaseDirectory);
+            string missing = entry.Required ? Rdv3Files.CheckInputName(file, match, dataDir, ReaderDataViewer.App.BaseDirectory) : null;
             if (missing != null)
             {
                 owner.Error(missing);

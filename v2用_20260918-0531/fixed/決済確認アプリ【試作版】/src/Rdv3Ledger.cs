@@ -107,6 +107,8 @@ public static class Rdv3Ledger
         string[][] heads = new string[nt][];
         for (int t = 0; t < nt; t++)
         {
+            // only the tables this job reads; a deletion list is read by the deletion
+            if (!IsInput(job, t)) { r.TableRows[t] = -1; continue; }
             long m = Rdv3Clock.Now();
             string note;
             string path = Rdv3Files.ResolveInput(d.Tables[t].File, d.Tables[t].FileMatch, dataDir, out note);
@@ -121,11 +123,11 @@ public static class Rdv3Ledger
         }
         // the definition's names against the headers actually read
         d.Bind(heads);
-        Rdv3BusinessDefinition.BindFileInputs(d, dataDir);
         d.ConvertWorkbookDates(tables);
         d.ValidateTypes(tables);
         for (int t = 0; t < nt; t++)
         {
+            if (tables[t] == null) { continue; }
             tables[t].AddWarnings(r.Warnings);
             tables[t].AddNotes(r.Notes);
             r.TableRows[t] = tables[t].Rows;
@@ -205,6 +207,12 @@ public static class Rdv3Ledger
         r.Head = d.Head;
         r.Lines = ComposeLines(d, job, tables, joined);
         return r;
+    }
+
+    private static bool IsInput(Rdv3ProcessJobDef job, int tableOrd)
+    {
+        foreach (Rdv3ProcessInputDef input in job.Inputs) { if (input.IsTable && input.TableOrd == tableOrd) { return true; } }
+        return false;
     }
 
     private static string[] ComposeLines(Rdv3Data d, Rdv3ProcessJobDef job,

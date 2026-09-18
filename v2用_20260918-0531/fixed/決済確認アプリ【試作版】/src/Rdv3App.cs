@@ -209,10 +209,10 @@ public sealed class Rdv3App
     // ---- the update check (at start-up, and from the refreshLedger button) ----
     private void StartCheck()
     {
-        StartCheck(dataDef.UpdateJob);
+        StartCheck(dataDef.UpdateJob, false);
     }
 
-    private void StartCheck(Rdv3ProcessJobDef process)
+    private void StartCheck(Rdv3ProcessJobDef process, bool explicitRequest)
     {
         ClearShown();
         state = StChecking;
@@ -221,13 +221,14 @@ public sealed class Rdv3App
         activeRunId = rid;
         form.SetState(Rdv3Text.StateChecking);
         form.EnableOps(false);
+        form.EnableRetry(false);
         log.Write(rid, "decision", "check started job=" + process.Id);
 
         Rdv3Job job = new Rdv3Job();
         job.RunId = rid;
         job.Kind = "check";
         job.TimeoutMs = cfg.CheckTimeoutMs;
-        job.Work = delegate { CheckJob(rid, process); };
+        job.Work = delegate { CheckJob(rid, process, explicitRequest); };
         worker.Start();
         worker.Post(job);
     }
@@ -237,44 +238,70 @@ public sealed class Rdv3App
         RefreshLedger(dataDef.UpdateJob);
     }
 
+    // From READY, and from BLOCKED: the operator who has just put the files
+    // in place asks for the check again without restarting.
     private void RefreshLedger(Rdv3ProcessJobDef process)
     {
-        if (state != StReady) { form.Error(Rdv3Text.ErrNotReady); return; }
+        if (state != StReady && state != StBlocked) { form.Error(Rdv3Text.ErrNotReady); return; }
         if (writes.Pending) { form.Error(Rdv3Text.ErrSaveInFlight); return; }
         log.Write("-", "decision", "check requested from the screen job=" + process.Id);
-        StartCheck(process);
+        StartCheck(process, true);
     }
 
-    // worker thread
-    private void CheckJob(string rid, Rdv3ProcessJobDef process)
+    // worker thread. The sources are read when they are all there; a source
+    // that is missing or unreadable is reported and the saved ledger stands.
+    // Nothing on disk is required to start: a ledger alone is searchable.
+    private void CheckJob(string rid, Rdv3ProcessJobDef process, bool explicitRequest)
     {
         // A no-change preview never reaches Write; detect direct JSON edits
         // here too, before reporting that the current ledger is up to date.
         CheckDefinitionSource();
         long t = Rdv3Clock.Now();
-        Rdv3MergeResult mr = Rdv3Ledger.BuildFromCsv(dataDef, process, dataDir);
-        double composeMs = Rdv3Clock.MsSince(t) - mr.MergeMs();
-
-        for (int i = 0; i < dataDef.Tables.Count; i++)
+        Rdv3MergeResult mr = null;
+        string sourceProblem = null;
+        bool sourceMissing = false;
+        List<string> missing = dataDef.MissingInputs(process, dataDir);
+        if (missing.Count > 0)
         {
-            log.Write(rid, "read", "table=" + dataDef.Tables[i].Id + " file=" + dataDef.Tables[i].File
-                + " rows=" + mr.TableRows[i].ToString(CultureInfo.InvariantCulture) + " ms=" + Rdv3Log.F(mr.ReadMs[i]));
+            sourceMissing = true;
+            sourceProblem = string.Join(", ", missing.ToArray());
+            log.Write(rid, "read", "sources missing: " + sourceProblem);
         }
-        for (int i = 0; i < mr.Notes.Count; i++) { log.Write(rid, "input", mr.Notes[i]); }
-        for (int i = 0; i < dataDef.Tables.Count; i++)
+        else
         {
-            log.Write(rid, "index", "table=" + dataDef.Tables[i].Id + " keys=" + mr.Keys[i].ToString(CultureInfo.InvariantCulture)
-                + " ms=" + Rdv3Log.F(mr.IndexMs[i]));
+            try { mr = Rdv3Ledger.BuildFromCsv(dataDef, process, dataDir); }
+            catch (Rdv3DataError error)
+            {
+                sourceProblem = Rdv3Business.Localize(error.Message);
+                log.Write(rid, "error", "stage=read msg=" + sourceProblem);
+            }
         }
-        for (int i = 0; i < process.Joins.Count; i++)
+        if (mr != null)
         {
-            log.Write(rid, "join", "pair=" + process.Spine + process.Joins[i].Table + " on=" + process.Joins[i].On
-                + " matched=" + mr.Matched[i].ToString(CultureInfo.InvariantCulture) + " ms=" + Rdv3Log.F(mr.JoinMs[i]));
+            double composeMs = Rdv3Clock.MsSince(t) - mr.MergeMs();
+            for (int i = 0; i < dataDef.Tables.Count; i++)
+            {
+                if (mr.TableRows[i] < 0) { continue; }
+                log.Write(rid, "read", "table=" + dataDef.Tables[i].Id + " file=" + dataDef.Tables[i].File
+                    + " rows=" + mr.TableRows[i].ToString(CultureInfo.InvariantCulture) + " ms=" + Rdv3Log.F(mr.ReadMs[i]));
+            }
+            for (int i = 0; i < mr.Notes.Count; i++) { log.Write(rid, "input", mr.Notes[i]); }
+            for (int i = 0; i < dataDef.Tables.Count; i++)
+            {
+                if (mr.TableRows[i] < 0) { continue; }
+                log.Write(rid, "index", "table=" + dataDef.Tables[i].Id + " keys=" + mr.Keys[i].ToString(CultureInfo.InvariantCulture)
+                    + " ms=" + Rdv3Log.F(mr.IndexMs[i]));
+            }
+            for (int i = 0; i < process.Joins.Count; i++)
+            {
+                log.Write(rid, "join", "pair=" + process.Spine + process.Joins[i].Table + " on=" + process.Joins[i].On
+                    + " matched=" + mr.Matched[i].ToString(CultureInfo.InvariantCulture) + " ms=" + Rdv3Log.F(mr.JoinMs[i]));
+            }
+            log.Write(rid, "merge", "rows=" + mr.Rows.ToString(CultureInfo.InvariantCulture)
+                + " checksum=" + mr.Checksum.ToString(CultureInfo.InvariantCulture)
+                + " ms=" + Rdv3Log.F(mr.MergeMs()) + " compose_ms=" + Rdv3Log.F(composeMs));
+            for (int i = 0; i < mr.Warnings.Count; i++) { log.Write(rid, "warning", mr.Warnings[i]); }
         }
-        log.Write(rid, "merge", "rows=" + mr.Rows.ToString(CultureInfo.InvariantCulture)
-            + " checksum=" + mr.Checksum.ToString(CultureInfo.InvariantCulture)
-            + " ms=" + Rdv3Log.F(mr.MergeMs()) + " compose_ms=" + Rdv3Log.F(composeMs));
-        for (int i = 0; i < mr.Warnings.Count; i++) { log.Write(rid, "warning", mr.Warnings[i]); }
 
         // saved ledger
         string[] oldLines = null;
@@ -287,7 +314,7 @@ public sealed class Rdv3App
             try
             {
                 t = Rdv3Clock.Now();
-                protection = ReadLedger(mr.Head, out oldLines, out oldStates).Protection;
+                protection = ReadLedger(dataDef.Head, out oldLines, out oldStates).Protection;
                 log.Write(rid, "load", "ledger rows=" + oldLines.Length.ToString(CultureInfo.InvariantCulture)
                     + " ms=" + Rdv3Log.F(Rdv3Clock.MsSince(t)));
             }
@@ -303,7 +330,7 @@ public sealed class Rdv3App
         }
 
         bool same = false;
-        if (oldLines != null)
+        if (mr != null && oldLines != null)
         {
             t = Rdv3Clock.Now();
             Rdv3UpdateResult preview = (mr.Prepared == null)
@@ -333,12 +360,14 @@ public sealed class Rdv3App
         string keepErr = loadError;
         bool keepExists = exists;
         bool keepSame = same;
-        form.RunOnUi(delegate { EndCheck(rid, mrKeep, keepOld, keepStates, keepExists, keepErr, keepSame); });
+        string keepProblem = sourceProblem;
+        bool keepMissing = sourceMissing;
+        form.RunOnUi(delegate { EndCheck(rid, mrKeep, keepOld, keepStates, keepExists, keepErr, keepSame, keepProblem, keepMissing, explicitRequest); });
     }
 
     // UI thread
     private void EndCheck(string rid, Rdv3MergeResult mr, string[] oldLines, string[] oldStates,
-                          bool ledgerExists, string loadError, bool same)
+                          bool ledgerExists, string loadError, bool same, string sourceProblem, bool sourceMissing, bool explicitRequest)
     {
         if (!string.Equals(rid, activeRunId, StringComparison.Ordinal))
         {
@@ -348,12 +377,50 @@ public sealed class Rdv3App
         mergeResult = mr;
         savedLines = oldLines;
         savedStates = oldStates;
-        lastMergeMs = mr.MergeMs();
-        form.SetTimes(lastMergeMs, -1);
-        if (mr.Warnings.Count > 0)
+        if (mr != null)
         {
-            if (!startupLogged) { form.Notice(Rdv3Text.InputWarningLog); }
-            else { form.Error(string.Join(Environment.NewLine, mr.Warnings.ToArray())); }
+            lastMergeMs = mr.MergeMs();
+            form.SetTimes(lastMergeMs, -1);
+            if (mr.Warnings.Count > 0)
+            {
+                if (!startupLogged) { form.Notice(Rdv3Text.InputWarningLog); }
+                else { form.Error(string.Join(Environment.NewLine, mr.Warnings.ToArray())); }
+            }
+        }
+
+        if (mr == null)
+        {
+            // No source this time. What was said about it is shown; the saved
+            // ledger stays searchable, or, without one, the app waits for the
+            // files with the update and reload buttons open.
+            string files = string.Join(", ", dataDef.InputFileNames(dataDef.UpdateJob).ToArray());
+            string sourceText = sourceMissing
+                ? Rdv3Text.ErrSourceMissing.Replace("{files}", sourceProblem).Replace("{dir}", dataDir)
+                : Rdv3Text.ErrSourceError.Replace("{reason}", sourceProblem);
+            if (oldLines != null)
+            {
+                AdoptLedger(rid, oldLines, oldStates, dataDef.Head, sourceMissing ? "sources-missing" : "source-error");
+                if (sourceMissing && !explicitRequest) { form.Notice(Rdv3Text.NoteSourceMissing.Replace("{files}", sourceProblem)); }
+                else { form.Error(sourceText); }
+                return;
+            }
+            if (ledgerExists)
+            {
+                form.Error(Rdv3Text.ErrLedgerRead + (loadError ?? ""));
+                if (ledLines != null) { ContinueWithActive(rid, "ledger-read-failed"); }
+                else { EnterBlocked(Rdv3Text.ErrNoLedger); }
+                return;
+            }
+            if (ledLines != null)
+            {
+                ContinueWithActive(rid, sourceMissing ? "sources-missing" : "source-error");
+                form.Error(sourceText);
+                return;
+            }
+            EnterBlocked(sourceMissing
+                ? Rdv3Text.ErrNoLedgerNoSource.Replace("{files}", files).Replace("{dir}", dataDir)
+                : Rdv3Text.ErrNoLedgerSourceError.Replace("{reason}", sourceProblem));
+            return;
         }
 
         if (oldLines == null)
@@ -363,22 +430,15 @@ public sealed class Rdv3App
                 // A read error is not permission to destroy the unreadable file.
                 form.Error(Rdv3Text.ErrLedgerRead + (loadError ?? ""));
                 if (ledLines != null) { ContinueWithActive(rid, "ledger-read-failed"); }
-                else { EnterBlocked(); }
+                else { EnterBlocked(Rdv3Text.ErrNoLedger); }
                 return;
             }
-            // missing or unreadable: never silently rebuild -- ask, with the
-            // reason on the screen
-            string body = ledgerExists
-                ? Rdv3Text.ConfirmRebuildBody.Replace("{err}", (loadError == null) ? "?" : loadError)
-                : Rdv3Text.ConfirmCreateBody;
-            if (ledgerExists) { form.Error(Rdv3Text.ErrLedgerRead + ((loadError == null) ? "" : loadError)); }
-            bool yes = form.Ask(Rdv3Text.ConfirmUpdateTitle, body);
-            log.Write(rid, "decision", ledgerExists
-                ? ("ledger unreadable; rebuild " + (yes ? "approved" : "declined"))
-                : ("ledger missing; create " + (yes ? "approved" : "declined")));
+            // missing: never silently build -- ask, with the reason on the screen
+            bool yes = form.Ask(Rdv3Text.ConfirmUpdateTitle, Rdv3Text.ConfirmCreateBody);
+            log.Write(rid, "decision", "ledger missing; create " + (yes ? "approved" : "declined"));
             if (yes) { StartApply(rid); }
             else if (ledLines != null) { ContinueWithActive(rid, Rdv3Text.NoteRejected); }
-            else { EnterBlocked(); }
+            else { EnterBlocked(Rdv3Text.ErrNoLedgerDeclined.Replace("{files}", string.Join(", ", dataDef.InputFileNames(dataDef.UpdateJob).ToArray()))); }
             return;
         }
 
@@ -655,15 +715,22 @@ public sealed class Rdv3App
         shownCands = null;
     }
 
-    // UI thread
+    // UI thread. Nothing to search yet; the update and reload buttons stay
+    // open so the ledger can be built once the files are in place.
     private void EnterBlocked()
+    {
+        EnterBlocked(Rdv3Text.ErrNoLedger);
+    }
+
+    private void EnterBlocked(string message)
     {
         state = StBlocked;
         activeRunId = "";
         form.EnableOps(false);
+        form.EnableRetry(true);
         form.SetState(Rdv3Text.StateBlocked);
-        form.Error(Rdv3Text.ErrNoLedger);
-        log.Write("-", "decision", "blocked (no ledger)");
+        form.Error(message);
+        log.Write("-", "decision", "blocked (no ledger): " + message.Replace("\r", " ").Replace("\n", " "));
     }
 
     // ---- search ------------------------------------------------------------
@@ -1244,7 +1311,7 @@ public sealed class Rdv3App
     private void OpenUpdateJob(string jobId)
     {
         if (writes.Pending || form.IsModalOpen) { form.Error(Rdv3Text.ErrSaveInFlight); return; }
-        if (state != StReady) { form.Error(Rdv3Text.ErrNotReady); return; }
+        if (state != StReady && state != StBlocked) { form.Error(Rdv3Text.ErrNotReady); return; }
         Rdv3ProcessJobDef process = dataDef.JobOf(jobId);
         if (process == null || process.Kind != "update") { return; }
         if (Rdv3ProcessForm.ShowJob(form, dataDef, jobId, dataDir, ledgerPath)) { RefreshLedger(process); }
@@ -1879,22 +1946,9 @@ public sealed class Rdv3App
     private void JobFailed(Rdv3Job job, Exception ex)
     {
         log.Write(job.RunId, "error", "kind=" + job.Kind + " msg=" + ex.GetType().Name + ": " + ex.Message);
-        if (ex is Rdv3DataError)
-        {
-            // the CSVs themselves are not usable: say so and stop. Going on with
-            // the ledger in memory would be running on data the operator has
-            // just been told is broken.
-            log.Write(job.RunId, "exit", "stopping: the data cannot be used");
-            // queued, not waited for: this is the worker thread, and the close
-            // that follows the modal stops the worker -- a synchronous call
-            // here would wait for itself
-            form.PostOnUi(delegate
-            {
-                if (writes.Pending) { EndWriteGuard(job.RunId, false); }
-                form.Fatal(Rdv3Text.FatalDataTitle, Rdv3Text.FatalData.Replace("{reason}", Rdv3Business.Localize(ex.Message)));
-            });
-            return;
-        }
+        // An unusable input is reported and the app goes on with the ledger it
+        // holds: the files are needed by the operation that reads them, not by
+        // the window (the operator's decision, 2026-09-18).
         form.RunOnUi(delegate
         {
             form.Error(Rdv3Text.ErrCheckFailed + Rdv3Business.Localize(ex.Message));

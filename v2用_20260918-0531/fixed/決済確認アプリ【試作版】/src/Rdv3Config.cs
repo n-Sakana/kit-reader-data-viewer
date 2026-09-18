@@ -241,11 +241,12 @@ public sealed class Rdv3TableFile
     public string Label = "";
     public string File = "";
     public string Match = "prefix";
+    public bool Required = true;              // read by the update; a deletion list is not
 
     public Rdv3TableFile Clone()
     {
         Rdv3TableFile t = new Rdv3TableFile();
-        t.Id = Id; t.Label = Label; t.File = File; t.Match = Match;
+        t.Id = Id; t.Label = Label; t.File = File; t.Match = Match; t.Required = Required;
         return t;
     }
 }
@@ -429,6 +430,7 @@ public sealed class Rdv3Config
                 Rdv3TableDef table = c.Data.Tables[i];
                 Rdv3TableFile entry = new Rdv3TableFile();
                 entry.Id = table.Id; entry.Label = table.Label; entry.File = table.File; entry.Match = table.FileMatch;
+                entry.Required = c.Data.IsUpdateInput(table.Ord);
                 c.TableFiles.Add(entry);
                 Rdv3Json node = (tables == null || tables.Kind != Rdv3Json.TObject) ? null : tables.Member(table.Id);
                 if (node != null && node.Kind == Rdv3Json.TObject) { c.tableNodes[table.Id] = node; }

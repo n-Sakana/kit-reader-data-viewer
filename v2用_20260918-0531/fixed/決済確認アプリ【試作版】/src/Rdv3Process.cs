@@ -204,6 +204,10 @@ public static class Rdv3Process
         for (int i = 0; i < data.Jobs.Count; i++)
         {
             Rdv3ProcessJobDef job = data.Jobs[i];
+            // a job whose table was not read this time is walked when it runs
+            bool headsKnown = true;
+            foreach (Rdv3ProcessInputDef input in job.Inputs) { if (input.IsTable && heads[input.TableOrd] == null) { headsKnown = false; } }
+            if (!headsKnown) { continue; }
             Action check = delegate {
             Rdv3PreparedProcess prepared = PrepareFromHeads(data, job, heads);
             Rdv3ProcessResult result = Execute(prepared, new string[0], new string[0], "", true);

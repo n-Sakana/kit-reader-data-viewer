@@ -294,6 +294,35 @@ public sealed class Rdv3Data
         }
     }
 
+    // The tables the update job reads. Any other table (a deletion list) is
+    // read by the job that uses it, when that job runs.
+    public bool IsUpdateInput(int tableOrd)
+    {
+        if (UpdateJob == null) { return false; }
+        foreach (Rdv3ProcessInputDef input in UpdateJob.Inputs) { if (input.IsTable && input.TableOrd == tableOrd) { return true; } }
+        return false;
+    }
+
+    // The job's table inputs that are not in the data folder, as "label (file)".
+    public List<string> MissingInputs(Rdv3ProcessJobDef job, string dataDir)
+    {
+        List<string> missing = new List<string>();
+        foreach (Rdv3ProcessInputDef input in job.Inputs)
+        {
+            string note;
+            string path = Rdv3Files.ResolveInput(input.File, input.FileMatch, dataDir, out note);
+            if (!Rdv3Files.Exists(path)) { missing.Add(input.File); }
+        }
+        return missing;
+    }
+
+    public List<string> InputFileNames(Rdv3ProcessJobDef job)
+    {
+        List<string> names = new List<string>();
+        foreach (Rdv3ProcessInputDef input in job.Inputs) { names.Add(input.File); }
+        return names;
+    }
+
     public Rdv3ProcessJobDef JobOf(string id)
     {
         for (int i = 0; i < Jobs.Count; i++) { if (Jobs[i].Id == id) { return Jobs[i]; } }
@@ -1305,6 +1334,8 @@ public sealed class Rdv3Data
         for (int t = 0; t < Tables.Count; t++)
         {
             Tables[t].Head = heads[t];
+            // a table that was not read this time (a deletion list) is checked when its job runs
+            if (heads[t] == null) { continue; }
             foreach (string key in Tables[t].KeyColumns)
             { if (FieldOf(heads[t], key) < 0) { Report(validation, Missing(Tables[t], key, "tables." + Tables[t].Id + ".key")); } }
         }
@@ -1325,13 +1356,13 @@ public sealed class Rdv3Data
         for (int i = 0; i < Columns.Count; i++)
         {
             Rdv3ColumnRef c = Columns[i];
-            c.Field = (c.TableOrd >= 0) ? FieldOf(heads[c.TableOrd], c.Column) : -1;
+            c.Field = (c.TableOrd >= 0 && heads[c.TableOrd] != null) ? FieldOf(heads[c.TableOrd], c.Column) : -1;
         }
         for (int i = 0; i < TypeOrder.Count; i++)
         {
             Rdv3ColumnTypeDef type = TypeOrder[i];
             int dot = type.Ref.IndexOf('.');
-            type.Field = (type.TableOrd >= 0) ? FieldOf(heads[type.TableOrd], type.Ref.Substring(dot + 1)) : -1;
+            type.Field = (type.TableOrd >= 0 && heads[type.TableOrd] != null) ? FieldOf(heads[type.TableOrd], type.Ref.Substring(dot + 1)) : -1;
         }
         if (validation != null) { validation.Finish("input columns", "job columns, ledger columns, input types and job preparation"); }
         HashSet<string> produced = Rdv3Process.ValidateColumns(this, heads, validation);
@@ -1347,6 +1378,7 @@ public sealed class Rdv3Data
         {
             Rdv3ColumnTypeDef type = TypeOrder[i];
             if (type.Field >= 0 || (produced != null && produced.Contains(type.Ref))) { continue; }
+            if (type.TableOrd >= 0 && heads[type.TableOrd] == null) { continue; }
             int dot = type.Ref.IndexOf('.');
             Report(validation, MissingRef(type.TableOrd, type.Ref.Substring(0, dot), type.Ref.Substring(dot + 1), "types"));
         }

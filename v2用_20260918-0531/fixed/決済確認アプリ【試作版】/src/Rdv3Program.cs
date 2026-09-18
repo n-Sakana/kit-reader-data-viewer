@@ -70,50 +70,9 @@ public static class Rdv3Program
             return 6;
         }
 
-        // ---- the data the definition names: the files exist and their headers
-        // hold every column the definition uses
-        try
-        {
-            if (!Directory.Exists(dataDir)) { throw new Rdv3DataError(Rdv3Text.ErrDataDir + dataDir); }
-            string[][] heads = new string[cfg.Data.Tables.Count][];
-            for (int t = 0; t < cfg.Data.Tables.Count; t++)
-            {
-                string resolvedNote;
-                string p = Rdv3Files.ResolveInput(cfg.Data.Tables[t].File, cfg.Data.Tables[t].FileMatch, dataDir, out resolvedNote);
-                Rdv3Log.Phase("window input header " + p);
-                if (!File.Exists(p))
-                { throw new Rdv3DataError(Rdv3Text.ErrNoData + p + "\r\n" + Rdv3Files.MissingInputMessage(cfg.Data.Tables[t].File, cfg.Data.Tables[t].FileMatch, dataDir)); }
-                heads[t] = Rdv3Table.ReadHead(p, cfg.Data.Tables[t].Enc, cfg.Data.Tables[t].EncodingSetting,
-                    cfg.Data.SourceReferences(cfg.Data.Tables[t].Id), cfg.Data.Tables[t].HeaderRow, cfg.Data.Tables[t].Delimiter,
-                    cfg.Data.Tables[t].Sheet);
-            }
-            cfg.Data.Bind(heads);
-            Rdv3BusinessDefinition.BindFileInputs(cfg.Data, dataDir);
-            if (cfg.Data.TypeOrder.Count > 0)
-            {
-                Rdv3Table[] typedTables = new Rdv3Table[cfg.Data.Tables.Count];
-                for (int i = 0; i < cfg.Data.TypeOrder.Count; i++)
-                {
-                    int tableOrd = cfg.Data.TypeOrder[i].TableOrd;
-                    // a type on a column the update job makes has no file to check here
-                    if (tableOrd < 0 || typedTables[tableOrd] != null) { continue; }
-                    Rdv3TableDef table = cfg.Data.Tables[tableOrd];
-                    string typedNote;
-                    typedTables[tableOrd] = Rdv3Table.Read(Rdv3Files.ResolveInput(table.File, table.FileMatch, dataDir, out typedNote),
-                        table.Id, table.Enc, table.KeyColumns, table.KeyValidation, table.EncodingSetting, cfg.Data.SourceReferences(table.Id),
-                        table.HeaderRow, table.Delimiter, table.Sheet);
-                }
-                cfg.Data.ConvertWorkbookDates(typedTables);
-                cfg.Data.ValidateTypes(typedTables);
-            }
-        }
-        catch (Exception ex)
-        {
-            string reason = Rdv3Business.Localize(ex.Message);
-            Stop(logPath, "data", "not started: " + reason,
-                Rdv3Text.FatalDataTitle, Rdv3Text.FatalData.Replace("{reason}", reason));
-            return 3;
-        }
+        // No input file is needed to start: a ledger alone is searchable. The
+        // CSVs are read by the update check, which reports what is missing.
+        Rdv3Log.Phase("window inputs deferred to the update check");
 
         // Every local store and shared companion file derives from this same
         // canonical ledger path.

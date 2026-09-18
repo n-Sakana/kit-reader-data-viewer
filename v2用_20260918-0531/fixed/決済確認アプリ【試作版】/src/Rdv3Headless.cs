@@ -102,6 +102,10 @@ public static class Rdv3Headless
             string path = Rdv3Files.ResolveInput(def.File, def.FileMatch, dataDir, out note);
             if (note != null) { notes.Add(note); }
             Rdv3Log.Phase("reading input " + def.Id + " " + path);
+            // a table only a deletion reads is optional here: without its file
+            // the deletion definition stays unchecked and says so
+            if (!Rdv3Files.Exists(path) && !data.IsUpdateInput(i))
+            { notes.Add(Rdv3Text.HeadlessDeleteSkipped.Replace("{file}", def.File)); return; }
             if (!Rdv3Files.Exists(path)) { throw new Rdv3DataError(Rdv3Files.MissingInputMessage(def.File, def.FileMatch, dataDir)); }
             tables[i] = Rdv3Table.Read(path, def.Id, def.Enc,
                 def.KeyColumns, def.KeyValidation, def.EncodingSetting, data.SourceReferences(def.Id), def.HeaderRow, def.Delimiter, def.Sheet);
@@ -115,12 +119,15 @@ public static class Rdv3Headless
         data.Bind(heads, validation);
         data.ConvertWorkbookDates(tables);
         data.ValidateTypes(tables, validation);
-        foreach (Rdv3Table table in tables) { new Rdv3Index(table); table.AddWarnings(warnings); table.AddNotes(notes); }
+        foreach (Rdv3Table table in tables) { if (table == null) { continue; } new Rdv3Index(table); table.AddWarnings(warnings); table.AddNotes(notes); }
         if (validation != null) { validation.Finish("input types", "job preparation"); }
         Rdv3PreparedProcess update = null;
         List<Rdv3InputResult> inputs = new List<Rdv3InputResult>();
         for (int j = 0; j < data.Jobs.Count; j++)
         {
+            bool inputsRead = true;
+            foreach (Rdv3ProcessInputDef input in data.Jobs[j].Inputs) { if (input.IsTable && tables[input.TableOrd] == null) { inputsRead = false; } }
+            if (!inputsRead) { continue; }
             Action prepare = delegate {
             Rdv3Log.Phase("preparing job " + data.Jobs[j].Id);
             Rdv3PreparedProcess prepared = Rdv3Process.Prepare(data, data.Jobs[j], dataDir, tables);

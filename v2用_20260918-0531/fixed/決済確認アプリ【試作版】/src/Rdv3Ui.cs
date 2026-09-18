@@ -74,6 +74,8 @@ public sealed class Rdv3Form
     private bool shown;
     private bool opsEnabled;
     private bool workEnabled;
+    // BLOCKED (no ledger yet): only the update and reload buttons are open
+    private bool retryEnabled;
     private string keyText = "";
     private string notice = "";
     private bool noticeError;
@@ -213,6 +215,11 @@ public sealed class Rdv3Form
     public void EnableWorkState(bool on)
     {
         Ui(delegate { workEnabled = on; RefreshValues(); });
+    }
+
+    public void EnableRetry(bool on)
+    {
+        Ui(delegate { retryEnabled = on; RefreshValues(); });
     }
 
     public void SetJudgmentNotice(string text, string look)
@@ -594,6 +601,9 @@ public sealed class Rdv3Form
                     field = "table:" + id;
                     break;
                 }
+                // only a file the update reads has to be there to save the
+                // settings; a deletion list is checked when the deletion runs
+                if (!Flag(item, "required", true)) { continue; }
                 string missing = Rdv3Files.CheckInputName(file, Text(item, "match"), dataDir, ReaderDataViewer.App.BaseDirectory);
                 if (missing != null)
                 {
@@ -870,6 +880,7 @@ public sealed class Rdv3Form
         sb.Append("},\"key\":").Append(Rdv3WebJson.Q(keyText));
         sb.Append(",\"opsEnabled\":").Append(Rdv3WebJson.B(opsEnabled));
         sb.Append(",\"workEnabled\":").Append(Rdv3WebJson.B(workEnabled));
+        sb.Append(",\"retryEnabled\":").Append(Rdv3WebJson.B(retryEnabled));
         sb.Append(",\"workText\":").Append(Rdv3WebJson.Q(buttonText));
         sb.Append(",\"workDown\":").Append(Rdv3WebJson.B(down));
         sb.Append(",\"pending\":").Append(View.PendingCount.ToString(CultureInfo.InvariantCulture));

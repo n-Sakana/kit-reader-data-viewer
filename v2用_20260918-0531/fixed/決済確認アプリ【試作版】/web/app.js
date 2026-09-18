@@ -259,8 +259,12 @@
     }
     Array.prototype.forEach.call(stage.querySelectorAll('[data-action]'), function (node) {
       var action = node.getAttribute('data-action');
+      // without a ledger (BLOCKED) the update and reload buttons stay open,
+      // so the ledger can be built once the files are in place
       var enabled = action === 'settings' ? true : action === 'workState' ?
-        next.opsEnabled && next.workEnabled : next.opsEnabled;
+        next.opsEnabled && next.workEnabled :
+        (action === 'refreshLedger' || action === 'updateRecords') ? (next.opsEnabled || next.retryEnabled) :
+        next.opsEnabled;
       node.classList.toggle('dis', !enabled);
       node.setAttribute('aria-disabled', enabled ? 'false' : 'true');
       node.tabIndex = enabled ? 0 : -1;
@@ -758,7 +762,7 @@
     var pattern = value('pattern');
     var tables = ((settingsContent && settingsContent.tables) || []).map(function (table) {
       var select = body.querySelector('select[data-match="' + cssEscape(table.id) + '"]');
-      return { id: table.id, file: value('table:' + table.id), match: select ? select.value : 'exact' };
+      return { id: table.id, file: value('table:' + table.id), match: select ? select.value : 'exact', required: table.required !== false };
     });
     pendingSettings = { ok: true, dataDir: dataDir, ledger: ledger, log: log,
       pattern: pattern, candidateRows: Number(value('candidateRows')), tables: tables };
