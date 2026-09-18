@@ -1,4 +1,4 @@
-(function () {
+﻿(function () {
   'use strict';
 
   function logClientError(kind, message, file, line, column, stack) {
@@ -359,6 +359,11 @@
     veil.classList.add('show');
     currentModal = veil;
     if (dialogMode) {
+      // The message text may be far taller than the desktop. Its limit comes
+      // from the monitor's work area, never from the window's current size,
+      // so the size reported to the host is the same whatever was open before.
+      var avail = (window.screen && window.screen.availHeight) ? window.screen.availHeight : 720;
+      document.documentElement.style.setProperty('--dialog-text-max', Math.max(120, avail - 200) + 'px');
       dialogSizePending = true;
       requestAnimationFrame(function () { requestAnimationFrame(reportDialogSize); });
     }
