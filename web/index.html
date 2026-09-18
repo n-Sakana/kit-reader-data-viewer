@@ -181,10 +181,9 @@ main,.page{max-width:none;padding:0;background:#d4d0c8}
       <div class="btn" id="b-del" role="button" data-action="deleteRecords" aria-disabled="true" tabindex="0" data-help="削除用の CSV に含まれ、確認済として送信済みの案件を統合台帳から削除します。">データ削除</div>
       <div class="btn" id="b-set" role="button" data-action="settings" aria-disabled="true" tabindex="0">設定</div>
     </div><div class="sep"></div>
-    <div class="sendbar"><div class="sendn" id="sn" data-bind="pendingCount" data-help="確認状態を変更したあと、まだ統合台帳に送信していない件数です。"></div>
+    <div class="sendbar"><div class="sendcol"><div class="sendn" id="sn" data-bind="pendingCount" data-help="確認状態を変更したあと、まだ統合台帳に送信していない件数です。"></div><div class="subtext" id="s-send"></div></div>
       <div class="btn def" id="b-send" role="button" data-action="sendChanges" aria-disabled="true" tabindex="0" data-help="この端末で変更した確認状態を統合台帳に送信します。送信するまで統合台帳には書き込まれません。">確認状態を送信</div>
     </div>
-    <div class="subtext" id="s-send"></div>
   </div></div>
   <div class="sb" role="status" aria-live="polite"><div class="sp" data-bind="appState"></div><div class="sp" data-bind="ledgerRows" data-prefix="統合台帳件数 "></div><div class="sp" data-bind="clock" data-clock="true"></div><div class="grip"></div></div>
 </div>

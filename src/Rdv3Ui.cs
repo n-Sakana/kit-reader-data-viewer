@@ -831,23 +831,10 @@ public sealed class Rdv3Form
         sb.Append(",\"searchLabel\":").Append(Rdv3WebJson.Q(Rdv3Business.SearchLabel));
         sb.Append(",\"boxNames\":{\"user\":").Append(Rdv3WebJson.Q(Rdv3Business.UserBoxName));
         sb.Append(",\"application\":").Append(Rdv3WebJson.Q(Rdv3Business.AppBoxName)).Append('}');
-        // The chips the block writes for itself: a text frame says which
-        // column it shows, the band says the rule that makes a record paid.
+        // The one chip the block writes for itself: the rule that makes a
+        // record paid. A text frame shows a column; there is nothing to add.
         sb.Append(",\"helps\":{");
         comma = false;
-        foreach (string slot in new string[] { "remarks", "plan", "usageState" })
-        {
-            Rdv3Bind bind;
-            if (!Screen.Bindings.TryGetValue(slot, out bind) || bind.Hidden || !bind.IsField) { continue; }
-            string reference = bind.Fields[0];
-            int dot = reference.IndexOf('.');
-            if (dot <= 0) { continue; }
-            if (comma) { sb.Append(','); }
-            comma = true;
-            sb.Append(Rdv3WebJson.Q(slot)).Append(':').Append(Rdv3WebJson.Q(
-                Rdv3Text.TextFrameHelpFmt.Replace("{table}", reference.Substring(0, dot))
-                    .Replace("{column}", ColumnOf(reference))));
-        }
         foreach (KeyValuePair<string, Rdv3Judgment> judgment in Screen.Judgments)
         {
             string rule = JudgeHelp(judgment.Value);
@@ -927,7 +914,7 @@ public sealed class Rdv3Form
             int col = fields.IndexOf(condition[1]);
             string value = (col >= 0 && col < View.Record.Length && View.Record[col] != null) ? View.Record[col] : "";
             if (string.Equals(value, condition[2], StringComparison.Ordinal)) { continue; }
-            string item = Rdv3Text.JudgeUnpaidItemFmt.Replace("{table}", condition[0])
+            string item = Rdv3Text.JudgeUnpaidItemFmt.Replace("{table}", condition[3])
                 .Replace("{column}", ColumnOf(condition[1])).Replace("{value}", condition[2]);
             if (!unmet.Contains(item)) { unmet.Add(item); }
         }
@@ -948,7 +935,7 @@ public sealed class Rdv3Form
         List<string> parts = new List<string>();
         foreach (string[] condition in Rdv3Business.PaidConditions)
         {
-            parts.Add(Rdv3Text.JudgeHelpItemFmt.Replace("{table}", condition[0])
+            parts.Add(Rdv3Text.JudgeHelpItemFmt.Replace("{table}", condition[3])
                 .Replace("{column}", ColumnOf(condition[1])).Replace("{value}", condition[2]));
         }
         if (parts.Count == 0) { return ""; }

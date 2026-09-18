@@ -62,7 +62,7 @@
    値は補足の有無で動かない。 */
 .runtime .band .bandline{position:absolute;left:calc(-1 * var(--frame-border));right:calc(-1 * var(--frame-border));bottom:calc(-1 * var(--frame-border));height:max(var(--band-height),var(--judgment-height));display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);align-items:center;min-width:0;}
 .runtime .band .bandline .ok{grid-column:2;}
-.runtime .band #jsub{position:absolute;left:calc(50% + 48px);right:8px;top:var(--frame-border);bottom:var(--frame-border);display:flex;align-items:center;margin:0;font-size:11px;line-height:1.3;font-weight:400;color:#5b626d;text-align:left;white-space:pre-line;overflow:hidden;}
+.runtime .band #jsub{position:absolute;left:calc(50% + 48px);right:8px;top:var(--frame-border);bottom:var(--frame-border);display:flex;align-items:center;margin:0;font-size:11px;line-height:1.3;font-weight:700;color:#5b626d;text-align:left;white-space:pre-line;overflow:hidden;}
 .runtime .band .ok{font-size:var(--judgment-font);}
 .runtime .band .ok.unsearched{font-size:var(--unsearched-font);color:#606060;letter-spacing:0;}
 /* no record to judge, but something to say: the key was not in the
@@ -73,9 +73,11 @@
 .runtime .band .band-label{white-space:nowrap;}
 /* 補足は太字の他の文字と同じ濃さで、行間だけ詰める。 */
 .runtime .subtext{font-weight:700;line-height:1.3;}
-/* 送信欄の下の補足は、いまもある 1 行に収める。
-   出ても消えても周りの位置は動かない。 */
-.runtime #s-send{min-height:14.3px;}
+/* 送信欄の補足は「未送信 N 件」の真下の行。行の場所は
+   常に確保されていて、出ても消えても周りは動かない。 */
+.runtime .sendcol{display:flex;flex-direction:column;min-width:0;}
+.runtime .sendbar .sendn{min-height:23px;}
+.runtime #s-send{min-height:14.3px;margin-top:0;}
 /* 「ヘルプ」は「未確認」の真上。オンとオフが隣り合った
    二択で、選ばれている側だけが押し込まれる。 */
 .runtime .workcol{display:flex;flex-direction:column;gap:2px;align-items:stretch;min-width:0;}
@@ -86,7 +88,7 @@
 .runtime .helpswitch .hs-opt{flex:1 1 0;height:23px;min-width:0;padding:0;background:#d4d0c8;cursor:pointer;user-select:none;font:700 12px/21px var(--ff);text-align:center;white-space:nowrap;box-shadow:inset -1px -1px #0a0a0a,inset 1px 1px #ffffff,inset -2px -2px #808080,inset 2px 2px #dfdfdf;}
 .runtime .helpswitch .hs-opt.on{padding-top:2px;color:#000080;background:#d4d0c8 repeating-conic-gradient(#cac6be 0% 25%,#d4d0c8 0% 50%) 0 0/4px 4px;box-shadow:inset -1px -1px #ffffff,inset 1px 1px #0a0a0a,inset -2px -2px #dfdfdf,inset 2px 2px #808080;}
 .runtime .commandbar{display:flex;justify-content:flex-end;gap:var(--card-gap);flex-wrap:wrap;}
-.runtime .sendbar{height:var(--send-height);min-height:var(--send-height);margin-top:0;gap:var(--card-gap);}
+.runtime .sendbar{height:auto;min-height:var(--send-height);align-items:flex-start;margin-top:0;gap:var(--card-gap);}
 .runtime .sb{height:var(--status-height);min-height:var(--status-height);padding-top:2px;}
 .runtime .sb .sp{min-width:0;text-overflow:ellipsis;}
 .runtime .sb .sp.notice{color:#006400;font-weight:bold;}

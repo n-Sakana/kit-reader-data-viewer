@@ -778,13 +778,20 @@ public static class Rdv3Business
 
     // ---- what the paid conditions look at, so the band can say which input
     // file is still not done when a record is unpaid -----------------------------
-    public static readonly List<string[]> PaidConditions = new List<string[]>();  // [table, reference, value]
+    public static readonly List<string[]> PaidConditions = new List<string[]>();  // [table, reference, value, file]
 
     private static void RememberPaid(Model m)
     {
         PaidConditions.Clear();
         for (int i = 0; i < m.Conditions.Count; i++)
-        { PaidConditions.Add(new string[] { m.Conditions[i][0].Table, m.Conditions[i][0].Text, m.ConditionValues[i] }); }
+        {
+            // the band names the file the column is read from, not the short
+            // name the block gave that file
+            string table = m.Conditions[i][0].Table;
+            string file;
+            if (!m.Files.TryGetValue(table, out file)) { file = table; }
+            PaidConditions.Add(new string[] { table, m.Conditions[i][0].Text, m.ConditionValues[i], file });
+        }
     }
 
     // ---- the form a searched number has ---------------------------------------

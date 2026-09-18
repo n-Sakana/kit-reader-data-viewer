@@ -271,14 +271,13 @@ public static class Rdv3Text
     // in the configured form, and a key the ledger does not hold
     // unpaid: which of the input files still fails the paid conditions
     // the band names the condition itself: which file, which column, which value
-    public const string JudgeUnpaidItemFmt = "{table}の{column}が「{value}」ではありません";
+    public const string JudgeUnpaidItemFmt = "{table} の {column} が「{value}」ではありません";
     public const string JudgeUnpaidSep = "\n";
     // the chip over the band, and over each text frame: both are built from
     // the block, so no column or file name is written here a second time
     public const string JudgeHelpFmt = "{conditions}のとき「{paid}」。どれか 1 つでも違えば「{unpaid}」。番号が統合台帳に無いときは「{unsearched}」のままです。";
-    public const string JudgeHelpItemFmt = "{table}の「{column}」が「{value}」";
+    public const string JudgeHelpItemFmt = "{table} の {column} が「{value}」";
     public const string JudgeHelpSep = "で、かつ ";
-    public const string TextFrameHelpFmt = "{table}データの「{column}」です。";
     public const string CandidateHitsFmt = "\u8A72\u5F53 {n} \u4EF6";
 
     // ---- shared-ledger notices ------------------------------------------------
