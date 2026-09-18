@@ -43,6 +43,15 @@ function Show-Usage {
         'See docs/design-build.md for Japanese instructions.'
     ) -join [Environment]::NewLine)
 }
+function Get-InputTables($Config) {
+    # The shipped settings.json names the inputs under 業務設定 / 入力ファイル; the generic form under data.tables.
+    $biz = $Config.PSObject.Properties['業務設定']
+    if ($biz) {
+        $files = $biz.Value.'入力ファイル'
+        return @(foreach ($key in @('取引','決済','受付','削除用')) { [pscustomobject]@{ Node = $files.$key; Member = 'ファイル名' } })
+    }
+    return @(foreach ($key in @('TXN','PAY','APP','DEL')) { [pscustomobject]@{ Node = $Config.data.tables.$key; Member = 'file' } })
+}
 function Invoke-NativeCheck([string]$Mode) {
     if ($env:OS -ne 'Windows_NT') {
         throw 'Windows C#/WPF verification requires Windows PowerShell 5.1 on Windows. For packaging tests ONLY, use -SkipValidation.'
@@ -166,14 +175,14 @@ function New-ProductPackage($Options) {
         }
         $config = Get-Content -LiteralPath $configSource -Raw -Encoding UTF8 | ConvertFrom-Json
         $sampleSourceNames = @{}
-        $sampleKeys = @('TXN','PAY','APP','DEL')
-        for ($sampleIndex = 0; $sampleIndex -lt $sampleKeys.Count; $sampleIndex++) {
-            $table = $config.data.tables.($sampleKeys[$sampleIndex])
-            $oldName = [string]$table.file
+        $inputTables = @(Get-InputTables $config)
+        for ($sampleIndex = 0; $sampleIndex -lt $inputTables.Count; $sampleIndex++) {
+            $entry = $inputTables[$sampleIndex]
+            $oldName = [string]$entry.Node.($entry.Member)
             $newName = $oldName
             if ($oldName -notmatch '^0[1-4]_') { $newName = ('{0:D2}_' -f ($sampleIndex + 1)) + $oldName.TrimStart([char[]]'①②③④') }
             $sampleSourceNames[$newName] = $oldName
-            $table.file = $newName
+            $entry.Node.($entry.Member) = $newName
         }
         if ($SampleRoot) {
             $config.paths.dataDir = 'data'
@@ -192,7 +201,7 @@ function New-ProductPackage($Options) {
         }
         [IO.Directory]::CreateDirectory((Join-Path $package 'data')) | Out-Null
         if ($Options.Data -eq 'sample') {
-            $names = @($config.data.tables.PSObject.Properties | ForEach-Object { [string]$_.Value.file })
+            $names = @((Get-InputTables $config) | ForEach-Object { [string]$_.Node.($_.Member) })
             if ($names.Count -ne 4 -or @($names | Sort-Object -Unique).Count -ne 4) { throw 'The five-record sample must have four distinct inputs.' }
             foreach ($name in $names) {
                 if ([IO.Path]::GetFileName($name) -ne $name -or $name -match '[/\\:]' -or [IO.Path]::GetExtension($name) -notin @('.csv','.xlsx')) { throw ('Invalid sample input filename: ' + $name) }
@@ -205,8 +214,8 @@ function New-ProductPackage($Options) {
             $updateTarget = Join-Path $package $updateName
             [IO.Directory]::CreateDirectory($updateTarget) | Out-Null
             $updateConfig = Get-Content -LiteralPath (Join-Path $script:Root 'configs/sample/settings.json') -Raw -Encoding UTF8 | ConvertFrom-Json
-            foreach ($table in $updateConfig.data.tables.PSObject.Properties) {
-                $name = [string]$table.Value.file
+            foreach ($entry in (Get-InputTables $updateConfig)) {
+                $name = [string]$entry.Node.($entry.Member)
                 if ([IO.Path]::GetFileName($name) -ne $name) { throw 'Invalid update input filename' }
                 Copy-SafeFile (Join-Path $updateSource $name) (Join-Path $updateTarget $name)
             }

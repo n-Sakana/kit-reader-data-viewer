@@ -14,6 +14,7 @@
     "src/03_Win98.cs",
     "src/Rdv3App.cs",
     "src/Rdv3ArchiveForm.cs",
+    "src/Rdv3Business.cs",
     "src/Rdv3Config.cs",
     "src/Rdv3Core.cs",
     "src/Rdv3Csv.cs",
