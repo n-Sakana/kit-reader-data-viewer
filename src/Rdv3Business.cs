@@ -71,8 +71,6 @@ public static class Rdv3Business
         public readonly List<ScreenRow> Rows = new List<ScreenRow>();
         public readonly List<ScreenRow> Candidates = new List<ScreenRow>();
         public string SearchLabel = "", UserBox = "", AppBox = "", JudgeLabel = "", PaidText = "", UnpaidText = "";
-        // the ledger / report name the operator gave a column, in file order
-        public readonly List<string[]> Names = new List<string[]>();   // [reference, name]
         public readonly List<string> ExportDefaults = new List<string>();
         public readonly Dictionary<string, string> DateFormats = new Dictionary<string, string>(StringComparer.Ordinal);
         public readonly List<string> AllRefs = new List<string>();
@@ -80,14 +78,56 @@ public static class Rdv3Business
     }
 
     // ---- reading the block -----------------------------------------------------
+    // ---- names that changed ------------------------------------------------
+    // A member the block used to carry: say what it is called now, instead of
+    // leaving a complaint about an unknown name to be decoded.
+    public static void Renamed(Rdv3Json node, params string[] pairs)
+    {
+        if (node == null || node.Kind != Rdv3Json.TObject) { return; }
+        for (int i = 0; i + 1 < pairs.Length; i += 2)
+        {
+            Rdv3Json at = node.Member(pairs[i]);
+            if (at == null) { continue; }
+            throw at.Fail(Rdv3Text.BizRenamedFmt.Replace("{old}", pairs[i]).Replace("{new}", pairs[i + 1]));
+        }
+    }
+
+    // a member the block no longer has at all
+    private static void Removed(Rdv3Json node, string name)
+    {
+        if (node == null || node.Kind != Rdv3Json.TObject) { return; }
+        Rdv3Json at = node.Member(name);
+        if (at == null) { return; }
+        throw at.Fail(Rdv3Text.BizRemovedFmt.Replace("{old}", name));
+    }
+
+    // the same for a value the operator writes rather than a member name
+    private static void RenamedValue(Rdv3Json at, string value, params string[] pairs)
+    {
+        if (at == null) { return; }
+        for (int i = 0; i + 1 < pairs.Length; i += 2)
+        {
+            if (value != pairs[i]) { continue; }
+            throw at.Fail(Rdv3Text.BizRenamedFmt.Replace("{old}", pairs[i]).Replace("{new}", pairs[i + 1]));
+        }
+    }
+
     public static Rdv3Json Expand(Rdv3Json block)
     {
         Model m = new Model();
+        Renamed(block, Rdv3Text.BizWasExtract, Rdv3Text.BizExtract,
+                       Rdv3Text.BizWasJoins, Rdv3Text.BizJoins,
+                       Rdv3Text.BizWasPaid, Rdv3Text.BizPaid,
+                       Rdv3Text.BizWasIdentity, Rdv3Text.BizIdentity,
+                       Rdv3Text.BizWasSearch, Rdv3Text.BizSearch,
+                       Rdv3Text.BizWasExtraColumns, Rdv3Text.BizExtraColumns,
+                       Rdv3Text.BizWasDelete, Rdv3Text.BizDelete);
+        Removed(block, Rdv3Text.BizWasColumnNames);
         block.Only(Rdv3Text.BizFiles, Rdv3Text.BizExtract, Rdv3Text.BizJoins, Rdv3Text.BizPaid, Rdv3Text.BizIdentity,
-                   Rdv3Text.BizSearch, Rdv3Text.BizExtraColumns, Rdv3Text.BizDelete, Rdv3Text.BizColumnNames,
+                   Rdv3Text.BizSearch, Rdv3Text.BizExtraColumns, Rdv3Text.BizDelete,
                    Rdv3Text.BizScreen);
         ReadFiles(m, block.Obj(Rdv3Text.BizFiles, true));
-        ReadExtracts(m, block.Obj(Rdv3Text.BizExtract, false));
+        ReadExtracts(m, block.Member(Rdv3Text.BizExtract));
         ReadJoins(m, block.Member(Rdv3Text.BizJoins), block);
         ReadConditions(m, block.Member(Rdv3Text.BizPaid), block);
         ReadRefList(m, block.Member(Rdv3Text.BizIdentity), block, Rdv3Text.BizIdentity, m.Identity, Rdv3Text.BizNoIdentity);
@@ -95,14 +135,12 @@ public static class Rdv3Business
         if (block.Has(Rdv3Text.BizExtraColumns))
         { ReadRefList(m, block.Member(Rdv3Text.BizExtraColumns), block, Rdv3Text.BizExtraColumns, m.Extras, ""); }
         ReadDelete(m, block.Obj(Rdv3Text.BizDelete, true));
-        ReadNames(m, block.Obj(Rdv3Text.BizColumnNames, false));
         ReadScreen(m, block.Obj(Rdv3Text.BizScreen, true));
         foreach (Extract e in m.Extracts)
         {
             if (!m.JoinedTables.Contains(e.Table) && e.Table != m.DeleteTable)
             { throw e.Node.Fail(Rdv3Text.BizExtractUnusedTable.Replace("{name}", e.Name).Replace("{table}", e.Table)); }
         }
-        CheckNames(m, block.Obj(Rdv3Text.BizColumnNames, false));
         RememberPaid(m);
         KeyPattern = SearchPattern(m);
         string text = "{\"data\":" + DataJson(m) + ",\"screen\":" + ScreenJson(m) + "}";
@@ -120,9 +158,11 @@ public static class Rdv3Business
             if (table.Trim().Length == 0 || table.IndexOf('.') >= 0 || table.IndexOf(' ') >= 0 || table == "ledger")
             { throw entry.Fail(Rdv3Text.BizTableIdForm.Replace("{table}", table)); }
             if (entry.Kind != Rdv3Json.TObject) { throw entry.Fail("must be an object"); }
+            Renamed(entry, Rdv3Text.BizWasKey, Rdv3Text.BizKey);
             entry.Only(Rdv3Text.BizFileName, Rdv3Text.BizFileMatch, Rdv3Text.BizKey);
             string file = entry.Need(Rdv3Text.BizFileName).Trim();
             string match = entry.StrOr(Rdv3Text.BizFileMatch, Rdv3Text.BizMatchPrefix).Trim();
+            RenamedValue(entry.Member(Rdv3Text.BizFileMatch), match, Rdv3Text.BizWasMatchExact, Rdv3Text.BizMatchExact);
             if (match != Rdv3Text.BizMatchExact && match != Rdv3Text.BizMatchPrefix)
             { throw entry.Member(Rdv3Text.BizFileMatch).Fail(Rdv3Text.BizMatchWord.Replace("{exact}", Rdv3Text.BizMatchExact).Replace("{prefix}", Rdv3Text.BizMatchPrefix).Replace("{value}", match)); }
             Rdv3Json keyNode = entry.Member(Rdv3Text.BizKey);
@@ -167,33 +207,46 @@ public static class Rdv3Business
         if (!m.AllRefs.Contains(reference)) { m.AllRefs.Add(reference); }
     }
 
+    // A computed column carries a column name and an expression. Which file
+    // it belongs to is not written: it is the one the expression reads from,
+    // and a computed column hands that on, so a chain stays inside one file.
     private static void ReadExtracts(Model m, Rdv3Json extracts)
     {
         if (extracts == null) { return; }
-        foreach (string name in extracts.Order)
+        if (extracts.Kind != Rdv3Json.TArray) { throw extracts.Fail(Rdv3Text.BizExtractForm); }
+        for (int i = 0; i < extracts.Count; i++)
         {
-            Rdv3Json node = extracts.Member(name);
-            if (node.Kind != Rdv3Json.TString || node.Str.Trim().Length == 0) { throw node.Fail("must be an expression text"); }
-            int dot = name.IndexOf('.');
-            if (dot <= 0 || dot == name.Length - 1 || name.IndexOf('.', dot + 1) >= 0 || HasWhite(name.Substring(dot + 1)))
-            { throw node.Fail(Rdv3Text.BizExtractName.Replace("{name}", name)); }
+            Rdv3Json node = extracts.At(i);
+            if (node.Kind != Rdv3Json.TObject) { throw node.Fail(Rdv3Text.BizExtractForm); }
+            node.Only(Rdv3Text.BizExtractColumn, Rdv3Text.BizExtractExpr);
             Extract e = new Extract();
-            e.Name = name.Trim();
-            e.Table = name.Substring(0, dot).Trim();
-            e.Column = name.Substring(dot + 1).Trim();
-            e.Expression = node.Str.Trim();
+            e.Column = node.Need(Rdv3Text.BizExtractColumn).Trim();
+            Rdv3Json at = node.Member(Rdv3Text.BizExtractColumn);
+            if (e.Column.IndexOf('.') >= 0)
+            { throw at.Fail(Rdv3Text.BizExtractNameTable.Replace("{name}", e.Column)); }
+            if (HasWhite(e.Column))
+            { throw at.Fail(Rdv3Text.BizExtractName.Replace("{name}", e.Column)); }
+            e.Expression = node.Need(Rdv3Text.BizExtractExpr).Trim();
             e.Node = node;
-            if (!m.Tables.Contains(e.Table))
-            { throw node.Fail(Rdv3Text.BizUnknownTable.Replace("{table}", e.Table).Replace("{tables}", string.Join(" / ", m.Tables.ToArray()))); }
-            foreach (Extract other in m.Extracts) { if (other.Name == e.Name) { throw node.Fail(Rdv3Text.BizExtractDuplicate.Replace("{name}", e.Name)); } }
+            List<string> tables = new List<string>();
+            List<string> refs = new List<string>();
             foreach (string token in ExpressionRefs(e.Expression))
             {
                 int td = token.IndexOf('.');
                 if (td <= 0) { continue; }
-                if (token.Substring(0, td) != e.Table)
-                { throw node.Fail(Rdv3Text.BizExtractOtherTable.Replace("{name}", e.Name).Replace("{table}", e.Table).Replace("{ref}", token)); }
-                Remember(m, token);
+                string table = token.Substring(0, td);
+                if (!tables.Contains(table)) { tables.Add(table); }
+                if (!refs.Contains(token)) { refs.Add(token); }
             }
+            if (tables.Count == 0) { throw node.Fail(Rdv3Text.BizExtractNoTable.Replace("{name}", e.Column)); }
+            if (tables.Count > 1)
+            { throw node.Fail(Rdv3Text.BizExtractTables.Replace("{name}", e.Column).Replace("{tables}", string.Join(" / ", tables.ToArray()))); }
+            e.Table = tables[0];
+            e.Name = e.Table + "." + e.Column;
+            if (!m.Tables.Contains(e.Table))
+            { throw node.Fail(Rdv3Text.BizUnknownTable.Replace("{table}", e.Table).Replace("{tables}", string.Join(" / ", m.Tables.ToArray()))); }
+            foreach (Extract other in m.Extracts) { if (other.Name == e.Name) { throw node.Fail(Rdv3Text.BizExtractDuplicate.Replace("{name}", e.Name)); } }
+            foreach (string token in refs) { Remember(m, token); }
             Remember(m, e.Name);
             m.Extracts.Add(e);
         }
@@ -250,6 +303,8 @@ public static class Rdv3Business
             j.Left = ParseRef(m, node.Need(Rdv3Text.BizJoinLeft), node.Member(Rdv3Text.BizJoinLeft), Rdv3Text.BizJoins);
             j.Right = ParseRef(m, node.Need(Rdv3Text.BizJoinRight), node.Member(Rdv3Text.BizJoinRight), Rdv3Text.BizJoins);
             string keep = node.StrOr(Rdv3Text.BizJoinKeep, Rdv3Text.BizKeepBoth).Trim();
+            RenamedValue(node.Member(Rdv3Text.BizJoinKeep), keep,
+                Rdv3Text.BizWasKeepBoth, Rdv3Text.BizKeepBoth, Rdv3Text.BizWasKeepLeft, Rdv3Text.BizKeepLeft);
             if (keep == Rdv3Text.BizKeepBoth) { j.Keep = "match"; }
             else if (keep == Rdv3Text.BizKeepLeft) { j.Keep = "left"; }
             else if (keep == Rdv3Text.BizKeepAll) { j.Keep = "full"; }
@@ -339,55 +394,18 @@ public static class Rdv3Business
 
     // The name the ledger's heading and the report's column carry. A column
     // that is not named here keeps the name it has in the file it came from.
-    private static void ReadNames(Model m, Rdv3Json names)
-    {
-        if (names == null) { return; }
-        foreach (string reference in names.Order)
-        {
-            Rdv3Json node = names.Member(reference);
-            if (node.Kind != Rdv3Json.TString || node.Str.Trim().Length == 0)
-            { throw node.Fail(Rdv3Text.BizColumnNameBlank.Replace("{ref}", reference)); }
-            Ref r = ParseRef(m, reference, node, Rdv3Text.BizColumnNames);
-            RequireJoined(m, r, node, Rdv3Text.BizColumnNames);
-            m.Names.Add(new string[] { r.Text, node.Str.Trim() });
-        }
-    }
-
     // Every named column has to be one the ledger keeps, and the headings the
     // ledger ends up with have to stay one name per column.
-    private static void CheckNames(Model m, Rdv3Json names)
-    {
-        if (m.Names.Count == 0) { return; }
-        List<string> saved = SavedColumns(m);
-        foreach (string[] pair in m.Names)
-        {
-            if (saved.Contains(pair[0])) { continue; }
-            throw names.Member(pair[0]).Fail(Rdv3Text.BizColumnNameUnknown.Replace("{ref}", pair[0]));
-        }
-        List<string> headings = new List<string>();
-        headings.Add(Rdv3Text.BizWorkColumn);
-        foreach (string reference in saved)
-        {
-            string heading = NameOf(m, reference);
-            if (headings.Contains(heading))
-            {
-                Rdv3Json at = names.Member(reference);
-                throw (at == null ? names : at).Fail(Rdv3Text.BizColumnNameDuplicate.Replace("{name}", heading));
-            }
-            headings.Add(heading);
-        }
-    }
-
-    // the heading a ledger column carries
-    private static string NameOf(Model m, string reference)
-    {
-        foreach (string[] pair in m.Names) { if (pair[0] == reference) { return pair[1]; } }
-        int dot = reference.IndexOf('.');
-        return (dot <= 0) ? reference : reference.Substring(dot + 1);
-    }
-
     private static void ReadScreen(Model m, Rdv3Json screen)
     {
+        // the frames the page fixes are marked by where they sit; what they
+        // are called on screen is the "見出し" each one carries
+        Renamed(screen, Rdv3Text.BizWasUserBox, Rdv3Text.BizUserBox,
+                        Rdv3Text.BizWasAppBox, Rdv3Text.BizAppBox,
+                        Rdv3Text.BizWasRemarks, Rdv3Text.BizRemarks,
+                        Rdv3Text.BizWasPlan, Rdv3Text.BizPlan,
+                        Rdv3Text.BizWasUsage, Rdv3Text.BizUsage,
+                        Rdv3Text.BizWasJudgment, Rdv3Text.BizJudgment);
         screen.Only(Rdv3Text.BizSearchLabel, Rdv3Text.BizUserBox, Rdv3Text.BizAppBox, Rdv3Text.BizRemarks, Rdv3Text.BizPlan,
                     Rdv3Text.BizUsage, Rdv3Text.BizJudgment, Rdv3Text.BizCandidates, Rdv3Text.BizExportDefaults);
         m.SearchLabel = screen.StrOr(Rdv3Text.BizSearchLabel, "").Trim();
@@ -398,6 +416,7 @@ public static class Rdv3Business
         // the only frame the block may leave out: unwritten, it stays off the screen
         ReadTextBox(m, screen.Obj(Rdv3Text.BizUsage, false), "usageState");
         Rdv3Json judge = screen.Obj(Rdv3Text.BizJudgment, true);
+        Renamed(judge, Rdv3Text.BizWasBoxName, Rdv3Text.BizBoxName);
         judge.Only(Rdv3Text.BizBoxName, Rdv3Text.BizPaidText, Rdv3Text.BizUnpaidText);
         m.JudgeLabel = judge.StrOr(Rdv3Text.BizBoxName, "").Trim();
         m.PaidText = judge.StrOr(Rdv3Text.BizPaidText, Rdv3Text.BizPaidStored).Trim();
@@ -433,6 +452,7 @@ public static class Rdv3Business
 
     private static void ReadBox(Model m, Rdv3Json box, string name, string[] slots, bool user)
     {
+        Renamed(box, Rdv3Text.BizWasBoxName, Rdv3Text.BizBoxName);
         box.Only(Rdv3Text.BizBoxName, Rdv3Text.BizRows);
         string title = box.StrOr(Rdv3Text.BizBoxName, "").Trim();
         if (user) { m.UserBox = title; } else { m.AppBox = title; }
@@ -453,6 +473,7 @@ public static class Rdv3Business
         ScreenRow row = new ScreenRow();
         row.Slot = slot;
         if (box == null) { row.Hidden = true; m.Rows.Add(row); return; }
+        Renamed(box, Rdv3Text.BizWasBoxName, Rdv3Text.BizBoxName);
         box.Only(Rdv3Text.BizBoxName, Rdv3Text.BizColumn);
         row.Label = box.StrOr(Rdv3Text.BizBoxName, "").Trim();
         Ref r = ParseRef(m, box.Need(Rdv3Text.BizColumn), box.Member(Rdv3Text.BizColumn), Rdv3Text.BizScreen);
@@ -492,14 +513,6 @@ public static class Rdv3Business
         StringBuilder sb = new StringBuilder("[");
         for (int i = 0; i < values.Count; i++) { if (i > 0) { sb.Append(','); } sb.Append(Q(values[i])); }
         return sb.Append(']').ToString();
-    }
-
-    private static string LabelOf(Model m, string reference)
-    {
-        foreach (string[] pair in m.Names) { if (pair[0] == reference) { return pair[1]; } }
-        int dot = reference.IndexOf('.');
-        if (dot <= 0) { return reference; }
-        return Rdv3Text.BizLabelOfFmt.Replace("{table}", reference.Substring(0, dot)).Replace("{column}", reference.Substring(dot + 1));
     }
 
     // What the ledger keeps: the extra columns named for it, everything the
@@ -554,14 +567,14 @@ public static class Rdv3Business
             labelled.Add(reference);
             if (comma) { sb.Append(','); }
             comma = true;
-            sb.Append(Q(reference)).Append(':').Append(Q(LabelOf(m, reference)));
+            sb.Append(Q(reference)).Append(':').Append(Q(reference));
         }
         List<string> made = new List<string>();
         string deleteJob = DeleteJob(m, made);
         string updateJob = UpdateJob(m, made);
         string[][] fixedLabels =
         {
-            new string[] { m.JudgeRef, LabelOf(m, m.JudgeRef) },
+            new string[] { m.JudgeRef, m.JudgeRef },
             new string[] { "ledger", Rdv3Text.BizLedgerLabel },
             new string[] { "$work", Rdv3Text.BizWorkLabel }
         };
@@ -580,17 +593,18 @@ public static class Rdv3Business
         sb.Append("},\"jobs\":[").Append(deleteJob).Append(',').Append(updateJob).Append(']');
         sb.Append(",\"ledger\":{\"identity\":").Append(Arr(RefTexts(m.Identity)));
         sb.Append(",\"search\":{\"columns\":").Append(Arr(RefTexts(m.Search))).Append(",\"match\":\"exact\"}");
-        sb.Append(",\"columns\":{\"source\":").Append(Arr(SavedColumns(m)));
-        if (m.Names.Count > 0)
+        List<string> savedColumns = SavedColumns(m);
+        sb.Append(",\"columns\":{\"source\":").Append(Arr(savedColumns));
+        // The heading a saved column shows is the way it is written: the table
+        // the operator named, then the column as its file heads it. The ledger
+        // file and an export both carry it unchanged; nothing is made up here.
+        sb.Append(",\"names\":{");
+        for (int i = 0; i < savedColumns.Count; i++)
         {
-            sb.Append(",\"names\":{");
-            for (int i = 0; i < m.Names.Count; i++)
-            {
-                if (i > 0) { sb.Append(','); }
-                sb.Append(Q(m.Names[i][0])).Append(':').Append(Q(m.Names[i][1]));
-            }
-            sb.Append('}');
+            if (i > 0) { sb.Append(','); }
+            sb.Append(Q(savedColumns[i])).Append(':').Append(Q(savedColumns[i]));
         }
+        sb.Append('}');
         sb.Append(",\"application\":[{\"name\":\"workState\",\"onSourceChange\":\"reset\"}]},\"protectStates\":[\"TRUE\"]}}");
         return sb.ToString();
     }

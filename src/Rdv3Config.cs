@@ -337,6 +337,10 @@ public sealed class Rdv3Config
             // data / screen stay named here so a file that has both the block
             // and a hand-written definition is answered by the message about that,
             // not by a spelling complaint.
+            root.Check(delegate {
+                Rdv3Business.Renamed(root, Rdv3Text.CfgWasPaths, Rdv3Text.CfgPaths,
+                                           Rdv3Text.CfgWasWatch, Rdv3Text.CfgWatch);
+            });
             root.Only("schema", Rdv3Text.BizRoot, Rdv3Text.CfgPaths, Rdv3Text.CfgSearch, Rdv3Text.CfgWatch,
                       "jobs", "data", "screen");
         }
