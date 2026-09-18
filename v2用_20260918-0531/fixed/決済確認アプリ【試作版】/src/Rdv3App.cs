@@ -209,6 +209,7 @@ public sealed class Rdv3App
     // ---- the update check (at start-up, and from the refreshLedger button) ----
     private void StartCheck()
     {
+        checkWarningsOnScreen = false;
         StartCheck(dataDef.UpdateJob, false);
     }
 
@@ -233,10 +234,17 @@ public sealed class Rdv3App
         worker.Post(job);
     }
 
+    // the reload button: excluded rows go to the operation log only
     private void RefreshLedger()
     {
+        checkWarningsOnScreen = false;
         RefreshLedger(dataDef.UpdateJob);
     }
+
+    // Excluded rows are always in the operation log (CheckJob writes each
+    // one). Whether the screen also gets a one-line count is decided by the
+    // button that started the check: "update records" yes, reload no.
+    private bool checkWarningsOnScreen;
 
     // From READY, and from BLOCKED: the operator who has just put the files
     // in place asks for the check again without restarting.
@@ -383,8 +391,14 @@ public sealed class Rdv3App
             form.SetTimes(lastMergeMs, -1);
             if (mr.Warnings.Count > 0)
             {
+                // The rows and their values are in the operation log. The
+                // screen gets a count after "update records" only; the reload
+                // button shows nothing for them.
                 if (!startupLogged) { form.Notice(Rdv3Text.InputWarningLog); }
-                else { form.Error(string.Join(Environment.NewLine, mr.Warnings.ToArray())); }
+                else if (checkWarningsOnScreen)
+                {
+                    form.Tell(Rdv3Text.AppTitle, Rdv3Text.InputWarningSummary.Replace("{n}", mr.Warnings.Count.ToString(CultureInfo.InvariantCulture)));
+                }
             }
         }
 
@@ -1314,7 +1328,7 @@ public sealed class Rdv3App
         if (state != StReady && state != StBlocked) { form.Error(Rdv3Text.ErrNotReady); return; }
         Rdv3ProcessJobDef process = dataDef.JobOf(jobId);
         if (process == null || process.Kind != "update") { return; }
-        if (Rdv3ProcessForm.ShowJob(form, dataDef, jobId, dataDir, ledgerPath)) { RefreshLedger(process); }
+        if (Rdv3ProcessForm.ShowJob(form, dataDef, jobId, dataDir, ledgerPath)) { checkWarningsOnScreen = true; RefreshLedger(process); }
     }
 
     private void OpenDeleteJob(string jobId)
