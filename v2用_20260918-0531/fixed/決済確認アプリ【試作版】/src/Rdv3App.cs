@@ -624,7 +624,12 @@ public sealed class Rdv3App
         RememberMarker(outcome.Marker);
         EndWriteGuard(rid, outcome.Error == null);
         EnterReady(rid, Rdv3Text.NoteUpdated);
-        if (outcome.Warnings.Length > 0) { form.Error(string.Join(Environment.NewLine, outcome.Warnings)); }
+        if (outcome.Warnings.Length > 0)
+        {
+            // rows and values go to the operation log; the screen gets the count
+            for (int i = 0; i < outcome.Warnings.Length; i++) { log.Write(rid, "warning", outcome.Warnings[i]); }
+            form.Tell(Rdv3Text.AppTitle, Rdv3Text.InputWarningSummary.Replace("{n}", outcome.Warnings.Length.ToString(CultureInfo.InvariantCulture)));
+        }
         if (outcome.Error != null) { form.Error(Rdv3Text.ErrSharedMarker + outcome.Error.Message); return; }
         form.Notice(Rdv3Text.NoteUpdated);
         if (resets.Count > 0) { form.TellResetRows(resets); }
@@ -1423,7 +1428,8 @@ public sealed class Rdv3App
                 ReadyAfterShared(tag, note);
                 form.Notice(note);
                 if (operationWarning != null) { form.Error(operationWarning); }
-                if (result.Warnings.Count > 0) { form.Error(string.Join(Environment.NewLine, result.Warnings.ToArray())); }
+                if (result.Warnings.Count > 0)
+                { form.Tell(Rdv3Text.AppTitle, Rdv3Text.InputWarningSummary.Replace("{n}", result.Warnings.Count.ToString(CultureInfo.InvariantCulture))); }
                 if (resetRows.Count > 0) { form.TellResetRows(resetRows); }
             });
         }
