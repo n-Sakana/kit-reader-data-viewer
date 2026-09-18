@@ -143,7 +143,6 @@ public static class Rdv3Text
     // ---- notices (shown in the status bar) ----------------------------------
     public const string NoteNoDiff = "CSV\u30D5\u30A1\u30A4\u30EB\u3092\u8AAD\u307F\u8FBC\u307F\u307E\u3057\u305F\u3002\u53F0\u5E33\u306E\u66F4\u65B0\u306F\u3042\u308A\u307E\u305B\u3093";
     public const string NoteUpdated = "\u53F0\u5E33\u3092\u66F4\u65B0\u3057\u307E\u3057\u305F";
-    public const string NoteReloaded = "\u53F0\u5E33\u3092\u8AAD\u307F\u76F4\u3057\u307E\u3057\u305F\uFF08{n} \u4EF6\uFF09";
     public const string NoteRejected = "\u66F4\u65B0\u3092\u898B\u9001\u308A\u307E\u3057\u305F (\u4FDD\u5B58\u6E08\u307F\u53F0\u5E33\u306E\u307E\u307E)";
     public const string NoteSettingsApplied = "\u8A2D\u5B9A\u3092\u4FDD\u5B58\u3057\u307E\u3057\u305F";
     public const string NoteSaveDoneCanClose = "\u72B6\u614B\u306E\u4FDD\u5B58\u304C\u5B8C\u4E86\u3057\u307E\u3057\u305F\u3002\u7D42\u4E86\u3067\u304D\u307E\u3059";
