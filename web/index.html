@@ -175,16 +175,16 @@ main,.page{max-width:none;padding:0;background:#d4d0c8}
     <fieldset class="gb text-section fixed-remarks"><legend>意見欄</legend><div class="fld dynamic-text" data-bind="remarks"></div></fieldset>
     <fieldset class="gb text-section fixed-plan"><legend>変更後の計画</legend><div class="fld dynamic-text" data-bind="plan"></div></fieldset>
     <fieldset class="gb text-section fixed-usage"><legend>利用状態</legend><div class="fld dynamic-text" data-bind="usageState"></div></fieldset>
-    </div><fieldset class="gb band" data-judgment="paymentStatus"><legend class="band-label">決済状況</legend><div class="bandline"><div class="ok unsearched">未検索</div></div><div id="jsub"></div></fieldset>
+    </div><fieldset class="gb band" data-judgment="paymentStatus"><legend class="band-label">決済状況</legend><div class="bandline"><div class="ok unsearched">未検索</div><div id="jsub"></div></div></fieldset>
     <div class="commandbar">
-      <div class="btn" id="b-refresh" role="button" data-action="refreshLedger" aria-disabled="true" tabindex="0" data-help="統合台帳を読み直します。他の端末が送信した確認状態を読み込みます。">統合台帳再読込</div>
+      <div class="btn" id="b-refresh" role="button" data-action="refreshLedger" aria-disabled="true" tabindex="0" data-help="統合台帳のファイルを読み直します。他の端末が行った送信、データ更新、データ削除の結果が反映されます。">台帳再読込</div>
       <div class="btn" id="b-out" role="button" data-action="tableExport" aria-disabled="true" tabindex="0">帳票出力</div>
       <div class="btn" id="b-upd" role="button" data-action="updateRecords" aria-disabled="true" tabindex="0" data-help="データフォルダの CSV を読み込み、統合台帳を更新します。">データ更新</div>
       <div class="btn" id="b-del" role="button" data-action="deleteRecords" aria-disabled="true" tabindex="0" data-help="削除用の CSV に含まれ、確認済として送信済みの案件を統合台帳から削除します。">データ削除</div>
       <div class="btn" id="b-set" role="button" data-action="settings" aria-disabled="true" tabindex="0">設定</div>
     </div><div class="sep"></div>
     <div class="sendbar"><div class="sendn" id="sn" data-bind="pendingCount" data-help="確認状態を変更したあと、まだ統合台帳に送信していない件数です。"></div>
-      <div class="btn def" id="b-send" role="button" data-action="sendChanges" aria-disabled="true" tabindex="0" data-help="この端末で変更した確認状態を統合台帳に送信します。送信するまで統合台帳には書き込まれません。">確認状態を統合台帳に送信</div>
+      <div class="btn def" id="b-send" role="button" data-action="sendChanges" aria-disabled="true" tabindex="0" data-help="この端末で変更した確認状態を統合台帳に送信します。送信するまで統合台帳には書き込まれません。">確認状態を送信</div>
     </div>
     <div class="subtext" id="s-send"></div>
   </div></div>

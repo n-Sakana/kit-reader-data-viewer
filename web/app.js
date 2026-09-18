@@ -237,18 +237,6 @@
     note.textContent = pending > 0 ? sendNote : '';
   }
 
-  // 帯の補足は 1 行。入らなければ小さくし、それでも入らなければ折り返す。
-  function fitBandNote(node) {
-    node.classList.remove('wrap');
-    node.style.fontSize = '';
-    if (!node.textContent) { return; }
-    for (var size = 9; size >= 7; size--) {
-      node.style.fontSize = size + 'px';
-      if (node.scrollWidth <= node.clientWidth) { return; }
-    }
-    node.classList.add('wrap');
-  }
-
   function renderScreen(definition) {
     if (!definition || definition.fixed !== true) { throw new Error('The fixed HTML screen requires compact settings.'); }
     stage.classList.add('runtime');
@@ -366,7 +354,6 @@
       head.className = 'ok ' + (result.look || 'unsearched');
       head.textContent = result.text || '';
       sub.textContent = result.sub || '';
-      fitBandNote(sub);
       if (id === 'paymentStatus') { showSearchNote(result.look); }
     });
     applyHelp();
