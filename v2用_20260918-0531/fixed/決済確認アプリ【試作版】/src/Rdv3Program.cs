@@ -1,4 +1,4 @@
-// Startup validation, path resolution and lifetime of the running app.
+﻿// Startup validation, path resolution and lifetime of the running app.
 using System;
 using System.Globalization;
 using System.IO;
@@ -36,11 +36,11 @@ public static class Rdv3Program
             cfg = Rdv3Config.Load(configPath);
             if (cfg.Screen.Bindings == null)
             {
-                throw new Rdv3LoadError("固定版の設定形式ではありません。この配布物に対応するsettings.jsonを使用してください。既存の設定は変更していません。", 0);
+                throw new Rdv3LoadError("この設定ファイルはこのアプリの形式ではありません。このアプリに付属の settings.json を使ってください。既存の設定は変更していません。", 0);
             }
             if (cfg.Screen.Work.Column != "確認状態")
             {
-                throw new Rdv3LoadError("固定版の台帳の状態列名は「確認状態」です。この設定の列名には対応していません。既存の台帳と未送信データは変更していません。", 0);
+                throw new Rdv3LoadError("台帳の状態列の名前は「確認状態」です。この設定の列名には対応していません。既存の台帳と未送信データは変更していません。", 0);
             }
         }
         catch (Rdv3LoadError ex)

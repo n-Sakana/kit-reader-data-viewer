@@ -41,7 +41,7 @@ public static class Rdv3Text
     public const string RecordControlKey = "キー列 {0} の値「{1}」に制御文字があります。";
     public const string RecordEmptyKey = "キー列 {0} の値が空です。";
     public const string RecordDuplicate = "{0}: キー列 {1}、値「{2}」の {3} 行を除外しました（元の行番号: {4}）。{5}";
-    public const string RecordConflict = "同じキーで内容が違うため、どの行も採用しません。キーに枝番を付けるか、入力データを訂正してください。複数の明細を集計する場合は、一意な明細key（複合keyも可）で全件を読んでから、aggregateのgroupByで集めます。入力キーの検査はaggregateより先です。duplicates:distinctは後続行を捨て、合計しません。";
+    public const string RecordConflict = "\u540C\u3058\u30AD\u30FC\u3067\u5185\u5BB9\u304C\u9055\u3046\u305F\u3081\u3001\u3069\u306E\u884C\u3082\u63A1\u7528\u3057\u307E\u305B\u3093\u3002\u5165\u529B\u30C7\u30FC\u30BF\u3092\u8A02\u6B63\u3057\u3066\u304F\u3060\u3055\u3044\u3002";
     public const string RecordIdentical = "同じキーの重複行です。";
     public const string RecordStep = "手順 {0}（{1} → {2}）、{3}";
     public const string RecordValues = "列と値: {0}";
@@ -64,14 +64,14 @@ public static class Rdv3Text
     public const string InputError = "{file} の {row} 行目、列 {column}: 必要なのは「{expected}」、実際は「{actual}」です。{fix}";
     public const string InputExpectKey = "空でないキー";
     public const string InputExpectWidth = "最初の有効行と同じ {n} 文字のキー";
-    public const string InputFixKey = "入力値を直してください。この形を許す定義なら、settings.json の {path} を \"{choice}\" にします。";
-    public const string InputFixConflict = " 同じキーで他の列の内容が違うため、どちらを採るか決められません。両方の行を照合して内容を直すか、{path} の key（外部入力では column）を各行を識別できる列名に直してください。複数の明細を残す場合は、一意な明細keyで読み、aggregateのgroupByで集めます。入力キーの検査はaggregateより先です。duplicates:distinctは最初の行を残すだけで、合計しません。明細を識別できなければ、入力の変更が必要な理由を返してください。必要な行を捨てた設定を完成品にしないでください。";
-    public const string InputFixType = " 値を指定した型・日付書式に直してください。数値・日付として扱わない列なら、settings.json の data.types[\"{ref}\"].type を \"text\" にします。";
-    public const string InputFixEncoding = "settings.json の {setting} を \"{encoding}\" に合わせるか、入力ファイルを指定した文字コードで保存してください。";
-    public const string InputFixUnknownEncoding = "このバイト列は指定した文字コードでは読めません。元ファイルの文字コードを確認して settings.json の {setting} に指定するか、ファイルをその文字コードで保存し直してください。";
-    public const string InputUnknownEncoding = "文字コード「{value}」を利用できません。encoding に \"utf-8\"、\"shift_jis\"、\"utf-16\" など、この端末で利用できる文字コード名を指定してください。";
+    public const string InputFixKey = "\u5165\u529B\u5024\u3092\u76F4\u3057\u3066\u304F\u3060\u3055\u3044\u3002";
+    public const string InputFixConflict = " \u540C\u3058\u30AD\u30FC\u3067\u4ED6\u306E\u5217\u306E\u5185\u5BB9\u304C\u9055\u3046\u305F\u3081\u3001\u3069\u3061\u3089\u3092\u63A1\u308B\u304B\u6C7A\u3081\u3089\u308C\u307E\u305B\u3093\u3002\u4E21\u65B9\u306E\u884C\u3092\u7167\u5408\u3057\u3066\u5185\u5BB9\u3092\u76F4\u3057\u3066\u304F\u3060\u3055\u3044\u3002";
+    public const string InputFixType = " \u5024\u3092\u6307\u5B9A\u3057\u305F\u578B\u30FB\u65E5\u4ED8\u66F8\u5F0F\u306B\u76F4\u3057\u3066\u304F\u3060\u3055\u3044\u3002";
+    public const string InputFixEncoding = "\u8A2D\u5B9A\u306E\u6587\u5B57\u30B3\u30FC\u30C9\u3092 \"{encoding}\" \u306B\u5408\u308F\u305B\u308B\u304B\u3001\u5165\u529B\u30D5\u30A1\u30A4\u30EB\u3092\u8A2D\u5B9A\u306E\u6587\u5B57\u30B3\u30FC\u30C9\u3067\u4FDD\u5B58\u3057\u3066\u304F\u3060\u3055\u3044\u3002";
+    public const string InputFixUnknownEncoding = "\u3053\u306E\u30D5\u30A1\u30A4\u30EB\u306F\u8A2D\u5B9A\u306E\u6587\u5B57\u30B3\u30FC\u30C9\u3067\u306F\u8AAD\u3081\u307E\u305B\u3093\u3002\u5143\u30D5\u30A1\u30A4\u30EB\u306E\u6587\u5B57\u30B3\u30FC\u30C9\u3092\u78BA\u8A8D\u3057\u3066\u8A2D\u5B9A\u306B\u6307\u5B9A\u3059\u308B\u304B\u3001\u30D5\u30A1\u30A4\u30EB\u3092\u305D\u306E\u6587\u5B57\u30B3\u30FC\u30C9\u3067\u4FDD\u5B58\u3057\u76F4\u3057\u3066\u304F\u3060\u3055\u3044\u3002";
+    public const string InputUnknownEncoding = "\u6587\u5B57\u30B3\u30FC\u30C9\u300C{value}\u300D\u3092\u5229\u7528\u3067\u304D\u307E\u305B\u3093\u3002\u8A2D\u5B9A\u306E\u6587\u5B57\u30B3\u30FC\u30C9\u306B\u306F \"utf-8\"\u3001\"shift_jis\"\u3001\"utf-16\" \u306A\u3069\u3001\u3053\u306E\u7AEF\u672B\u3067\u5229\u7528\u3067\u304D\u308B\u540D\u524D\u3092\u6307\u5B9A\u3057\u3066\u304F\u3060\u3055\u3044\u3002";
     public const string InputExpectHeader = "空でなく重複しない列名";
-    public const string InputFixHeader = "Use non-empty source column names. Duplicate headers used by a key, type, job or ledger reference are ambiguous: rename them in the source and update the references in data.tables, data.jobs, data.types, data.ledger and screen. JSON labels or select cannot disambiguate repeated source headers. Unreferenced duplicate name groups are excluded automatically with a warning; empty cells do not make a referenced duplicate safe.";
+    public const string InputFixHeader = "\u5217\u540D\u304C\u7A7A\u304B\u3001\u540C\u3058\u5217\u540D\u304C 2 \u56DE\u3042\u308A\u307E\u3059\u3002CSV \u306E 1 \u884C\u76EE\u306E\u5217\u540D\u3092\u7A7A\u306B\u305B\u305A\u3001\u91CD\u8907\u3057\u306A\u3044\u3088\u3046\u306B\u3057\u3066\u304F\u3060\u3055\u3044\u3002";
     public const string InputShapeSkipped = "{file}: 見出しより列が少ない {short} 行と空行 {blank} 行を除外しました。不足セルの補完はしていません。";
     // ---- what the reader absorbed on its own (logged, never an error) ------
     public const string InputHeaderAlias = "列名「{actual}」を設定の列名「{name}」として読みました。";
@@ -86,14 +86,14 @@ public static class Rdv3Text
     public const string InputReadItemFmt = "{label} {n} 件";
     public const string InputNoticeLog = "入力の読取結果は実行ログに記録しました。";
     public const string InputHeaderOffset = "{file}: headerRow の指定により、見出し行より前の {n} 行を読み飛ばしました。";
-    public const string DataNoDerivedColumn = "更新ジョブの結果に列 {name} がありません ({where})。入力表の見出し、または calculate の column / aggregate の as / select の as で作った参照を指定してください。";
-    public const string LedgerColumnNotProduced = "台帳の保存列 {name} は、更新ジョブの最後の書込み段 ({step}) の入力にありません。その列を持つ表を結合していないか、select で外したか、綴りが違います。";
+    public const string DataNoDerivedColumn = "\u7D50\u5408\u3057\u305F\u7D50\u679C\u306B\u5217 {name} \u304C\u3042\u308A\u307E\u305B\u3093\uFF08{where}\uFF09\u3002\u5165\u529B\u306E\u898B\u51FA\u3057\u304B\u3001\u5207\u308A\u51FA\u3057\u3067\u4F5C\u3063\u305F\u5217\u540D\u3092\u6307\u5B9A\u3057\u3066\u304F\u3060\u3055\u3044\u3002";
+    public const string LedgerColumnNotProduced = "\u53F0\u5E33\u306B\u6B8B\u3059\u5217 {name} \u304C\u7D50\u5408\u3057\u305F\u7D50\u679C\u306B\u3042\u308A\u307E\u305B\u3093\u3002\u305D\u306E\u5217\u306E\u8868\u3092\u3064\u306A\u3044\u3067\u3044\u306A\u3044\u304B\u3001\u7DB4\u308A\u304C\u9055\u3044\u307E\u3059\u3002";
     public const string InputHeadersSkipped = "{file}: 設定から参照されていない重複見出し「{names}」の {n} 列をすべて除外しました。";
     public const string InputExpectQuote = "セル全体を囲む二重引用符と閉じ引用符";
     public const string InputExpectDelimiter = "閉じ引用符の後のカンマまたは改行";
     public const string InputColumnCount = "{n} 列";
-    public const string InputFixCsv = "CSV の各行を見出しと同じ列数にしてください。セル内の区切り文字・改行はセル全体を二重引用符で囲み、セル内の二重引用符は2個重ねます。区切り文字は既定でカンマです（settings.json の delimiter で tab 等に変更できます）。";
-    public const string InputFixTab = " 見出しにタブ文字があり、指定した区切り文字がありません。タブ区切りのファイル（Excel の「Unicode テキスト」等）なら、settings.json の data.tables.<ID>.delimiter（外部入力なら inputs[].delimiter）を \"tab\" にしてください。";
+    public const string InputFixCsv = "CSV \u306E\u5404\u884C\u3092\u898B\u51FA\u3057\u3068\u540C\u3058\u5217\u6570\u306B\u3057\u3066\u304F\u3060\u3055\u3044\u3002\u30BB\u30EB\u5185\u306E\u533A\u5207\u308A\u6587\u5B57\u30FB\u6539\u884C\u306F\u30BB\u30EB\u5168\u4F53\u3092\u4E8C\u91CD\u5F15\u7528\u7B26\u3067\u56F2\u307F\u3001\u30BB\u30EB\u5185\u306E\u4E8C\u91CD\u5F15\u7528\u7B26\u306F2\u500B\u91CD\u306D\u307E\u3059\u3002";
+    public const string InputFixTab = " \u898B\u51FA\u3057\u306B\u30BF\u30D6\u6587\u5B57\u304C\u3042\u308A\u3001\u8A2D\u5B9A\u306E\u533A\u5207\u308A\u6587\u5B57\u304C\u3042\u308A\u307E\u305B\u3093\u3002\u30BF\u30D6\u533A\u5207\u308A\u306E\u30D5\u30A1\u30A4\u30EB\u306A\u3089\u3001\u8A2D\u5B9A\u306E\u533A\u5207\u308A\u6587\u5B57\u3092\u30BF\u30D6\u306B\u3057\u3066\u304F\u3060\u3055\u3044\u3002";
     public const string StorageContractMismatch = "\u3053\u306e\u53f0\u5e33\u3068\u8a2d\u5b9a\u306e\u5217\u30fb\u8b58\u5225\u30ad\u30fc\u30fb\u4f5c\u696d\u72b6\u614b\u306e\u5b9a\u7fa9\u304c\u4e00\u81f4\u3057\u307e\u305b\u3093\u3002\u540c\u3058\u53f0\u5e33\u3092\u4f7f\u3046\u5168PC\u306e\u5b9a\u7fa9\u3092\u78ba\u8a8d\u3057\u3066\u304f\u3060\u3055\u3044\u3002";
 
     public const string UpdateChangedDuringCheck = "\u78ba\u8a8d\u4e2d\u306b\u5171\u6709\u53f0\u5e33\u306e\u5185\u5bb9\u304c\u5909\u308f\u308a\u307e\u3057\u305f\u3002\u4e0a\u66f8\u304d\u305b\u305a\u4e2d\u6b62\u3057\u307e\u3057\u305f\u3002\u3082\u3046\u4e00\u5ea6\u300c\u66f4\u65b0\u300d\u3067\u78ba\u8a8d\u3057\u3066\u304f\u3060\u3055\u3044\u3002";
@@ -197,14 +197,14 @@ public static class Rdv3Text
     public const string ErrSaveInFlight = "\u72B6\u614B\u3092\u4FDD\u5B58\u4E2D\u3067\u3059\u3002\u78BA\u5B9A\u3059\u308B\u307E\u3067\u6B21\u306E\u64CD\u4F5C\u306F\u3067\u304D\u307E\u305B\u3093";
     public const string ErrCloseWhileWriting = "\u66F8\u304D\u8FBC\u307F\u4E2D\u3067\u3059\u3002\u7D50\u679C\u304C\u78BA\u5B9A\u3059\u308B\u307E\u3067\u7D42\u4E86\u3067\u304D\u307E\u305B\u3093";
     public const string ErrSaveOverdue = "\u72B6\u614B\u306E\u4FDD\u5B58\u304C\u60F3\u5B9A\u3088\u308A\u9577\u5F15\u3044\u3066\u3044\u307E\u3059 (\u78BA\u5B9A\u3059\u308B\u307E\u3067\u7D42\u4E86\u3057\u307E\u305B\u3093)";
-    public const string ErrBadKeyFmt = "{label} \u304C\u5F62\u5F0F {pattern} \u306B\u4E00\u81F4\u3057\u307E\u305B\u3093";
+    public const string ErrBadKeyFmt = "{label} \u306E\u5F62\u5F0F\u3067\u306F\u3042\u308A\u307E\u305B\u3093";
     public const string ErrBadPattern = "\u756A\u53F7\u306E\u5F62\u5F0F\uFF08\u6B63\u898F\u8868\u73FE\uFF09\u304C\u4E0D\u6B63\u3067\u3059\u3002\u8A2D\u5B9A\u3092\u78BA\u8A8D\u3057\u3066\u304F\u3060\u3055\u3044";
     public const string ErrNoRecordShown = "{state}\u306B\u3059\u308B\u30EC\u30B3\u30FC\u30C9\u304C\u8868\u793A\u3055\u308C\u3066\u3044\u307E\u305B\u3093";
     public const string ErrNoTransition = "\u3053\u306E\u30EC\u30B3\u30FC\u30C9\u306F\u3059\u3067\u306B{state}\u3067\u3059";
     public const string ErrUnknownState = "\u53F0\u5E33\u306E\u72B6\u614B {stored} \u306F\u753B\u9762\u5B9A\u7FA9\u306B\u3042\u308A\u307E\u305B\u3093\u3002\u9077\u79FB\u3067\u304D\u307E\u305B\u3093";
     public const string ErrSettingsSave = "\u8A2D\u5B9A\u3092\u4FDD\u5B58\u3067\u304D\u307E\u305B\u3093\u3067\u3057\u305F: ";
     public const string ErrPatternTyped = "\u5F62\u5F0F\uFF08\u6B63\u898F\u8868\u73FE\uFF09\u304C\u4E0D\u6B63\u3067\u3059: ";
-    public const string ErrPathBlank = "\u30D1\u30B9\u306F 3 \u3064\u3068\u3082\u5FC5\u8981\u3067\u3059";
+    public const string ErrPathBlank = "\u30C7\u30FC\u30BF\u30FB\u7D71\u5408\u53F0\u5E33\u30FB\u30ED\u30B0\u306E\u5834\u6240\u306F\u3059\u3079\u3066\u5FC5\u8981\u3067\u3059";
     public const string ErrDataDir = "\u30C7\u30FC\u30BF\u30D5\u30A9\u30EB\u30C0\u30FC\u304C\u898B\u3064\u304B\u308A\u307E\u305B\u3093: ";
     public const string ErrLogWrite = "\u30ED\u30B0\u3092\u66F8\u3051\u307E\u305B\u3093: ";
     public const string ErrExport = "CSV \u3092\u51FA\u529B\u3067\u304D\u307E\u305B\u3093\u3067\u3057\u305F: ";
@@ -292,8 +292,8 @@ public static class Rdv3Text
     // ---- process job dialogs --------------------------------------------------
     public const string UpdateRecordsTitle = "\u30EC\u30B3\u30FC\u30C9\u66F4\u65B0";
     public const string DeleteRecordsTitle = "\u30EC\u30B3\u30FC\u30C9\u524A\u9664";
-    public const string UpdateRecordsHint = "\u5B9A\u7FA9\u3055\u308C\u305F\u30D5\u30A1\u30A4\u30EB\u3060\u3051\u3092\u8AAD\u307F\u3001JSON \u306E\u624B\u9806\u3067\u7D71\u5408\u53F0\u5E33\u3092\u66F4\u65B0\u3057\u307E\u3059\u3002";
-    public const string DeleteRecordsHint = "\u5B9A\u7FA9\u3055\u308C\u305F\u30D5\u30A1\u30A4\u30EB\u3060\u3051\u3092\u8AAD\u307F\u3001\u6761\u4EF6\u306B\u4E00\u81F4\u3059\u308B\u884C\u3092\u7D71\u5408\u53F0\u5E33\u304B\u3089\u53D6\u308A\u9664\u304D\u307E\u3059\u3002";
+    public const string UpdateRecordsHint = "\u30C7\u30FC\u30BF \u30D5\u30A9\u30EB\u30C0\u30FC\u306E\u30D5\u30A1\u30A4\u30EB\u3092\u8AAD\u307F\u3001\u7D71\u5408\u53F0\u5E33\u3092\u66F4\u65B0\u3057\u307E\u3059\u3002";
+    public const string DeleteRecordsHint = "\u524A\u9664\u7528\u306E\u30D5\u30A1\u30A4\u30EB\u3092\u8AAD\u307F\u3001\u4E00\u81F4\u3059\u308B\u884C\u3092\u7D71\u5408\u53F0\u5E33\u304B\u3089\u53D6\u308A\u9664\u304D\u307E\u3059\u3002";
     public const string SecInputs = "\u53D6\u308A\u8FBC\u3080\u30C7\u30FC\u30BF\uFF08{dir}\uFF3C\uFF09";
     public const string SecProcess = "\u51E6\u7406\u5185\u5BB9";
     public const string SecOutput = "\u66F8\u304D\u51FA\u3057\u5148";
@@ -454,7 +454,7 @@ public static class Rdv3Text
 
     // ---- the settings modal -----------------------------------------------------
     public const string SettingsTitle = "\u8A2D\u5B9A";
-    public const string SettingsHint = "\u66F8\u304D\u623B\u3059\u306E\u306F \u5834\u6240\u30FB\u691C\u7D22\u30FB\u76E3\u8996\u5BFE\u8C61 \u3068 \u5165\u529B\u30D5\u30A1\u30A4\u30EB\u540D\uFF08\u4E00\u81F4\u65B9\u6CD5\uFF09\u3060\u3051\u3067\u3059\u3002\u307B\u304B\u306E\u9805\u76EE\u306F settings.json \u3092\u76F4\u63A5\u76F4\u3057\u307E\u3059\u3002";
+    public const string SettingsHint = "";
     public const string SecFiles = "\u5165\u529B\u30D5\u30A1\u30A4\u30EB";
     public const string ErrFileBlank = "\u5165\u529B\u30D5\u30A1\u30A4\u30EB\u540D\u306F\u7A7A\u306B\u3067\u304D\u307E\u305B\u3093: ";
     public const string NoteSettingsFilesApplied = "\u8A2D\u5B9A\u3092\u4FDD\u5B58\u3057\u307E\u3057\u305F\u3002\u5165\u529B\u30D5\u30A1\u30A4\u30EB\u306E\u5909\u66F4\u3092\u78BA\u8A8D\u3057\u307E\u3059";
@@ -594,7 +594,7 @@ public static class Rdv3Text
     public const string BizPathScreen = "業務設定.画面";
     // ---- where the settings do not line up (which member, and what to align) ----
     public const string SettingsStepPrefix = "処理「{job}」の手順 {n}（{operation}: {target}）: ";
-    public const string SettingsStepColumnHint = " 列は「表ID.列名」で書きます。入力表の列は CSV の見出しどおり、作った列は calculate の column / aggregate の as / select の as と同じ名前です。この手順より前の手順で作られていない列は使えません。";
+    public const string SettingsStepColumnHint = " \u5217\u306F\u300C\u8868\u306E\u540D\u524D.\u5217\u540D\u300D\u3067\u66F8\u304D\u307E\u3059\u3002\u5165\u529B\u306E\u5217\u306F CSV \u306E\u898B\u51FA\u3057\u3069\u304A\u308A\u3001\u4F5C\u3063\u305F\u5217\u306F\u5207\u308A\u51FA\u3057\u3067\u4ED8\u3051\u305F\u540D\u524D\u3067\u3059\u3002\u3053\u306E\u624B\u9806\u3088\u308A\u524D\u306E\u624B\u9806\u3067\u4F5C\u3089\u308C\u3066\u3044\u306A\u3044\u5217\u306F\u4F7F\u3048\u307E\u305B\u3093\u3002";
     public const string SettingsIdentityNotSaved = "data.ledger.identity の「{name}」が data.ledger.columns.source にありません。台帳の行を識別する列は、保存する列（columns.source）にも並べてください。";
     public const string SettingsSearchNotSaved = "data.ledger.search.columns の「{name}」が data.ledger.columns.source にありません。検索に使う列は、保存する列（columns.source）にも並べてください。";
     public const string SettingsScreenNotSaved = "画面に出す列「{name}」が data.ledger.columns.source にありません。画面（screen.bindings / candidates / judgments）の field は、保存する列（columns.source）のどれかにしてください。";
@@ -606,7 +606,7 @@ public static class Rdv3Text
     public const string ProcessAppendCount = "縦結合する表の列数が違います。対象1は {0} 列、対象2は {1} 列です。";
     public const string ProcessAppendColumn = "縦結合の {0} 列目の見出しが違います。対象1「{1}」、対象2「{2}」。";
     public const string ProcessSelectionSource = "対象の表と行の選択元が違います。抽出した行と同じ表を対象に指定してください。";
-    public const string ProcessLedgerKey = "書き込み先のキーが data.ledger.identity と違います。設定の keys の対象2を台帳の識別列に合わせてください。";
+    public const string ProcessLedgerKey = "\u66F8\u304D\u8FBC\u307F\u5148\u306E\u30AD\u30FC\u304C\u53F0\u5E33\u306E\u8B58\u5225\u5217\u3068\u9055\u3044\u307E\u3059\u3002\u8A2D\u5B9A\u306E\u5BFE\u8C612\u3092\u53F0\u5E33\u306E\u8B58\u5225\u5217\u306B\u5408\u308F\u305B\u3066\u304F\u3060\u3055\u3044\u3002";
     public const string LedgerLengths = "台帳の内容行数と作業状態の行数が一致しません。台帳の整合性を確認してください。";
     public const string LedgerNotUpdate = "レコード更新のジョブが指定されていません。";
     public const string LedgerNoResult = "更新ジョブの結果が台帳ではありません。最後の出力を確認してください。";

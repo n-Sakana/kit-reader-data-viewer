@@ -1,4 +1,4 @@
-// Configuration for paths, search, monitoring and job timing. Data and screen
+﻿// Configuration for paths, search, monitoring and job timing. Data and screen
 // definitions are validated by their own readers before any settings apply.
 // The settings dialog replaces only paths/search/watch, preserving other text.
 // Re-reading and comparing the original content prevents a stale dialog from
@@ -328,8 +328,8 @@ public sealed class Rdv3Config
         int schema = root.Int("schema", 1, 1000);
         if (schema != Schema)
         {
-            throw root.Member("schema").Fail("this program reads schema " + N(Schema)
-                + "; the file says " + N(schema) + ". この配布物に対応するsettings.jsonを使用してください。");
+            throw root.Member("schema").Fail("\u8A2D\u5B9A\u30D5\u30A1\u30A4\u30EB\u306E\u7248\u304C\u9055\u3044\u307E\u3059\uFF08schema " + N(schema)
+                + "\u3001\u3053\u306E\u30A2\u30D7\u30EA\u306F schema " + N(Schema) + "\uFF09\u3002\u3053\u306E\u30A2\u30D7\u30EA\u306B\u4ED8\u5C5E\u306E settings.json \u3092\u4F7F\u3063\u3066\u304F\u3060\u3055\u3044\u3002");
         }
         });
 
