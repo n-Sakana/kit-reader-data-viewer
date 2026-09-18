@@ -678,8 +678,16 @@ namespace ReaderDataViewer
             double screenTop = SystemParameters.VirtualScreenTop;
             double screenRight = screenLeft + SystemParameters.VirtualScreenWidth;
             double screenBottom = screenTop + SystemParameters.VirtualScreenHeight;
-            left = Math.Max(screenLeft, Math.Min(left, screenRight - Width));
-            top = Math.Max(screenTop, Math.Min(top, screenBottom - Height));
+            // An owner kept off the desktop on purpose (the headless probe)
+            // keeps its dialogs there too; only a visible owner's dialog is
+            // pulled onto the screen.
+            bool ownerOnScreen = Owner.Left < screenRight && Owner.Left + Owner.ActualWidth > screenLeft
+                && Owner.Top < screenBottom && Owner.Top + Owner.ActualHeight > screenTop;
+            if (ownerOnScreen)
+            {
+                left = Math.Max(screenLeft, Math.Min(left, screenRight - Width));
+                top = Math.Max(screenTop, Math.Min(top, screenBottom - Height));
+            }
             Left = left;
             Top = top;
             sized = true;
