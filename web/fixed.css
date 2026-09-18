@@ -33,7 +33,7 @@
 .runtime .record-details .fixed-remarks .dynamic-text{height:0;min-height:0;flex:1 1 0;}
 .runtime .record-details .fixed-plan{flex:none;height:auto;}
 .runtime .record-details .fixed-plan .dynamic-text{flex:none;height:20px;min-height:20px;}
-.runtime .keyactions>.btn,.runtime .keyactions>.tog{flex-shrink:0;}
+.runtime .keyactions>.btn,.runtime .keyactions>.tog,.runtime .keyactions>.workcol{flex-shrink:0;}
 
 /* Wide working dialogs keep their natural content height. */
 .dialogmode #v-cand>.dlg,

@@ -616,10 +616,10 @@ public sealed class Rdv3App
             : new List<Rdv3CandRow>();
         log.Write(rid, "index", "table=LEDGER rows=" + outcome.Update.Lines.Length.ToString(CultureInfo.InvariantCulture)
             + " ms=" + Rdv3Log.F(Rdv3Clock.MsSince(indexAt)));
-        form.RunOnUi(delegate { EndApply(rid, outcome, resets); });
+        form.RunOnUi(delegate { EndApply(rid, outcome, resets, checkedLines == null); });
     }
 
-    private void EndApply(string rid, Rdv3ApplyOutcome outcome, List<Rdv3CandRow> resets)
+    private void EndApply(string rid, Rdv3ApplyOutcome outcome, List<Rdv3CandRow> resets, bool created)
     {
         RememberMarker(outcome.Marker);
         EndWriteGuard(rid, outcome.Error == null);
@@ -632,8 +632,31 @@ public sealed class Rdv3App
         }
         if (outcome.Error != null) { form.Error(Rdv3Text.ErrSharedMarker + outcome.Error.Message); return; }
         form.Notice(Rdv3Text.NoteUpdated);
-        if (resets.Count > 0) { form.TellResetRows(resets); }
+        // The result of building or updating the ledger, said once and in
+        // full. It only happens when the files behind it really changed, so
+        // it is not in the way of ordinary work.
+        string done = LedgerResult(outcome, created);
+        if (resets.Count > 0) { form.TellResetRows(resets, done); }
+        else { form.Tell(created ? Rdv3Text.LedgerCreateTitle : Rdv3Text.LedgerUpdateTitle, done); }
     }
+
+    // how many rows the ledger holds now, and what the run changed
+    private static string LedgerResult(Rdv3ApplyOutcome outcome, bool created)
+    {
+        string rows = Count(outcome.Update.Lines.Length);
+        if (!outcome.Committed) { return Rdv3Text.LedgerUnchangedFmt.Replace("{rows}", rows); }
+        if (created)
+        {
+            return Rdv3Text.LedgerCreatedFmt.Replace("{rows}", rows)
+                .Replace("{added}", Count(outcome.Update.Added));
+        }
+        return Rdv3Text.LedgerUpdatedFmt.Replace("{rows}", rows)
+            .Replace("{added}", Count(outcome.Update.Added))
+            .Replace("{updated}", Count(outcome.Update.Updated))
+            .Replace("{deleted}", Count(outcome.Update.Deleted));
+    }
+
+    private static string Count(int value) { return value.ToString("N0", CultureInfo.InvariantCulture); }
 
     // UI thread. The persist failed: the saved ledger file is untouched, so the
     // saved content stays the active one (or the app is blocked if none).
@@ -1430,7 +1453,7 @@ public sealed class Rdv3App
                 if (operationWarning != null) { form.Error(operationWarning); }
                 if (result.Warnings.Count > 0)
                 { form.Tell(Rdv3Text.AppTitle, Rdv3Text.InputWarningSummary.Replace("{n}", result.Warnings.Count.ToString(CultureInfo.InvariantCulture))); }
-                if (resetRows.Count > 0) { form.TellResetRows(resetRows); }
+                if (resetRows.Count > 0) { form.TellResetRows(resetRows, note); }
             });
         }
         catch (Exception ex)

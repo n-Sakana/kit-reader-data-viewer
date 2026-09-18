@@ -259,8 +259,13 @@ public sealed class Rdv3Config
     // the input files, as the settings dialog shows and writes them
     public List<Rdv3TableFile> TableFiles = new List<Rdv3TableFile>();
     private Dictionary<string, Rdv3Json> tableNodes = new Dictionary<string, Rdv3Json>(StringComparer.Ordinal);
-    // the definition came from the business block, whose file entries use its words
+    // the definition came from the business block, whose file entries use its
+    // words -- and so do the three members the settings dialog writes
     private bool businessForm;
+    public bool BusinessForm { get { return businessForm; } }
+    private string PathsMember { get { return businessForm ? Rdv3Text.CfgPaths : "paths"; } }
+    private string SearchMember { get { return businessForm ? Rdv3Text.CfgSearch : "search"; } }
+    private string WatchMember { get { return businessForm ? Rdv3Text.CfgWatch : "watch"; } }
 
     // paths, as written in the file; resolved against the .cmd's folder
     public string DataDir = "data";
@@ -321,8 +326,21 @@ public sealed class Rdv3Config
         Rdv3Json root = Rdv3Json.Parse(text);
         if (!root.IsObject) { throw new Rdv3LoadError("the top level is not an object", root.Line); }
         if (collectErrors) { root.CollectErrors(new Rdv3Validation()); }
-        root.Only("schema", "paths", "search", "watch", "jobs", "data", "screen", Rdv3Text.BizRoot);
         Rdv3Config c = new Rdv3Config();
+        // The business block is the whole definition; the rest of the file is
+        // then written in its language too, and holds only what an operator
+        // sets: where the files are, how many candidates to list, and what is
+        // read from the screen.
+        c.businessForm = root.Has(Rdv3Text.BizRoot);
+        if (c.businessForm)
+        {
+            // data / screen stay named here so a file that has both the block
+            // and a hand-written definition is answered by the message about that,
+            // not by a spelling complaint.
+            root.Only("schema", Rdv3Text.BizRoot, Rdv3Text.CfgPaths, Rdv3Text.CfgSearch, Rdv3Text.CfgWatch,
+                      "jobs", "data", "screen");
+        }
+        else { root.Only("schema", "paths", "search", "watch", "jobs", "data", "screen"); }
 
         root.Check(delegate {
         int schema = root.Int("schema", 1, 1000);
@@ -334,46 +352,63 @@ public sealed class Rdv3Config
         });
 
         root.Check(delegate {
-        Rdv3Json p = OptionalObject(root, "paths");
-        p.Only("dataDir", "ledger", "log");
+        string dataDirName = c.businessForm ? Rdv3Text.CfgDataDir : "dataDir";
+        string ledgerName = c.businessForm ? Rdv3Text.CfgLedger : "ledger";
+        string logName = c.businessForm ? Rdv3Text.CfgLog : "log";
+        Rdv3Json p = OptionalObject(root, c.PathsMember);
+        p.Only(dataDirName, ledgerName, logName);
         p.Check(delegate {
-        c.DataDir = p.StrOr("dataDir", c.DataDir);
-        if (c.DataDir.Trim().Length == 0) { throw p.Member("dataDir").Fail("must not be blank"); }
+        c.DataDir = p.StrOr(dataDirName, c.DataDir);
+        if (c.DataDir.Trim().Length == 0) { throw p.Member(dataDirName).Fail("must not be blank"); }
         });
         p.Check(delegate {
-        c.Ledger = p.StrOr("ledger", c.Ledger);
-        if (c.Ledger.Trim().Length == 0) { throw p.Member("ledger").Fail("must not be blank"); }
+        c.Ledger = p.StrOr(ledgerName, c.Ledger);
+        if (c.Ledger.Trim().Length == 0) { throw p.Member(ledgerName).Fail("must not be blank"); }
         });
         p.Check(delegate {
-        c.Log = p.StrOr("log", c.Log);
-        if (c.Log.Trim().Length == 0) { throw p.Member("log").Fail("must not be blank"); }
+        c.Log = p.StrOr(logName, c.Log);
+        if (c.Log.Trim().Length == 0) { throw p.Member(logName).Fail("must not be blank"); }
         });
         c.pathsNode = p;
         });
 
         root.Check(delegate {
-        Rdv3Json s = OptionalObject(root, "search");
-        s.Only("pattern", "candidateRowsShown");
-        s.Check(delegate {
-        c.KeyPattern = s.StrOr("pattern", DefaultKeyPattern);
-        string why = PatternError(c.KeyPattern);
-        if (why != null) { throw s.Member("pattern").Fail("is not a usable regular expression (" + why + ")"); }
-        });
-        s.Check(delegate { c.CandidateRowsShown = s.IntOr("candidateRowsShown", c.CandidateRowsShown, 1, 1000); });
+        // The form of a number is not written here in the business form: it
+        // comes from the way the block cuts the searched columns out.
+        string rowsName = c.businessForm ? Rdv3Text.CfgCandidateRows : "candidateRowsShown";
+        Rdv3Json s = OptionalObject(root, c.SearchMember);
+        if (c.businessForm) { s.Only(rowsName); }
+        else
+        {
+            s.Only("pattern", rowsName);
+            s.Check(delegate {
+            c.KeyPattern = s.StrOr("pattern", DefaultKeyPattern);
+            string why = PatternError(c.KeyPattern);
+            if (why != null) { throw s.Member("pattern").Fail("is not a usable regular expression (" + why + ")"); }
+            });
+        }
+        s.Check(delegate { c.CandidateRowsShown = s.IntOr(rowsName, c.CandidateRowsShown, 1, 1000); });
         c.searchNode = s;
         });
 
         root.Check(delegate {
-        Rdv3Json w = OptionalObject(root, "watch");
-        w.Only("pollMs", "stableMs", "rebindMs", "preferFocusedWindow", "targets");
-        w.Check(delegate { c.PollMs = w.IntOr("pollMs", c.PollMs, 5, 5000); });
-        w.Check(delegate { c.StableMs = w.IntOr("stableMs", c.StableMs, 0, 60000); });
-        w.Check(delegate { c.RebindMs = w.IntOr("rebindMs", c.RebindMs, 50, 60000); });
-        w.Check(delegate { c.PreferFocusedWindow = w.BoolOr("preferFocusedWindow", c.PreferFocusedWindow); });
+        // How often the watched screen is read is the program's business, not
+        // the operator's: in the business form only the targets are written.
+        string targetsName = c.businessForm ? Rdv3Text.CfgTargets : "targets";
+        Rdv3Json w = OptionalObject(root, c.WatchMember);
+        if (c.businessForm) { w.Only(targetsName); }
+        else
+        {
+            w.Only("pollMs", "stableMs", "rebindMs", "preferFocusedWindow", targetsName);
+            w.Check(delegate { c.PollMs = w.IntOr("pollMs", c.PollMs, 5, 5000); });
+            w.Check(delegate { c.StableMs = w.IntOr("stableMs", c.StableMs, 0, 60000); });
+            w.Check(delegate { c.RebindMs = w.IntOr("rebindMs", c.RebindMs, 50, 60000); });
+            w.Check(delegate { c.PreferFocusedWindow = w.BoolOr("preferFocusedWindow", c.PreferFocusedWindow); });
+        }
         // the file decides what is watched -- down to "nothing" (an empty list).
         // A target the operator turned OFF is kept: it is still theirs, the
         // dialog still lists it, and the next save still writes it.
-        List<Rdv3Json> ts = w.Objs("targets", false);
+        List<Rdv3Json> ts = w.Objs(targetsName, false);
         for (int i = 0; i < ts.Count; i++) { ts[i].Check(delegate { c.Targets.Add(Rdv3Target.Read(ts[i])); }); }
         c.watchNode = w;
         });
@@ -399,11 +434,11 @@ public sealed class Rdv3Config
             // generic data / screen members and those are read as always. A
             // message about the generated members is turned back into the
             // block's own words before anyone sees it.
-            c.businessForm = true;
             root.Check(delegate {
                 if (root.Has("data") || root.Has("screen")) { throw root.Fail(Rdv3Text.BizConflict); }
                 if (business.Kind != Rdv3Json.TObject) { throw business.Fail("must be an object"); }
                 Rdv3Json generated = Rdv3Business.Expand(business);
+                if (Rdv3Business.KeyPattern.Length > 0) { c.KeyPattern = Rdv3Business.KeyPattern; }
                 if (root.Validation != null) { generated.CollectErrors(root.Validation); }
                 Rdv3Business.RememberCaptions(business);
                 try
@@ -522,10 +557,10 @@ public sealed class Rdv3Config
             List<int> ends = new List<int>();
             List<string> bodies = new List<string>();
             Rdv3Json[] nodes = { now.pathsNode, now.searchNode, now.watchNode };
-            string[] nodeBodies = { PathsJson(IndentOf(text, now.pathsNode), nl),
-                                    SearchJson(),
-                                    WatchJson(IndentOf(text, now.watchNode), nl) };
-            string[] names = { "paths", "search", "watch" };
+            string[] nodeBodies = { PathsJson(IndentOf(text, now.pathsNode), nl, now.businessForm),
+                                    SearchJson(now.businessForm),
+                                    WatchJson(IndentOf(text, now.watchNode), nl, now.businessForm) };
+            string[] names = { now.PathsMember, now.SearchMember, now.WatchMember };
             StringBuilder missing = new StringBuilder();
             for (int i = 0; i < nodes.Length; i++)
             {
@@ -601,31 +636,35 @@ public sealed class Rdv3Config
         return text.Substring(ls, e - ls);
     }
 
-    private string PathsJson(string ind, string nl)
+    private string PathsJson(string ind, string nl, bool business)
     {
         StringBuilder sb = new StringBuilder();
         sb.Append("{").Append(nl);
-        sb.Append(ind).Append("  \"dataDir\": ").Append(Q(DataDir)).Append(",").Append(nl);
-        sb.Append(ind).Append("  \"ledger\": ").Append(Q(Ledger)).Append(",").Append(nl);
-        sb.Append(ind).Append("  \"log\": ").Append(Q(Log)).Append(nl);
+        sb.Append(ind).Append("  ").Append(Q(business ? Rdv3Text.CfgDataDir : "dataDir")).Append(": ").Append(Q(DataDir)).Append(",").Append(nl);
+        sb.Append(ind).Append("  ").Append(Q(business ? Rdv3Text.CfgLedger : "ledger")).Append(": ").Append(Q(Ledger)).Append(",").Append(nl);
+        sb.Append(ind).Append("  ").Append(Q(business ? Rdv3Text.CfgLog : "log")).Append(": ").Append(Q(Log)).Append(nl);
         sb.Append(ind).Append("}");
         return sb.ToString();
     }
 
-    private string SearchJson()
+    private string SearchJson(bool business)
     {
+        if (business) { return "{ " + Q(Rdv3Text.CfgCandidateRows) + ": " + N(CandidateRowsShown) + " }"; }
         return "{ \"pattern\": " + Q(KeyPattern) + ", \"candidateRowsShown\": " + N(CandidateRowsShown) + " }";
     }
 
-    private string WatchJson(string ind, string nl)
+    private string WatchJson(string ind, string nl, bool business)
     {
         StringBuilder sb = new StringBuilder();
         sb.Append("{").Append(nl);
-        sb.Append(ind).Append("  \"pollMs\": ").Append(N(PollMs));
-        sb.Append(", \"stableMs\": ").Append(N(StableMs));
-        sb.Append(", \"rebindMs\": ").Append(N(RebindMs));
-        sb.Append(", \"preferFocusedWindow\": ").Append(B(PreferFocusedWindow)).Append(",").Append(nl);
-        sb.Append(ind).Append("  \"targets\": [").Append(nl);
+        if (!business)
+        {
+            sb.Append(ind).Append("  \"pollMs\": ").Append(N(PollMs));
+            sb.Append(", \"stableMs\": ").Append(N(StableMs));
+            sb.Append(", \"rebindMs\": ").Append(N(RebindMs));
+            sb.Append(", \"preferFocusedWindow\": ").Append(B(PreferFocusedWindow)).Append(",").Append(nl);
+        }
+        sb.Append(ind).Append("  ").Append(Q(business ? Rdv3Text.CfgTargets : "targets")).Append(": [").Append(nl);
         for (int i = 0; i < Targets.Count; i++)
         {
             Rdv3Target t = Targets[i];

@@ -71,6 +71,8 @@ public static class Rdv3Business
         public readonly List<ScreenRow> Rows = new List<ScreenRow>();
         public readonly List<ScreenRow> Candidates = new List<ScreenRow>();
         public string SearchLabel = "", UserBox = "", AppBox = "", JudgeLabel = "", PaidText = "", UnpaidText = "";
+        // the ledger / report name the operator gave a column, in file order
+        public readonly List<string[]> Names = new List<string[]>();   // [reference, name]
         public readonly List<string> ExportDefaults = new List<string>();
         public readonly Dictionary<string, string> DateFormats = new Dictionary<string, string>(StringComparer.Ordinal);
         public readonly List<string> AllRefs = new List<string>();
@@ -82,7 +84,8 @@ public static class Rdv3Business
     {
         Model m = new Model();
         block.Only(Rdv3Text.BizFiles, Rdv3Text.BizExtract, Rdv3Text.BizJoins, Rdv3Text.BizPaid, Rdv3Text.BizIdentity,
-                   Rdv3Text.BizSearch, Rdv3Text.BizExtraColumns, Rdv3Text.BizDelete, Rdv3Text.BizScreen);
+                   Rdv3Text.BizSearch, Rdv3Text.BizExtraColumns, Rdv3Text.BizDelete, Rdv3Text.BizColumnNames,
+                   Rdv3Text.BizScreen);
         ReadFiles(m, block.Obj(Rdv3Text.BizFiles, true));
         ReadExtracts(m, block.Obj(Rdv3Text.BizExtract, false));
         ReadJoins(m, block.Member(Rdv3Text.BizJoins), block);
@@ -92,12 +95,16 @@ public static class Rdv3Business
         if (block.Has(Rdv3Text.BizExtraColumns))
         { ReadRefList(m, block.Member(Rdv3Text.BizExtraColumns), block, Rdv3Text.BizExtraColumns, m.Extras, ""); }
         ReadDelete(m, block.Obj(Rdv3Text.BizDelete, true));
+        ReadNames(m, block.Obj(Rdv3Text.BizColumnNames, false));
         ReadScreen(m, block.Obj(Rdv3Text.BizScreen, true));
         foreach (Extract e in m.Extracts)
         {
             if (!m.JoinedTables.Contains(e.Table) && e.Table != m.DeleteTable)
             { throw e.Node.Fail(Rdv3Text.BizExtractUnusedTable.Replace("{name}", e.Name).Replace("{table}", e.Table)); }
         }
+        CheckNames(m, block.Obj(Rdv3Text.BizColumnNames, false));
+        RememberPaid(m);
+        KeyPattern = SearchPattern(m);
         string text = "{\"data\":" + DataJson(m) + ",\"screen\":" + ScreenJson(m) + "}";
         Rdv3Json generated = Rdv3Json.Parse(text);
         Enabled = true;
@@ -330,6 +337,55 @@ public static class Rdv3Business
         }
     }
 
+    // The name the ledger's heading and the report's column carry. A column
+    // that is not named here keeps the name it has in the file it came from.
+    private static void ReadNames(Model m, Rdv3Json names)
+    {
+        if (names == null) { return; }
+        foreach (string reference in names.Order)
+        {
+            Rdv3Json node = names.Member(reference);
+            if (node.Kind != Rdv3Json.TString || node.Str.Trim().Length == 0)
+            { throw node.Fail(Rdv3Text.BizColumnNameBlank.Replace("{ref}", reference)); }
+            Ref r = ParseRef(m, reference, node, Rdv3Text.BizColumnNames);
+            RequireJoined(m, r, node, Rdv3Text.BizColumnNames);
+            m.Names.Add(new string[] { r.Text, node.Str.Trim() });
+        }
+    }
+
+    // Every named column has to be one the ledger keeps, and the headings the
+    // ledger ends up with have to stay one name per column.
+    private static void CheckNames(Model m, Rdv3Json names)
+    {
+        if (m.Names.Count == 0) { return; }
+        List<string> saved = SavedColumns(m);
+        foreach (string[] pair in m.Names)
+        {
+            if (saved.Contains(pair[0])) { continue; }
+            throw names.Member(pair[0]).Fail(Rdv3Text.BizColumnNameUnknown.Replace("{ref}", pair[0]));
+        }
+        List<string> headings = new List<string>();
+        headings.Add(Rdv3Text.BizWorkColumn);
+        foreach (string reference in saved)
+        {
+            string heading = NameOf(m, reference);
+            if (headings.Contains(heading))
+            {
+                Rdv3Json at = names.Member(reference);
+                throw (at == null ? names : at).Fail(Rdv3Text.BizColumnNameDuplicate.Replace("{name}", heading));
+            }
+            headings.Add(heading);
+        }
+    }
+
+    // the heading a ledger column carries
+    private static string NameOf(Model m, string reference)
+    {
+        foreach (string[] pair in m.Names) { if (pair[0] == reference) { return pair[1]; } }
+        int dot = reference.IndexOf('.');
+        return (dot <= 0) ? reference : reference.Substring(dot + 1);
+    }
+
     private static void ReadScreen(Model m, Rdv3Json screen)
     {
         screen.Only(Rdv3Text.BizSearchLabel, Rdv3Text.BizUserBox, Rdv3Text.BizAppBox, Rdv3Text.BizRemarks, Rdv3Text.BizPlan,
@@ -435,8 +491,9 @@ public static class Rdv3Business
         return sb.Append(']').ToString();
     }
 
-    private static string LabelOf(string reference)
+    private static string LabelOf(Model m, string reference)
     {
+        foreach (string[] pair in m.Names) { if (pair[0] == reference) { return pair[1]; } }
         int dot = reference.IndexOf('.');
         if (dot <= 0) { return reference; }
         return Rdv3Text.BizLabelOfFmt.Replace("{table}", reference.Substring(0, dot)).Replace("{column}", reference.Substring(dot + 1));
@@ -494,14 +551,14 @@ public static class Rdv3Business
             labelled.Add(reference);
             if (comma) { sb.Append(','); }
             comma = true;
-            sb.Append(Q(reference)).Append(':').Append(Q(LabelOf(reference)));
+            sb.Append(Q(reference)).Append(':').Append(Q(LabelOf(m, reference)));
         }
         List<string> made = new List<string>();
         string deleteJob = DeleteJob(m, made);
         string updateJob = UpdateJob(m, made);
         string[][] fixedLabels =
         {
-            new string[] { m.JudgeRef, LabelOf(m.JudgeRef) },
+            new string[] { m.JudgeRef, LabelOf(m, m.JudgeRef) },
             new string[] { "ledger", Rdv3Text.BizLedgerLabel },
             new string[] { "$work", Rdv3Text.BizWorkLabel }
         };
@@ -521,6 +578,16 @@ public static class Rdv3Business
         sb.Append(",\"ledger\":{\"identity\":").Append(Arr(RefTexts(m.Identity)));
         sb.Append(",\"search\":{\"columns\":").Append(Arr(RefTexts(m.Search))).Append(",\"match\":\"exact\"}");
         sb.Append(",\"columns\":{\"source\":").Append(Arr(SavedColumns(m)));
+        if (m.Names.Count > 0)
+        {
+            sb.Append(",\"names\":{");
+            for (int i = 0; i < m.Names.Count; i++)
+            {
+                if (i > 0) { sb.Append(','); }
+                sb.Append(Q(m.Names[i][0])).Append(':').Append(Q(m.Names[i][1]));
+            }
+            sb.Append('}');
+        }
         sb.Append(",\"application\":[{\"name\":\"workState\",\"onSourceChange\":\"reset\"}]},\"protectStates\":[\"TRUE\"]}}");
         return sb.ToString();
     }
@@ -690,6 +757,67 @@ public static class Rdv3Business
         sb.Append(",\"payment\":{\"header\":").Append(Q(m.JudgeLabel)).Append(",\"value\":{\"field\":").Append(Q(m.JudgeRef)).Append(",\"empty\":").Append(Q(m.UnpaidText)).Append('}');
         sb.Append(",\"looks\":{").Append(Q(Rdv3Text.BizPaidStored)).Append(":\"accent\",\"*\":\"neutral\"}}}}");
         return sb.ToString();
+    }
+
+    // ---- what the paid conditions look at, so the band can say which input
+    // file is still not done when a record is unpaid -----------------------------
+    public static readonly List<string[]> PaidConditions = new List<string[]>();  // [table, reference, value]
+
+    private static void RememberPaid(Model m)
+    {
+        PaidConditions.Clear();
+        for (int i = 0; i < m.Conditions.Count; i++)
+        { PaidConditions.Add(new string[] { m.Conditions[i][0].Table, m.Conditions[i][0].Text, m.ConditionValues[i] }); }
+    }
+
+    // ---- the form a searched number has ---------------------------------------
+    // The block already says how each searched column is cut out of its file.
+    // The form of a typed or read number is those cut-out patterns, so it is
+    // taken from them instead of being written a second time in the file.
+    public static string KeyPattern = "";
+
+    private static string SearchPattern(Model m)
+    {
+        List<string> patterns = new List<string>();
+        foreach (Ref r in m.Search)
+        {
+            foreach (Extract e in m.Extracts)
+            {
+                if (e.Name != r.Text) { continue; }
+                string regex = RegexLiteral(e.Expression);
+                if (regex != null && !patterns.Contains(regex)) { patterns.Add(regex); }
+            }
+        }
+        if (patterns.Count == 0) { return ""; }
+        string whole = "^(?:" + string.Join("|", patterns.ToArray()) + ")$";
+        try { new System.Text.RegularExpressions.Regex(whole, System.Text.RegularExpressions.RegexOptions.CultureInvariant); }
+        catch (Exception) { return ""; }
+        return whole;
+    }
+
+    // the pattern of regexExtract(column, 'pattern'): the last quoted text of
+    // the expression, with the doubled quotes inside it written out once
+    private static string RegexLiteral(string expression)
+    {
+        string text = (expression == null) ? "" : expression.Trim();
+        if (!text.StartsWith("regexExtract", StringComparison.Ordinal)) { return null; }
+        string found = null;
+        int p = 0;
+        while (p < text.Length)
+        {
+            if (text[p] != '\'') { p++; continue; }
+            StringBuilder sb = new StringBuilder();
+            p++;
+            while (p < text.Length)
+            {
+                if (text[p] != '\'') { sb.Append(text[p++]); continue; }
+                p++;
+                if (p < text.Length && text[p] == '\'') { sb.Append('\''); p++; continue; }
+                break;
+            }
+            found = sb.ToString();
+        }
+        return (found != null && found.Length > 0) ? found : null;
     }
 
     // ---- captions the page applies (the box names and the search label) ------

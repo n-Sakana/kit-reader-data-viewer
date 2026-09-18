@@ -186,7 +186,7 @@ public static class Rdv3Files
         {
             int column = fields[i] == "$work" ? -1 : data.IndexOf(fields[i]);
             if (column < 0 && fields[i] != "$work") { throw new InvalidDataException("unknown export field: " + fields[i]); }
-            headers[i] = column < 0 ? stateColumn : data.Columns[column].Column;
+            headers[i] = column < 0 ? stateColumn : data.Columns[column].Heading;
             int count; counts.TryGetValue(headers[i], out count); counts[headers[i]] = count + 1;
         }
         HashSet<string> used = new HashSet<string>(StringComparer.Ordinal);

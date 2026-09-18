@@ -27,7 +27,7 @@ public static class Rdv3SettingsForm
         sb.Append(",\"dataDir\":").Append(Rdv3WebJson.Q(working.DataDir));
         sb.Append(",\"ledger\":").Append(Rdv3WebJson.Q(working.Ledger));
         sb.Append(",\"log\":").Append(Rdv3WebJson.Q(working.Log));
-        sb.Append(",\"pattern\":").Append(Rdv3WebJson.Q(working.KeyPattern));
+        if (!working.BusinessForm) { sb.Append(",\"pattern\":").Append(Rdv3WebJson.Q(working.KeyPattern)); }
         sb.Append(",\"candidateRows\":").Append(working.CandidateRowsShown.ToString(CultureInfo.InvariantCulture));
         sb.Append(",\"tables\":[");
         for (int i = 0; i < working.TableFiles.Count; i++)
@@ -52,9 +52,10 @@ public static class Rdv3SettingsForm
         string dataDir = Rdv3Form.Text(result, "dataDir").Trim();
         string ledger = Rdv3Form.Text(result, "ledger").Trim();
         string log = Rdv3Form.Text(result, "log").Trim();
+        bool typedPattern = result.Member("pattern") != null;
         string pattern = Rdv3Form.Text(result, "pattern").Trim();
         int candidateRows = Rdv3Form.Number(result, "candidateRows", -1);
-        string patternError = Rdv3Config.PatternError(pattern);
+        string patternError = typedPattern ? Rdv3Config.PatternError(pattern) : null;
         if (patternError != null)
         {
             owner.Error(Rdv3Text.ErrPatternTyped + patternError);
@@ -104,7 +105,7 @@ public static class Rdv3SettingsForm
         working.DataDir = dataDir;
         working.Ledger = ledger;
         working.Log = log;
-        working.KeyPattern = pattern;
+        if (typedPattern) { working.KeyPattern = pattern; }
         working.CandidateRowsShown = candidateRows;
 
         Rdv3Target picked = owner.TakePickedTarget();

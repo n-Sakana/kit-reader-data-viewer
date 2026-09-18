@@ -154,6 +154,13 @@ public static class Rdv3Text
     public const string NoteNoPending = "\u672A\u9001\u4FE1\u306E\u5909\u66F4\u306F\u3042\u308A\u307E\u305B\u3093";
     public const string NoteNotFound = "\u898B\u3064\u304B\u308A\u307E\u305B\u3093";
 
+    // ---- what the create / update of the ledger ended with (one dialog) -----
+    public const string LedgerCreateTitle = "台帳の作成";
+    public const string LedgerUpdateTitle = "台帳の更新";
+    public const string LedgerCreatedFmt = "統合台帳を作成しました。\n台帳の件数 {rows} 件（追加 {added} 件）";
+    public const string LedgerUpdatedFmt = "統合台帳を更新しました。\n台帳の件数 {rows} 件（追加 {added} 件、更新 {updated} 件、削除 {deleted} 件）";
+    public const string LedgerUnchangedFmt = "統合台帳の更新はありませんでした。\n台帳の件数 {rows} 件";
+
     // ---- confirmations ---------------------------------------------------------
     public const string ConfirmUpdateTitle = "\u66F4\u65B0\u306E\u78BA\u8A8D";
     public const string ConfirmRebuildBody = "\u4FDD\u5B58\u6E08\u307F\u306E\u7D71\u5408\u53F0\u5E33\u304C\u8AAD\u3081\u307E\u305B\u3093:\n{err}\nCSV \u304B\u3089\u4F5C\u308A\u76F4\u3057\u307E\u3059\u304B? (\u4F5C\u696D\u72B6\u614B\u306F\u5931\u308F\u308C\u307E\u3059)";
@@ -264,6 +271,9 @@ public static class Rdv3Text
     // in the configured form, and a key the ledger does not hold
     public const string JudgeInvalidKey = "\u5165\u529B\u5185\u5BB9\u3092\u78BA\u8A8D\u3057\u3066\u304F\u3060\u3055\u3044";
     public const string JudgeNotFound = "\u5BFE\u8C61\u30C7\u30FC\u30BF\u304C\u898B\u3064\u304B\u308A\u307E\u305B\u3093";
+    // unpaid: which of the input files still fails the paid conditions
+    public const string JudgeUnpaidSubFmt = "支払済の条件を満たしていません: {names}";
+    public const string JudgeUnpaidSep = "・";
     public const string CandidateHitsFmt = "\u8A72\u5F53 {n} \u4EF6";
 
     // ---- shared-ledger notices ------------------------------------------------
@@ -538,6 +548,7 @@ public static class Rdv3Text
     public const string BizUnpaidText = "未決済の表示";
     public const string BizCandidates = "候補一覧";
     public const string BizHeader = "見出し";
+    public const string BizColumnNames = "台帳と帳票の列名";
     public const string BizExportDefaults = "帳票出力の初期項目";
     public const string BizWorkColumn = "確認状態";
     // names the expansion makes up (they appear in the process dialogs and logs)
@@ -587,12 +598,25 @@ public static class Rdv3Text
     public const string BizDateConflict = "列「{ref}」の CSVの日付 が 2 通り書かれています（{a} と {b}）。同じ書き方にそろえてください。";
     public const string BizExportUnknown = "帳票出力の初期項目 の「{ref}」は台帳に残る列ではありません（画面・候補一覧・識別・検索に使う列か「確認状態」）。";
     public const string BizTableIdForm = "入力ファイルの表の名前に . と空白は使えません。実際: 「{table}」";
+    public const string BizColumnNameUnknown = "台帳と帳票の列名 の「{ref}」は台帳に残る列ではありません（画面・候補一覧・識別・検索・削除・支払済の条件・帳票出力の初期項目に使う列）。";
+    public const string BizColumnNameBlank = "台帳と帳票の列名 の「{ref}」に名前がありません。";
+    public const string BizColumnNameDuplicate = "台帳と帳票の列名 の「{name}」が 2 つの列に付いています。台帳の見出しは列ごとに違う名前にしてください。";
     // path words used when a generated-definition message is shown to the operator
     public const string BizPathKey = "業務設定.入力ファイル.{table}.識別する列";
     public const string BizPathIdentity = "業務設定.台帳の1件を決める列";
     public const string BizPathSearch = "業務設定.検索に使う列";
     public const string BizPathSource = "台帳に残す列（画面・候補一覧・識別・検索の列から自動で決まります）";
     public const string BizPathScreen = "業務設定.画面";
+
+    // ---- what settings.json holds outside the business block ----------------
+    public const string CfgPaths = "場所";
+    public const string CfgDataDir = "データ";
+    public const string CfgLedger = "統合台帳";
+    public const string CfgLog = "操作ログ";
+    public const string CfgSearch = "検索";
+    public const string CfgCandidateRows = "候補一覧の表示件数";
+    public const string CfgWatch = "読み取り元";
+    public const string CfgTargets = "対象";
     // ---- where the settings do not line up (which member, and what to align) ----
     public const string SettingsStepPrefix = "処理「{job}」の手順 {n}（{operation}: {target}）: ";
     public const string SettingsStepColumnHint = " \u5217\u306F\u300C\u8868\u306E\u540D\u524D.\u5217\u540D\u300D\u3067\u66F8\u304D\u307E\u3059\u3002\u5165\u529B\u306E\u5217\u306F CSV \u306E\u898B\u51FA\u3057\u3069\u304A\u308A\u3001\u4F5C\u3063\u305F\u5217\u306F\u5207\u308A\u51FA\u3057\u3067\u4ED8\u3051\u305F\u540D\u524D\u3067\u3059\u3002\u3053\u306E\u624B\u9806\u3088\u308A\u524D\u306E\u624B\u9806\u3067\u4F5C\u3089\u308C\u3066\u3044\u306A\u3044\u5217\u306F\u4F7F\u3048\u307E\u305B\u3093\u3002";

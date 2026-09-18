@@ -78,9 +78,9 @@ public static class Rdv3LedgerUpdateForm
         return Rdv3Form.Flag(owner.ShowModal("shared", content), "ok", false);
     }
 
-    public static void TellReset(Rdv3Form owner, List<Rdv3CandRow> resetRows)
+    public static void TellReset(Rdv3Form owner, List<Rdv3CandRow> resetRows, string summary)
     {
-        string body = Rdv3Text.NoteUpdated;
+        string body = (summary == null || summary.Length == 0) ? Rdv3Text.NoteUpdated : summary;
         if (resetRows != null && resetRows.Count > 0)
         {
             body += "\r\n" + Rdv3Text.SharedResetFmt
@@ -96,7 +96,7 @@ public static class Rdv3LedgerUpdateForm
                 resetRows == null ? 0 : resetRows.Count,
                 -1,
                 false,
-                Rdv3Text.SharedUpdateTitle,
+                Rdv3Text.LedgerUpdateTitle,
                 body));
     }
 }

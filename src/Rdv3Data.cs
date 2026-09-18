@@ -46,8 +46,13 @@ public sealed class Rdv3ColumnRef
     public string Ref = "";
     public string Table = "";
     public string Column = "";
+    // the heading this column carries in the ledger file and in an export,
+    // when the settings gave it one; otherwise the column's own name is used
+    public string Name = "";
     public int TableOrd;
     public int Field = -1;
+
+    public string Heading { get { return (Name.Length > 0) ? Name : Column; } }
 }
 
 public sealed class Rdv3ApplicationColumnDef
@@ -365,7 +370,7 @@ public sealed class Rdv3Data
         get
         {
             string[] h = new string[Columns.Count];
-            for (int i = 0; i < h.Length; i++) { h[i] = Columns[i].Column; }
+            for (int i = 0; i < h.Length; i++) { h[i] = Columns[i].Heading; }
             return h;
         }
     }
@@ -497,7 +502,7 @@ public sealed class Rdv3Data
         ledger.Only("identity", "search", "columns", "protectStates");
         d.ProtectedStates = ledger.Strs("protectStates", false);
         Rdv3Json columnGroups = ledger.Obj("columns", true);
-        columnGroups.Only("source", "application");
+        columnGroups.Only("source", "names", "application");
         string[] cols = columnGroups.Strs("source", true);
         if (cols.Length == 0) { throw ledger.Member("columns").Fail("names no column"); }
         Rdv3Json colsNode = columnGroups.Member("source");
@@ -506,6 +511,30 @@ public sealed class Rdv3Data
             Rdv3ColumnRef c = ParseLedgerRef(d, cols[i], colsNode.At(i));
             if (d.IndexOf(c.Ref) >= 0) { throw colsNode.At(i).Fail(c.Ref + " is listed twice"); }
             d.Columns.Add(c);
+        }
+
+        // A heading the settings chose for a saved column. Listing a column
+        // here renames what the ledger file and an export show; the column
+        // itself, and everything that refers to it, keeps its own name.
+        Rdv3Json names = columnGroups.Obj("names", false);
+        if (names != null)
+        {
+            foreach (string reference in names.Order)
+            {
+                Rdv3Json node = names.Member(reference);
+                int at = d.IndexOf(reference.Trim());
+                if (at < 0) { throw node.Fail(reference + " is not one of the ledger source columns"); }
+                if (node.Kind != Rdv3Json.TString || node.Str.Trim().Length == 0)
+                { throw node.Fail("must be the heading this column shows"); }
+                d.Columns[at].Name = node.Str.Trim();
+            }
+            List<string> headings = new List<string>();
+            for (int i = 0; i < d.Columns.Count; i++)
+            {
+                if (headings.Contains(d.Columns[i].Heading))
+                { throw names.Fail(d.Columns[i].Heading + " is the heading of two columns"); }
+                headings.Add(d.Columns[i].Heading);
+            }
         }
 
         List<Rdv3Json> appColumns = columnGroups.Objs("application", true);

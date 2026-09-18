@@ -209,6 +209,7 @@ public static class Rdv3Headless
         if (result != null)
         {
             sb.Append(",\"columns\":").Append(Rdv3WebJson.S(data.ColumnRefs));
+            sb.Append(",\"ledgerHead\":").Append(Rdv3WebJson.S(data.Head));
             sb.Append(",\"rows\":").Append(Rows(result.Lines));
             sb.Append(",\"states\":").Append(Rdv3WebJson.S(result.States));
             sb.Append(",\"resetRows\":").Append(Rows(reset.ToArray()));

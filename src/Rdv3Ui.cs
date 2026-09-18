@@ -346,7 +346,7 @@ public sealed class Rdv3Form
     public bool Ask(string title, string body) { return Rdv3ConfirmForm.Ask(this, title, body); }
     public void Tell(string title, string body) { Rdv3ConfirmForm.Tell(this, title, body); }
     public bool AskLedgerSwitch(List<Rdv3CandRow> rows) { return Rdv3LedgerUpdateForm.Ask(this, rows); }
-    public void TellResetRows(List<Rdv3CandRow> rows) { Rdv3LedgerUpdateForm.TellReset(this, rows); }
+    public void TellResetRows(List<Rdv3CandRow> rows, string body) { Rdv3LedgerUpdateForm.TellReset(this, rows, body); }
     public bool TellUnmatched(List<Rdv3UnmatchedChange> rows) { return Rdv3UnmatchedForm.Tell(this, rows); }
 
     public void Fatal(string title, string body)
@@ -571,7 +571,8 @@ public sealed class Rdv3Form
         int candidateRows = Number(root, "candidateRows", -1);
         string error = "";
         string field = "";
-        string patternError = Rdv3Config.PatternError(pattern);
+        // the dialog leaves the number form out when the settings derive it
+        string patternError = (root.Member("pattern") == null) ? null : Rdv3Config.PatternError(pattern);
         if (patternError != null)
         {
             error = Rdv3Text.ErrPatternTyped + patternError;
@@ -870,7 +871,7 @@ public sealed class Rdv3Form
                 sb.Append(",\"look\":").Append(Rdv3WebJson.Q(verdict.Result.Look));
                 sb.Append(",\"icon\":").Append(Rdv3WebJson.Q(verdict.Result.Icon));
             }
-            sb.Append(",\"sub\":\"\"}");
+            sb.Append(",\"sub\":").Append(Rdv3WebJson.Q(UnpaidNote(verdict))).Append('}');
         }
         Rdv3StateDef workState = View.HasRecord
             ? Screen.Work.ByStored(View.StoredState) : Screen.Work.InitialState;
@@ -888,6 +889,24 @@ public sealed class Rdv3Form
         sb.Append(",\"noticeError\":").Append(Rdv3WebJson.B(noticeError));
         sb.Append('}');
         return sb.ToString();
+    }
+
+    // Unpaid is one answer over several input files. The band says which of
+    // them is not done, so the reason a record does not become confirmed on
+    // its own does not have to be guessed.
+    private string UnpaidNote(Rdv3Verdict verdict)
+    {
+        if (!View.HasRecord || verdict.Result == null || verdict.Result.Id != "unpaid") { return ""; }
+        List<string> names = new List<string>();
+        foreach (string[] condition in Rdv3Business.PaidConditions)
+        {
+            int col = fields.IndexOf(condition[1]);
+            string value = (col >= 0 && col < View.Record.Length && View.Record[col] != null) ? View.Record[col] : "";
+            if (string.Equals(value, condition[2], StringComparison.Ordinal)) { continue; }
+            if (!names.Contains(condition[0])) { names.Add(condition[0]); }
+        }
+        if (names.Count == 0) { return ""; }
+        return Rdv3Text.JudgeUnpaidSubFmt.Replace("{names}", string.Join(Rdv3Text.JudgeUnpaidSep, names.ToArray()));
     }
 
     private void AppendValue(StringBuilder sb, string id, Rdv3Bind bind, ref bool comma)

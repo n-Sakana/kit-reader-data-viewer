@@ -186,9 +186,40 @@
     });
     var searchLabel = stage.querySelector('label[for=input]');
     if (searchLabel && definition.searchLabel) { searchLabel.textContent = definition.searchLabel; }
+    if (definition.searchLabel) { searchLabelText = definition.searchLabel; }
     candidateHidden = (definition.candidateHidden || []).map(Number);
   }
   var candidateHidden = [];
+
+  // ホバーチップ。「ヘルプ」が入っている間だけ、部品の上に説明を出す。
+  // data-help を持たない表示欄は、切れた値そのものを出す。
+  var helpOn = false;
+  function applyHelp() {
+    Array.prototype.forEach.call(stage.querySelectorAll('.win [data-help],.win [data-bind]'), function (node) {
+      if (!helpOn) { node.removeAttribute('title'); return; }
+      var text = node.getAttribute('data-help');
+      node.title = (text === null) ? node.textContent : text;
+    });
+    var button = stage.querySelector('#b-help');
+    if (!button) { return; }
+    button.classList.toggle('on', helpOn);
+    button.setAttribute('aria-pressed', helpOn ? 'true' : 'false');
+  }
+
+  // 検索欄の下の補足。番号の形式が違うときと、台帳に無いときを書き分ける。
+  var searchNotes = {
+    invalid: '入力した文字が番号の形式ではありません。{label}の形式で入れ直してください。',
+    notfound: '番号の形式は合っていますが、この番号は統合台帳にありません。「データ更新」で台帳を新しくするか、番号を確かめてください。'
+  };
+  var searchLabelText = '識別番号／受付番号';
+  function showSearchNote(look) {
+    var note = stage.querySelector('#s-search');
+    if (!note) { return; }
+    var text = searchNotes[look];
+    note.textContent = text ? text.replace('{label}', searchLabelText) : '';
+    note.classList.toggle('warn', !!text);
+    note.hidden = !text;
+  }
 
   function renderScreen(definition) {
     if (!definition || definition.fixed !== true) { throw new Error('The fixed HTML screen requires compact settings.'); }
@@ -207,6 +238,8 @@
         post({ type: 'action', name: node.getAttribute('data-action'), job: node.getAttribute('data-job') || '', key: keyValue() });
       });
     });
+    var help = stage.querySelector('#b-help');
+    if (help) { activate(help, function () { helpOn = !helpOn; applyHelp(); }); }
     input.addEventListener('input', function (event) { if (!event.isComposing) { onKeyInput(); } });
     input.addEventListener('compositionend', onKeyInput);
     input.addEventListener('paste', function (event) {
@@ -251,7 +284,6 @@
         node.textContent = text;
         node.classList.toggle('tone-muted', item.tone === 1);
         node.classList.toggle('tone-error', item.tone === 2);
-        node.title = text;
       });
     });
     if (input && document.activeElement !== input && input.textContent !== (next.key || '')) {
@@ -303,14 +335,15 @@
       var sub = band.querySelector('#jsub');
       head.className = 'ok ' + (result.look || 'unsearched');
       head.textContent = result.text || '';
-      sub.textContent = result.sub ? ' ' + result.sub : '';
+      sub.textContent = result.sub || '';
+      if (id === 'paymentStatus') { showSearchNote(result.look); }
     });
+    applyHelp();
     if (statusSegments.length) {
       statusSegments.forEach(function (node) { node.classList.remove('notice', 'error'); });
       if (next.notice) {
         var target = statusSegments[Math.min(2, statusSegments.length - 1)];
         target.textContent = next.notice;
-        target.title = next.notice;
         target.classList.add('notice');
         if (next.noticeError) { target.classList.add('error'); }
       }
@@ -739,7 +772,10 @@
       row.appendChild(select);
       tablesSlot.appendChild(row);
     });
-    shell.body.querySelector('[data-row=pattern]').appendChild(editable(content.pattern, 'pattern'));
+    var patternRow = shell.body.querySelector('[data-row=pattern]');
+    // 業務設定が番号の形式を導くときは、設定で触る項目ではないので出さない
+    if (content.pattern === undefined) { patternRow.hidden = true; }
+    else { patternRow.appendChild(editable(content.pattern, 'pattern')); }
     var candidateEditor = numberEditor(content.candidateRows, 'candidateRows', 1, 1000);
     shell.body.querySelector('[data-row=candidateRows]').appendChild(candidateEditor);
     shell.body.querySelector('[data-target-summary]').textContent = content.target.summary || '';
@@ -759,17 +795,21 @@
     var dataDir = value('dataDir');
     var ledger = value('ledger');
     var log = value('log');
-    var pattern = value('pattern');
     var tables = ((settingsContent && settingsContent.tables) || []).map(function (table) {
       var select = body.querySelector('select[data-match="' + cssEscape(table.id) + '"]');
       return { id: table.id, file: value('table:' + table.id), match: select ? select.value : 'exact', required: table.required !== false };
     });
     pendingSettings = { ok: true, dataDir: dataDir, ledger: ledger, log: log,
-      pattern: pattern, candidateRows: Number(value('candidateRows')), tables: tables };
+      candidateRows: Number(value('candidateRows')), tables: tables };
+    var submission = { type: 'settingsSubmit', token: currentToken, dataDir: dataDir,
+      ledger: ledger, log: log,
+      candidateRows: pendingSettings.candidateRows, tables: tables };
+    if (settingsContent && settingsContent.pattern !== undefined) {
+      pendingSettings.pattern = value('pattern');
+      submission.pattern = pendingSettings.pattern;
+    }
     error.hidden = true;
-    post({ type: 'settingsSubmit', token: currentToken, dataDir: dataDir,
-      ledger: ledger, log: log, pattern: pattern,
-      candidateRows: pendingSettings.candidateRows, tables: tables });
+    post(submission);
   }
 
   function settingsValidation(message) {
