@@ -145,16 +145,14 @@ main,.page{max-width:none;padding:0;background:#d4d0c8}
       <div class="keyline"><div class="keyfigure"><div class="lab">読取値</div><div class="fld keyvalue" data-bind="searchKey" data-help="表示中の案件の検索キーです。右の欄に入力した番号か、監視している画面から読み取った番号が入ります。"></div></div>
         <div class="keyactions"><div class="keyinput"><label class="lab" for="input">識別番号／受付番号</label><div class="fld inp" id="input" role="textbox" aria-label="識別番号／受付番号" aria-multiline="false" data-max-length="32" contenteditable="false" tabindex="0"></div></div>
           <div class="btn def" id="b-search" role="button" data-action="search" aria-disabled="true" tabindex="0">検索</div>
-          <div class="helpcol">
-            <div class="helpswitch" id="b-help" role="group" aria-label="ヘルプ" data-help="ヘルプをオンにすると、画面の各部分にカーソルを乗せたときに説明が表示されます。"><span class="hs-label">ヘルプ</span><span class="hs-opts"><span class="hs-opt" id="b-help-on" role="button" aria-pressed="false" tabindex="0">オン</span><span class="hs-opt on" id="b-help-off" role="button" aria-pressed="true" tabindex="0">オフ</span></span></div>
-            <div class="btn" id="b-clear" role="button" data-action="clear" aria-disabled="true" tabindex="0">クリア</div>
-          </div>
+          <div class="btn" id="b-clear" role="button" data-action="clear" aria-disabled="true" tabindex="0">クリア</div>
           <div class="workcol">
+            <div class="helpswitch" id="b-help" role="group" aria-label="ヘルプ" data-help="ヘルプをオンにすると、画面の各部分にカーソルを乗せたときに説明が表示されます。"><span class="hs-label">ヘルプ</span><span class="hs-opts"><span class="hs-opt" id="b-help-on" role="button" aria-pressed="false" tabindex="0">オン</span><span class="hs-opt on" id="b-help-off" role="button" aria-pressed="true" tabindex="0">オフ</span></span></div>
             <div class="tog" id="b-work" role="button" data-action="workState" aria-disabled="true" tabindex="0" data-help="表示中の案件の確認状態を切り替えます。支払済の案件は、検索した時点で自動的に確認済になります。">未確認</div>
           </div>
+          <div class="keynote" id="s-search"></div>
         </div>
       </div>
-      <div class="subtext" id="s-search"></div>
     </fieldset>
     <div class="record-details"><div class="cols">
       <fieldset class="gb fixed-user"><legend>利用者情報</legend>

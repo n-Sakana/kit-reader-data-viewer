@@ -81,8 +81,7 @@ public sealed class Rdv3Form
     private bool noticeError;
     // what the judgment band says while there is no record: a key outside
     // the configured form, or a key the ledger does not hold
-    private string judgmentNotice = "";
-    private string judgmentLook = "";
+    private string searchNote = "";     // "invalid" / "notfound" / ""
     private readonly DispatcherTimer noticeTimer = new DispatcherTimer();
     private Rdv3Data exportFilterData;
     private int modalToken;
@@ -222,12 +221,13 @@ public sealed class Rdv3Form
         Ui(delegate { retryEnabled = on; RefreshValues(); });
     }
 
-    public void SetJudgmentNotice(string text, string look)
+    // Why a search found nothing. The band keeps its three words; the reason
+    // is written under the number the operator typed.
+    public void SetSearchNote(string look)
     {
         Ui(delegate
         {
-            judgmentNotice = text ?? "";
-            judgmentLook = look ?? "";
+            searchNote = look ?? "";
             RefreshValues();
         });
     }
@@ -238,8 +238,7 @@ public sealed class Rdv3Form
         {
             View.SearchKey = key ?? "";
             keyText = View.SearchKey;
-            judgmentNotice = "";
-            judgmentLook = "";
+            searchNote = "";
             candidates = rows ?? new List<Rdv3CandRow>();
             candidateTotal = totalHits;
             View.CandidateCount = totalHits;
@@ -288,8 +287,7 @@ public sealed class Rdv3Form
         Ui(delegate
         {
             if (!keepKey) { keyText = ""; }
-            judgmentNotice = "";
-            judgmentLook = "";
+            searchNote = "";
             View.SearchKey = "";
             candidates = new List<Rdv3CandRow>();
             candidateTotal = 0;
@@ -887,9 +885,8 @@ public sealed class Rdv3Form
             sb.Append(Rdv3WebJson.Q(judgment.Key)).Append(":{");
             if (!View.HasRecord || verdict.Result == null)
             {
-                bool noticed = judgmentNotice.Length > 0;
-                sb.Append("\"text\":").Append(Rdv3WebJson.Q(noticed ? judgmentNotice : Rdv3Text.Unsearched));
-                sb.Append(",\"look\":").Append(Rdv3WebJson.Q(noticed ? judgmentLook : "unsearched")).Append(",\"icon\":\"\"");
+                sb.Append("\"text\":").Append(Rdv3WebJson.Q(Rdv3Text.Unsearched));
+                sb.Append(",\"look\":\"unsearched\",\"icon\":\"\"");
             }
             else
             {
@@ -911,6 +908,7 @@ public sealed class Rdv3Form
         sb.Append(",\"workText\":").Append(Rdv3WebJson.Q(buttonText));
         sb.Append(",\"workDown\":").Append(Rdv3WebJson.B(down));
         sb.Append(",\"pending\":").Append(View.PendingCount.ToString(CultureInfo.InvariantCulture));
+        sb.Append(",\"searchNote\":").Append(Rdv3WebJson.Q(searchNote));
         sb.Append(",\"notice\":").Append(Rdv3WebJson.Q(notice));
         sb.Append(",\"noticeError\":").Append(Rdv3WebJson.B(noticeError));
         sb.Append('}');
@@ -960,7 +958,7 @@ public sealed class Rdv3Form
             .Replace("{conditions}", string.Join(Rdv3Text.JudgeHelpSep, parts.ToArray()))
             .Replace("{paid}", paid == null ? "" : paid.Text)
             .Replace("{unpaid}", unpaid == null ? "" : unpaid.Text)
-            .Replace("{notfound}", Rdv3Text.JudgeNotFound);
+            .Replace("{unsearched}", Rdv3Text.Unsearched);
     }
 
     private void AppendValue(StringBuilder sb, string id, Rdv3Bind bind, ref bool comma)

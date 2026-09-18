@@ -341,6 +341,7 @@
       work.classList.toggle('on', !!next.workDown);
       work.setAttribute('aria-pressed', next.workDown ? 'true' : 'false');
     }
+    showSearchNote(next.searchNote || '');
     var pending = stage.querySelector('#sn');
     if (pending) { pending.classList.toggle('warn', Number(next.pending) > 0); }
     showSendNote(Number(next.pending));
@@ -354,7 +355,6 @@
       head.className = 'ok ' + (result.look || 'unsearched');
       head.textContent = result.text || '';
       sub.textContent = result.sub || '';
-      if (id === 'paymentStatus') { showSearchNote(result.look); }
     });
     applyHelp();
     if (statusSegments.length) {

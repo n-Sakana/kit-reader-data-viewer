@@ -269,15 +269,13 @@ public static class Rdv3Text
     public const string Unsearched = "\u672A\u691C\u7D22";
     // the judgment band when there is no record to judge: a key that is not
     // in the configured form, and a key the ledger does not hold
-    public const string JudgeInvalidKey = "\u5165\u529B\u5185\u5BB9\u3092\u78BA\u8A8D\u3057\u3066\u304F\u3060\u3055\u3044";
-    public const string JudgeNotFound = "\u5BFE\u8C61\u30C7\u30FC\u30BF\u304C\u898B\u3064\u304B\u308A\u307E\u305B\u3093";
     // unpaid: which of the input files still fails the paid conditions
     // the band names the condition itself: which file, which column, which value
-    public const string JudgeUnpaidItemFmt = "{table}の「{column}」が「{value}」ではありません";
-    public const string JudgeUnpaidSep = "／";
+    public const string JudgeUnpaidItemFmt = "{table}の{column}が「{value}」ではありません";
+    public const string JudgeUnpaidSep = "\n";
     // the chip over the band, and over each text frame: both are built from
     // the block, so no column or file name is written here a second time
-    public const string JudgeHelpFmt = "{conditions}のとき「{paid}」。どれか 1 つでも違えば「{unpaid}」。番号が統合台帳に無いときは「{notfound}」。";
+    public const string JudgeHelpFmt = "{conditions}のとき「{paid}」。どれか 1 つでも違えば「{unpaid}」。番号が統合台帳に無いときは「{unsearched}」のままです。";
     public const string JudgeHelpItemFmt = "{table}の「{column}」が「{value}」";
     public const string JudgeHelpSep = "で、かつ ";
     public const string TextFrameHelpFmt = "{table}データの「{column}」です。";

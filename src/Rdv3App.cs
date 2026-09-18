@@ -794,10 +794,10 @@ public sealed class Rdv3App
         }
         if (!cfg.IsKey(key))
         {
-            // A key outside the configured form is answered on the judgment
-            // band, where the operator is looking, with the form in the status bar.
+            // A key outside the configured form is answered under the box it
+            // was typed into, with the form in the status bar.
             ClearShown();
-            form.SetJudgmentNotice(Rdv3Text.JudgeInvalidKey, "invalid");
+            form.SetSearchNote("invalid");
             form.Notice(Rdv3Text.ErrBadKeyFmt.Replace("{label}", LabelOrRef(dataDef.SearchRefs[0]))
                 .Replace("{pattern}", cfg.KeyPattern));
             log.Write("-", "search", "ignored length=" + key.Length.ToString(CultureInfo.InvariantCulture) + " reason=bad-key");
@@ -888,8 +888,8 @@ public sealed class Rdv3App
             shownKey = key;
             shownCands = candRows;
             shownRow = -1;
-            // Nothing in the ledger for this key: said on the judgment band.
-            if (n == 0) { form.SetJudgmentNotice(Rdv3Text.JudgeNotFound, "notfound"); }
+            // Nothing in the ledger for this key: said under the number.
+            if (n == 0) { form.SetSearchNote("notfound"); }
             else if (n == 1)
             {
                 // one hit is selected at once, the way the reference does it

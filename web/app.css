@@ -38,8 +38,12 @@
 .runtime .cols.stacked{flex-direction:column;}
 .runtime .cols>.gb{min-width:0;}
 .runtime .keyline{display:flex;align-items:flex-end;gap:var(--card-gap);min-width:0;}
-.runtime .keyfigure{flex:1;min-width:0;}
-.runtime .keyactions{display:flex;align-items:flex-end;gap:var(--card-gap);padding-bottom:2px;min-width:0;}
+.runtime .keyfigure{flex:1;min-width:0;margin-bottom:var(--keynote-space);}
+.runtime .keyactions{position:relative;display:flex;align-items:flex-end;gap:var(--card-gap);padding-bottom:2px;min-width:0;}
+.runtime .keyactions>.keyinput,.runtime .keyactions>.btn,.runtime .keyactions>.workcol{margin-bottom:var(--keynote-space);}
+/* 形式違いと未登録の短い補足。入力欄の真下、左端を揃えて出す。
+   行は常に確保されているので、出ても消えても何も動かない。 */
+.runtime .keyactions>.keynote{position:absolute;left:0;right:0;bottom:2px;height:var(--keynote-height);line-height:var(--keynote-height);font-size:12px;font-weight:700;color:#800000;white-space:nowrap;overflow:hidden;margin:0;}
 /* 入力欄は表示欄 (.keyfigure) と同じ縦並び。ラベルが上、欄が下。 */
 .runtime .keyinput{display:flex;flex-direction:column;min-width:0;}
 .runtime .keyinput>label{display:block;}
@@ -52,12 +56,13 @@
 .runtime .text-section{display:flex;flex-direction:column;flex:1 0 auto;height:var(--text-height);box-sizing:content-box;}
 .runtime .text-section .dynamic-text{flex:1;min-height:var(--text-height);}
 .runtime .band{height:max(var(--band-height),var(--judgment-height));min-height:max(var(--band-height),var(--judgment-height));display:block;}
-/* 「決済状況」は枠の題。帯は 3 列で、値は真ん中の列。
-   左右の列は同じ幅なので、未決済のときの補足を右に出しても
-   値は帯の中央のまま動かない。補足は右の列の中で折り返す。 */
-.runtime .band .bandline{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);align-items:center;height:100%;min-width:0;}
+/* 「決済状況」は枠の題。帯の行は枠そのものを覆うので、
+   値は題の行を除いた中央ではなく、枠 65px の上下中央に立つ。
+   未決済のときの補足は、値の右に同じ中央線で 1 条件 1 行。
+   値は補足の有無で動かない。 */
+.runtime .band .bandline{position:absolute;left:calc(-1 * var(--frame-border));right:calc(-1 * var(--frame-border));bottom:calc(-1 * var(--frame-border));height:max(var(--band-height),var(--judgment-height));display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);align-items:center;min-width:0;}
 .runtime .band .bandline .ok{grid-column:2;}
-.runtime .band #jsub{grid-column:3;min-width:0;max-height:100%;padding-left:10px;margin:0;font-size:12px;line-height:1.3;font-weight:700;color:#5b626d;text-align:left;overflow:hidden;}
+.runtime .band #jsub{position:absolute;left:calc(50% + 48px);right:8px;top:var(--frame-border);bottom:var(--frame-border);display:flex;align-items:center;margin:0;font-size:11px;line-height:1.3;font-weight:400;color:#5b626d;text-align:left;white-space:pre-line;overflow:hidden;}
 .runtime .band .ok{font-size:var(--judgment-font);}
 .runtime .band .ok.unsearched{font-size:var(--unsearched-font);color:#606060;letter-spacing:0;}
 /* no record to judge, but something to say: the key was not in the
@@ -68,14 +73,12 @@
 .runtime .band .band-label{white-space:nowrap;}
 /* 補足は太字の他の文字と同じ濃さで、行間だけ詰める。 */
 .runtime .subtext{font-weight:700;line-height:1.3;}
-/* 検索欄の下の補足は検索枠の下の余白に、送信欄の下の補足は
-   いまもある 1 行に収める。出ても消えても周りの位置は動かない。 */
-.runtime .fixed-search #s-search{position:absolute;left:10px;right:10px;bottom:0;height:9px;line-height:9px;font-size:9px;margin:0;white-space:nowrap;overflow:hidden;}
+/* 送信欄の下の補足は、いまもある 1 行に収める。
+   出ても消えても周りの位置は動かない。 */
 .runtime #s-send{min-height:14.3px;}
-/* 「ヘルプ」は「クリア」の上。オンとオフが隣り合った二择で、
-   選ばれている側だけが押し込まれる。「未確認」はその右にそのまま残る。 */
+/* 「ヘルプ」は「未確認」の真上。オンとオフが隣り合った
+   二択で、選ばれている側だけが押し込まれる。 */
 .runtime .workcol{display:flex;flex-direction:column;gap:2px;align-items:stretch;min-width:0;}
-.runtime .helpcol{display:flex;flex-direction:column;gap:2px;align-items:flex-end;min-width:0;}
 .runtime .helpswitch{position:relative;width:78px;height:23px;}
 .runtime .helpswitch .hs-label{position:absolute;right:calc(100% + 5px);top:0;line-height:23px;font-size:11px;color:#5b626d;letter-spacing:.05em;font-weight:700;white-space:nowrap;}
 /* 切替の幅は下の釦と同じ 78px。オンとオフで半分ずつ。 */

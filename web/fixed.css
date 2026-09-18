@@ -7,6 +7,7 @@
   --judgment-font:15pt;--judgment-height:65px;--band-height:65px;--unsearched-font:12pt;
   --control-height:20px;--control-button-width:20px;--calendar-cell:20px;
   --row-height:28px;--send-height:26px;--status-height:20px;
+  --keynote-height:14px;--keynote-space:15px;--frame-border:2px;
 }
 .runtime .win .gb{border:2px groove #fff;padding-top:.5em;box-shadow:none;}
 .runtime .win .gb>legend{position:static;}
@@ -14,6 +15,7 @@
 .runtime #input{width:135px;flex:none;}
 .runtime .keyfigure{flex:1 1 0;min-width:0;margin-right:12px;}
 .runtime .keyactions{margin-left:auto;}
+.runtime .fixed-search{padding-bottom:3px;}
 .runtime .fixed-user{flex:1;--label-width:88px;}
 .runtime .fixed-application{flex:2;--label-width:130px;}
 .runtime .fixed-remarks{--text-height:100px;}
@@ -34,8 +36,7 @@
 .runtime .record-details .fixed-plan,.runtime .record-details .fixed-usage{flex:none;height:auto;}
 .runtime .record-details .fixed-plan .dynamic-text,
 .runtime .record-details .fixed-usage .dynamic-text{flex:none;height:20px;min-height:20px;}
-.runtime .keyactions>.btn,.runtime .keyactions>.tog,.runtime .keyactions>.workcol,
-.runtime .keyactions>.helpcol{flex-shrink:0;}
+.runtime .keyactions>.btn,.runtime .keyactions>.tog,.runtime .keyactions>.workcol{flex-shrink:0;}
 
 /* Wide working dialogs keep their natural content height. */
 .dialogmode #v-cand>.dlg,
