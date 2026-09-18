@@ -45,7 +45,7 @@ async function main(){let app,modal;try{
   await capture(app,'main-paid');
   await click(app,'#b-work');await waitFor(app,`document.querySelector('[data-bind=pendingCount]').textContent==='未送信 1 件'`,10000,'one pending');
   await deleteOnce();
-  check('unsent done status cannot delete a shared unprocessed row',await app.evaluate(`document.querySelector('[data-bind=ledgerRows]').textContent==='台帳件数 100' && document.querySelector('[data-bind=pendingCount]').textContent==='未送信 1 件'`));
+  check('unsent done status cannot delete a shared unprocessed row',await app.evaluate(`document.querySelector('[data-bind=ledgerRows]').textContent==='統合台帳件数 100' && document.querySelector('[data-bind=pendingCount]').textContent==='未送信 1 件'`));
   await click(app,'#b-send');await visible('v-send');await click(modal,'#v-send .foot .btn');
   await ready();await waitFor(app,`document.querySelector('[data-bind=pendingCount]').textContent==='未送信 0 件'`,10000,'sent');
   fs.copyFileSync(info.ledger,path.join(evidence,'sent-ledger.xlsx'));
@@ -78,7 +78,7 @@ async function main(){let app,modal;try{
       await modal.evaluate(`(()=>{const b=document.querySelector('#v-shared.show .foot .btn')||document.querySelector('#v-send.show .foot .btn');if(b)b.click();})()`);
       await delay(100);
     }
-    await ready();check(id+' row count',await app.evaluate(`document.querySelector('[data-bind=ledgerRows]').textContent===${JSON.stringify('台帳件数 '+String(count))}`));
+    await ready();check(id+' row count',await app.evaluate(`document.querySelector('[data-bind=ledgerRows]').textContent===${JSON.stringify('統合台帳件数 '+String(count))}`));
   }
   fs.copyFileSync(info.ledger,path.join(evidence,'deleted-ledger.xlsx'));
   await capture(app,'main-after-delete');

@@ -34,7 +34,8 @@
 .runtime .record-details .fixed-plan,.runtime .record-details .fixed-usage{flex:none;height:auto;}
 .runtime .record-details .fixed-plan .dynamic-text,
 .runtime .record-details .fixed-usage .dynamic-text{flex:none;height:20px;min-height:20px;}
-.runtime .keyactions>.btn,.runtime .keyactions>.tog,.runtime .keyactions>.workcol{flex-shrink:0;}
+.runtime .keyactions>.btn,.runtime .keyactions>.tog,.runtime .keyactions>.workcol,
+.runtime .keyactions>.helpcol{flex-shrink:0;}
 
 /* Wide working dialogs keep their natural content height. */
 .dialogmode #v-cand>.dlg,

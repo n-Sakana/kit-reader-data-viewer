@@ -187,29 +187,38 @@
     var searchLabel = stage.querySelector('label[for=input]');
     if (searchLabel && definition.searchLabel) { searchLabel.textContent = definition.searchLabel; }
     if (definition.searchLabel) { searchLabelText = definition.searchLabel; }
+    // 設定から組み立てたチップ。文章枠はその枠に、
+    // 決済状況は帯自身に付く。
+    var helps = definition.helps || {};
+    Object.keys(helps).forEach(function (id) {
+      var node = stage.querySelector('[data-bind="' + cssEscape(id) + '"]');
+      var target = node ? node.closest('fieldset') : stage.querySelector('[data-judgment="' + cssEscape(id) + '"]');
+      if (target && helps[id]) { target.setAttribute('data-help', helps[id]); }
+    });
     candidateHidden = (definition.candidateHidden || []).map(Number);
   }
   var candidateHidden = [];
 
-  // ホバーチップ。「ヘルプ」が入っている間だけ、部品の上に説明を出す。
-  // data-help を持たない表示欄は、切れた値そのものを出す。
+  // ホバーチップ。「ヘルプ」がオンの間だけ、説明を書いた
+  // 部品にだけ出す。表示欄が自分の値を出すことはしない。
   var helpOn = false;
   function applyHelp() {
-    Array.prototype.forEach.call(stage.querySelectorAll('.win [data-help],.win [data-bind]'), function (node) {
+    Array.prototype.forEach.call(stage.querySelectorAll('.win [data-help]'), function (node) {
       if (!helpOn) { node.removeAttribute('title'); return; }
-      var text = node.getAttribute('data-help');
-      node.title = (text === null) ? node.textContent : text;
+      node.title = node.getAttribute('data-help') || '';
     });
-    var button = stage.querySelector('#b-help');
-    if (!button) { return; }
-    button.classList.toggle('on', helpOn);
-    button.setAttribute('aria-pressed', helpOn ? 'true' : 'false');
+    Array.prototype.forEach.call(stage.querySelectorAll('.helpswitch .hs-opt'), function (node) {
+      var chosen = (node.id === 'b-help-on') === helpOn;
+      node.classList.toggle('on', chosen);
+      node.setAttribute('aria-pressed', chosen ? 'true' : 'false');
+    });
   }
 
-  // 検索欄の下の補足。番号の形式が違うときと、台帳に無いときを書き分ける。
+  // 検索欄の下の補足。番号の形式が違うときと、
+  // 統合台帳に無いときを書き分ける。行の場所は常に確保されている。
   var searchNotes = {
-    invalid: '入力した文字が番号の形式ではありません。{label}の形式で入れ直してください。',
-    notfound: '番号の形式は合っていますが、この番号は統合台帳にありません。「データ更新」で台帳を新しくするか、番号を確かめてください。'
+    invalid: '{label}の形式ではありません。',
+    notfound: 'この番号は統合台帳にありません。'
   };
   var searchLabelText = '識別番号／受付番号';
   function showSearchNote(look) {
@@ -218,7 +227,26 @@
     var text = searchNotes[look];
     note.textContent = text ? text.replace('{label}', searchLabelText) : '';
     note.classList.toggle('warn', !!text);
-    note.hidden = !text;
+  }
+
+  // 送信欄の下の補足。未送信があるときだけ文字を出す。
+  var sendNote = '送信するまで、変更した確認状態は統合台帳に書き込まれません。';
+  function showSendNote(pending) {
+    var note = stage.querySelector('#s-send');
+    if (!note) { return; }
+    note.textContent = pending > 0 ? sendNote : '';
+  }
+
+  // 帯の補足は 1 行。入らなければ小さくし、それでも入らなければ折り返す。
+  function fitBandNote(node) {
+    node.classList.remove('wrap');
+    node.style.fontSize = '';
+    if (!node.textContent) { return; }
+    for (var size = 9; size >= 7; size--) {
+      node.style.fontSize = size + 'px';
+      if (node.scrollWidth <= node.clientWidth) { return; }
+    }
+    node.classList.add('wrap');
   }
 
   function renderScreen(definition) {
@@ -238,8 +266,9 @@
         post({ type: 'action', name: node.getAttribute('data-action'), job: node.getAttribute('data-job') || '', key: keyValue() });
       });
     });
-    var help = stage.querySelector('#b-help');
-    if (help) { activate(help, function () { helpOn = !helpOn; applyHelp(); }); }
+    Array.prototype.forEach.call(stage.querySelectorAll('.helpswitch .hs-opt'), function (node) {
+      activate(node, function () { helpOn = node.id === 'b-help-on'; applyHelp(); });
+    });
     input.addEventListener('input', function (event) { if (!event.isComposing) { onKeyInput(); } });
     input.addEventListener('compositionend', onKeyInput);
     input.addEventListener('paste', function (event) {
@@ -326,6 +355,7 @@
     }
     var pending = stage.querySelector('#sn');
     if (pending) { pending.classList.toggle('warn', Number(next.pending) > 0); }
+    showSendNote(Number(next.pending));
     var judgments = next.judgments || {};
     Object.keys(judgments).forEach(function (id) {
       var band = stage.querySelector('[data-judgment="' + cssEscape(id) + '"]');
@@ -336,6 +366,7 @@
       head.className = 'ok ' + (result.look || 'unsearched');
       head.textContent = result.text || '';
       sub.textContent = result.sub || '';
+      fitBandNote(sub);
       if (id === 'paymentStatus') { showSearchNote(result.look); }
     });
     applyHelp();

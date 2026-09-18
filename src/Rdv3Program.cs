@@ -40,7 +40,7 @@ public static class Rdv3Program
             }
             if (cfg.Screen.Work.Column != "確認状態")
             {
-                throw new Rdv3LoadError("台帳の状態列の名前は「確認状態」です。この設定の列名には対応していません。既存の台帳と未送信データは変更していません。", 0);
+                throw new Rdv3LoadError("統合台帳の状態列の名前は「確認状態」です。この設定の列名には対応していません。既存の統合台帳と未送信データは変更していません。", 0);
             }
         }
         catch (Rdv3LoadError ex)

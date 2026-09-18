@@ -833,6 +833,32 @@ public sealed class Rdv3Form
         sb.Append(",\"searchLabel\":").Append(Rdv3WebJson.Q(Rdv3Business.SearchLabel));
         sb.Append(",\"boxNames\":{\"user\":").Append(Rdv3WebJson.Q(Rdv3Business.UserBoxName));
         sb.Append(",\"application\":").Append(Rdv3WebJson.Q(Rdv3Business.AppBoxName)).Append('}');
+        // The chips the block writes for itself: a text frame says which
+        // column it shows, the band says the rule that makes a record paid.
+        sb.Append(",\"helps\":{");
+        comma = false;
+        foreach (string slot in new string[] { "remarks", "plan", "usageState" })
+        {
+            Rdv3Bind bind;
+            if (!Screen.Bindings.TryGetValue(slot, out bind) || bind.Hidden || !bind.IsField) { continue; }
+            string reference = bind.Fields[0];
+            int dot = reference.IndexOf('.');
+            if (dot <= 0) { continue; }
+            if (comma) { sb.Append(','); }
+            comma = true;
+            sb.Append(Rdv3WebJson.Q(slot)).Append(':').Append(Rdv3WebJson.Q(
+                Rdv3Text.TextFrameHelpFmt.Replace("{table}", reference.Substring(0, dot))
+                    .Replace("{column}", ColumnOf(reference))));
+        }
+        foreach (KeyValuePair<string, Rdv3Judgment> judgment in Screen.Judgments)
+        {
+            string rule = JudgeHelp(judgment.Value);
+            if (rule.Length == 0) { continue; }
+            if (comma) { sb.Append(','); }
+            comma = true;
+            sb.Append(Rdv3WebJson.Q(judgment.Key)).Append(':').Append(Rdv3WebJson.Q(rule));
+        }
+        sb.Append('}');
         sb.Append("},\"state\":").Append(BuildStateBody()).Append('}');
         return sb.ToString();
     }
@@ -897,16 +923,44 @@ public sealed class Rdv3Form
     private string UnpaidNote(Rdv3Verdict verdict)
     {
         if (!View.HasRecord || verdict.Result == null || verdict.Result.Id != "unpaid") { return ""; }
-        List<string> names = new List<string>();
+        List<string> unmet = new List<string>();
         foreach (string[] condition in Rdv3Business.PaidConditions)
         {
             int col = fields.IndexOf(condition[1]);
             string value = (col >= 0 && col < View.Record.Length && View.Record[col] != null) ? View.Record[col] : "";
             if (string.Equals(value, condition[2], StringComparison.Ordinal)) { continue; }
-            if (!names.Contains(condition[0])) { names.Add(condition[0]); }
+            string item = Rdv3Text.JudgeUnpaidItemFmt.Replace("{table}", condition[0])
+                .Replace("{column}", ColumnOf(condition[1])).Replace("{value}", condition[2]);
+            if (!unmet.Contains(item)) { unmet.Add(item); }
         }
-        if (names.Count == 0) { return ""; }
-        return Rdv3Text.JudgeUnpaidSubFmt.Replace("{names}", string.Join(Rdv3Text.JudgeUnpaidSep, names.ToArray()));
+        return string.Join(Rdv3Text.JudgeUnpaidSep, unmet.ToArray());
+    }
+
+    // "表.列名" names a file and a column; a chip or a note says only the column
+    private static string ColumnOf(string reference)
+    {
+        int dot = reference.IndexOf('.');
+        return (dot < 0) ? reference : reference.Substring(dot + 1);
+    }
+
+    // What the band promises: every condition in the block, joined, then the
+    // two words it can show and the one it shows for a number that is not there.
+    private static string JudgeHelp(Rdv3Judgment judgment)
+    {
+        List<string> parts = new List<string>();
+        foreach (string[] condition in Rdv3Business.PaidConditions)
+        {
+            parts.Add(Rdv3Text.JudgeHelpItemFmt.Replace("{table}", condition[0])
+                .Replace("{column}", ColumnOf(condition[1])).Replace("{value}", condition[2]));
+        }
+        if (parts.Count == 0) { return ""; }
+        Rdv3Result paid = judgment.ResultOf("paid");
+        Rdv3Result unpaid = judgment.ResultOf("unpaid");
+        return Rdv3Text.JudgeHelpFmt
+            .Replace("{conditions}", string.Join(Rdv3Text.JudgeHelpSep, parts.ToArray()))
+            .Replace("{paid}", paid == null ? "" : paid.Text)
+            .Replace("{unpaid}", unpaid == null ? "" : unpaid.Text)
+            .Replace("{notfound}", Rdv3Text.JudgeNotFound);
     }
 
     private void AppendValue(StringBuilder sb, string id, Rdv3Bind bind, ref bool comma)

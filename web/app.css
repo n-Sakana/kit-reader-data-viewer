@@ -52,8 +52,11 @@
 .runtime .text-section{display:flex;flex-direction:column;flex:1 0 auto;height:var(--text-height);box-sizing:content-box;}
 .runtime .text-section .dynamic-text{flex:1;min-height:var(--text-height);}
 .runtime .band{height:max(var(--band-height),var(--judgment-height));min-height:max(var(--band-height),var(--judgment-height));display:block;}
-/* 「決済状況」は枠の題。中は値と、未決済のときの短い補足だけ。 */
+/* 「決済状況」は枠の題。値は帯の中央、未決済のときの短い補足は
+   その下の余白に 1 行。補足の有無で帯の高さも値の位置も動かない。 */
 .runtime .band .bandline{display:flex;align-items:center;justify-content:center;height:100%;min-width:0;}
+.runtime .band #jsub{position:absolute;left:10px;right:10px;bottom:0;height:9px;line-height:9px;font-size:9px;font-weight:700;color:#5b626d;text-align:center;white-space:nowrap;overflow:hidden;margin:0;}
+.runtime .band #jsub.wrap{white-space:normal;}
 .runtime .band .ok{font-size:var(--judgment-font);}
 .runtime .band .ok.unsearched{font-size:var(--unsearched-font);color:#606060;letter-spacing:0;}
 /* no record to judge, but something to say: the key was not in the
@@ -64,8 +67,19 @@
 .runtime .band .band-label{white-space:nowrap;}
 /* 補足は太字の他の文字と同じ濃さで、行間だけ詰める。 */
 .runtime .subtext{font-weight:700;line-height:1.3;}
-/* 「ヘルプ」は「未確認」の上。押している間だけ説明が出る。 */
+/* 検索欄の下の補足は検索枠の下の余白に、送信欄の下の補足は
+   いまもある 1 行に収める。出ても消えても周りの位置は動かない。 */
+.runtime .fixed-search #s-search{position:absolute;left:10px;right:10px;bottom:0;height:9px;line-height:9px;font-size:9px;margin:0;white-space:nowrap;overflow:hidden;}
+.runtime #s-send{min-height:14.3px;}
+/* 「ヘルプ」は「クリア」の上。オンとオフが隣り合った二择で、
+   選ばれている側だけが押し込まれる。「未確認」はその右にそのまま残る。 */
 .runtime .workcol{display:flex;flex-direction:column;gap:2px;align-items:stretch;min-width:0;}
+.runtime .helpcol{display:flex;flex-direction:column;gap:2px;align-items:flex-end;min-width:0;}
+.runtime .helpswitch{display:flex;align-items:center;gap:5px;min-width:0;}
+.runtime .helpswitch .hs-label{flex:none;font-size:11px;color:#5b626d;letter-spacing:.05em;font-weight:700;white-space:nowrap;}
+.runtime .helpswitch .hs-opts{display:flex;flex:none;}
+.runtime .helpswitch .hs-opt{height:23px;min-width:34px;padding:0 8px;background:#d4d0c8;cursor:pointer;user-select:none;font:700 12px/21px var(--ff);text-align:center;white-space:nowrap;box-shadow:inset -1px -1px #0a0a0a,inset 1px 1px #ffffff,inset -2px -2px #808080,inset 2px 2px #dfdfdf;}
+.runtime .helpswitch .hs-opt.on{padding-top:2px;color:#000080;background:#d4d0c8 repeating-conic-gradient(#cac6be 0% 25%,#d4d0c8 0% 50%) 0 0/4px 4px;box-shadow:inset -1px -1px #ffffff,inset 1px 1px #0a0a0a,inset -2px -2px #dfdfdf,inset 2px 2px #808080;}
 .runtime .commandbar{display:flex;justify-content:flex-end;gap:var(--card-gap);flex-wrap:wrap;}
 .runtime .sendbar{height:var(--send-height);min-height:var(--send-height);margin-top:0;gap:var(--card-gap);}
 .runtime .sb{height:var(--status-height);min-height:var(--status-height);padding-top:2px;}

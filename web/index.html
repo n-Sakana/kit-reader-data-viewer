@@ -142,17 +142,19 @@ main,.page{max-width:none;padding:0;background:#d4d0c8}
 <div class="win">
   <div class="client"><div class="stack">
     <fieldset class="gb fixed-search"><legend>検索</legend>
-      <div class="keyline"><div class="keyfigure"><div class="lab">読取値</div><div class="fld keyvalue" data-bind="searchKey" data-help="監視している画面から読み取った番号です。下の入力欄に手で入れた番号とは別に表示します。"></div></div>
-        <div class="keyactions"><div class="keyinput"><label class="lab" for="input">識別番号／受付番号</label><div class="fld inp" id="input" role="textbox" aria-label="識別番号／受付番号" aria-multiline="false" data-max-length="32" contenteditable="false" tabindex="0" data-help="探す番号を入れる欄です。識別番号か受付番号を入れて「検索」を押します。"></div></div>
-          <div class="btn def" id="b-search" role="button" data-action="search" aria-disabled="true" tabindex="0" data-help="入れた番号で統合台帳を探します。1 件なら画面に出し、複数あれば候補一覧から選びます。">検索</div>
-          <div class="btn" id="b-clear" role="button" data-action="clear" aria-disabled="true" tabindex="0" data-help="入力した番号と、表示中の案件を消します。台帳と確認状態は変わりません。">クリア</div>
+      <div class="keyline"><div class="keyfigure"><div class="lab">読取値</div><div class="fld keyvalue" data-bind="searchKey" data-help="表示中の案件の検索キーです。右の欄に入力した番号か、監視している画面から読み取った番号が入ります。"></div></div>
+        <div class="keyactions"><div class="keyinput"><label class="lab" for="input">識別番号／受付番号</label><div class="fld inp" id="input" role="textbox" aria-label="識別番号／受付番号" aria-multiline="false" data-max-length="32" contenteditable="false" tabindex="0"></div></div>
+          <div class="btn def" id="b-search" role="button" data-action="search" aria-disabled="true" tabindex="0">検索</div>
+          <div class="helpcol">
+            <div class="helpswitch" id="b-help" role="group" aria-label="ヘルプ" data-help="ヘルプをオンにすると、画面の各部分にカーソルを乗せたときに説明が表示されます。"><span class="hs-label">ヘルプ</span><span class="hs-opts"><span class="hs-opt" id="b-help-on" role="button" aria-pressed="false" tabindex="0">オン</span><span class="hs-opt on" id="b-help-off" role="button" aria-pressed="true" tabindex="0">オフ</span></span></div>
+            <div class="btn" id="b-clear" role="button" data-action="clear" aria-disabled="true" tabindex="0">クリア</div>
+          </div>
           <div class="workcol">
-            <div class="tog help" id="b-help" role="button" aria-pressed="false" tabindex="0" data-help="この説明の表示を切り替えます。">ヘルプ</div>
-            <div class="tog" id="b-work" role="button" data-action="workState" aria-disabled="true" tabindex="0" data-help="表示中の案件を「確認済」にします。もう一度押すと「未確認」に戻ります。決済状況が支払済の案件は、検索したときに自動で確認済になります。">未確認</div>
+            <div class="tog" id="b-work" role="button" data-action="workState" aria-disabled="true" tabindex="0" data-help="表示中の案件の確認状態を切り替えます。支払済の案件は、検索した時点で自動的に確認済になります。">未確認</div>
           </div>
         </div>
       </div>
-      <div class="subtext" id="s-search" hidden></div>
+      <div class="subtext" id="s-search"></div>
     </fieldset>
     <div class="record-details"><div class="cols">
       <fieldset class="gb fixed-user"><legend>利用者情報</legend>
@@ -172,23 +174,23 @@ main,.page{max-width:none;padding:0;background:#d4d0c8}
     </div>
     <fieldset class="gb text-section fixed-remarks"><legend>意見欄</legend><div class="fld dynamic-text" data-bind="remarks"></div></fieldset>
     <fieldset class="gb text-section fixed-plan"><legend>変更後の計画</legend><div class="fld dynamic-text" data-bind="plan"></div></fieldset>
-    <fieldset class="gb text-section fixed-usage" data-help="表示中の案件の利用状態です。受付データの「利用状態」の列をそのまま出します。"><legend>利用状態</legend><div class="fld dynamic-text" data-bind="usageState"></div></fieldset>
-    </div><fieldset class="gb band" data-judgment="paymentStatus" data-help="統合台帳の内容が、業務設定の「支払済の条件」を全部満たしたときだけ「支払済」になります。未決済のあいだは、検索しても自動で確認済にはなりません。"><legend class="band-label">決済状況</legend><div class="bandline"><div class="ok unsearched">未検索</div><span id="jsub"></span></div></fieldset>
+    <fieldset class="gb text-section fixed-usage"><legend>利用状態</legend><div class="fld dynamic-text" data-bind="usageState"></div></fieldset>
+    </div><fieldset class="gb band" data-judgment="paymentStatus"><legend class="band-label">決済状況</legend><div class="bandline"><div class="ok unsearched">未検索</div></div><div id="jsub"></div></fieldset>
     <div class="commandbar">
-      <div class="btn" id="b-refresh" role="button" data-action="refreshLedger" aria-disabled="true" tabindex="0" data-help="共有の統合台帳を読み直して、他の端末が送った確認状態を取り込みます。">台帳再読込</div>
-      <div class="btn" id="b-out" role="button" data-action="tableExport" aria-disabled="true" tabindex="0" data-help="統合台帳から、選んだ項目と絞り込みで CSV を書き出します。">帳票出力</div>
-      <div class="btn" id="b-upd" role="button" data-action="updateRecords" aria-disabled="true" tabindex="0" data-help="データフォルダーの CSV を読み直し、統合台帳を作り直します。結果はダイアログで出ます。">データ更新</div>
-      <div class="btn" id="b-del" role="button" data-action="deleteRecords" aria-disabled="true" tabindex="0" data-help="手続完了の一覧にあり、かつ確認済の案件を統合台帳から取り除きます。">データ削除</div>
-      <div class="btn" id="b-set" role="button" data-action="settings" aria-disabled="true" tabindex="0" data-help="データの場所と入力ファイル名、候補一覧の表示件数、読み取り元を変えます。">設定</div>
+      <div class="btn" id="b-refresh" role="button" data-action="refreshLedger" aria-disabled="true" tabindex="0" data-help="統合台帳を読み直します。他の端末が送信した確認状態を読み込みます。">統合台帳再読込</div>
+      <div class="btn" id="b-out" role="button" data-action="tableExport" aria-disabled="true" tabindex="0">帳票出力</div>
+      <div class="btn" id="b-upd" role="button" data-action="updateRecords" aria-disabled="true" tabindex="0" data-help="データフォルダの CSV を読み込み、統合台帳を更新します。">データ更新</div>
+      <div class="btn" id="b-del" role="button" data-action="deleteRecords" aria-disabled="true" tabindex="0" data-help="削除用の CSV に含まれ、確認済として送信済みの案件を統合台帳から削除します。">データ削除</div>
+      <div class="btn" id="b-set" role="button" data-action="settings" aria-disabled="true" tabindex="0">設定</div>
     </div><div class="sep"></div>
-    <div class="sendbar"><div class="sendn" id="sn" data-bind="pendingCount" data-help="「確認済／未確認」を切り替えたあと、まだ共有台帳へ送っていない件数です。"></div>
-      <div class="btn def" id="b-send" role="button" data-action="sendChanges" aria-disabled="true" tabindex="0" data-help="この端末にたまった「確認済／未確認」を共有台帳へ書き込みます。送るまで他の端末からは見えません。">確認状態を台帳に送信</div>
+    <div class="sendbar"><div class="sendn" id="sn" data-bind="pendingCount" data-help="確認状態を変更したあと、まだ統合台帳に送信していない件数です。"></div>
+      <div class="btn def" id="b-send" role="button" data-action="sendChanges" aria-disabled="true" tabindex="0" data-help="この端末で変更した確認状態を統合台帳に送信します。送信するまで統合台帳には書き込まれません。">確認状態を統合台帳に送信</div>
     </div>
-    <div class="subtext" id="s-send">「確認済／未確認」はこの端末にたまります。「確認状態を台帳に送信」で共有台帳に反映します。</div>
+    <div class="subtext" id="s-send"></div>
   </div></div>
-  <div class="sb" role="status" aria-live="polite"><div class="sp" data-bind="appState" data-help="いまアプリが何をしているかです。"></div><div class="sp" data-bind="ledgerRows" data-prefix="台帳件数 " data-help="統合台帳に入っている案件の件数です。"></div><div class="sp" data-bind="clock" data-clock="true" data-help="時刻と、直前の操作の結果を出します。"></div><div class="grip"></div></div>
+  <div class="sb" role="status" aria-live="polite"><div class="sp" data-bind="appState"></div><div class="sp" data-bind="ledgerRows" data-prefix="統合台帳件数 "></div><div class="sp" data-bind="clock" data-clock="true"></div><div class="grip"></div></div>
 </div>
-<template id="fixed-candidate-columns"><table data-title="該当案件" data-hint="受付番号、識別番号、申込者氏名を確認して選択してください" data-width="1100" data-max-height="360" data-row-height="30" data-header-height="32"><thead><tr>
+<template id="fixed-candidate-columns"><table data-title="該当案件" data-hint="複数の案件が当たりました。1 件を選んでください。" data-width="1100" data-max-height="360" data-row-height="30" data-header-height="32"><thead><tr>
   <th data-width="40" data-align="right" data-muted="true">#</th>
   <th data-width="180">受付番号</th><th data-width="150">識別番号</th>
   <th data-width="240">申込者氏名</th><th data-width="120">申込日</th>
@@ -202,7 +204,7 @@ main,.page{max-width:none;padding:0;background:#d4d0c8}
 <div class='veil' id='v-set'><div class='dlg' style='width:540px;'><div class='tb'><div class='ic'>R</div><div class='ttl'>設定</div><div class='bx cl x'>✕</div></div><div class='body'></div></div></div>
 <div class='veil' id='v-pick'><div class='dlg' style='width:460px;'><div class='tb'><div class='ic'>R</div><div class='ttl'>画面から選ぶ</div><div class='bx cl x'>✕</div></div><div class='body'></div></div></div>
 <div class='veil' id='v-send'><div class='dlg' style='width:404px;'><div class='tb'><div class='ic'>R</div><div class='ttl'>送信</div><div class='bx cl x'>✕</div></div><div class='body'></div></div></div>
-<div class='veil' id='v-shared'><div class='dlg' style='width:744px;'><div class='tb'><div class='ic'>R</div><div class='ttl'>台帳の更新</div><div class='bx cl x'>✕</div></div><div class='body'></div></div></div>
+<div class='veil' id='v-shared'><div class='dlg' style='width:744px;'><div class='tb'><div class='ic'>R</div><div class='ttl'>統合台帳の更新</div><div class='bx cl x'>✕</div></div><div class='body'></div></div></div>
 <div class='veil' id='v-unm'><div class='dlg' style='width:560px;'><div class='tb'><div class='ic'>R</div><div class='ttl'>送信できなかったレコード</div><div class='bx cl x'>✕</div></div><div class='body'></div></div></div>
 <div class='veil' id='v-archive'><div class='dlg' style='width:820px;'><div class='tb'><div class='ic'>R</div><div class='ttl'>削除済みレコード</div><div class='bx cl x'>✕</div></div><div class='body'></div></div></div>
 <div class='veil' id='v-fatal'><div class='dlg' style='width:470px;'><div class='tb'><div class='ic'>!</div><div class='ttl'>データを読めません</div><div class='bx cl x'>✕</div></div><div class='body'></div></div></div>
@@ -228,7 +230,7 @@ main,.page{max-width:none;padding:0;background:#d4d0c8}
     <div class="kv" data-row="log"><label>ログ</label></div>
   </fieldset>
   <div class="process-gap"></div>
-  <fieldset class="gb"><legend>入力ファイル（データ フォルダー内のファイル名と一致方法）</legend><div data-slot="tables"></div></fieldset>
+  <fieldset class="gb"><legend>入力ファイル（データフォルダ内のファイル名と一致方法）</legend><div data-slot="tables"></div></fieldset>
   <div class="process-gap"></div>
   <fieldset class="gb"><legend>検索</legend>
     <div class="kv" data-row="pattern"><label>番号の形式</label></div>

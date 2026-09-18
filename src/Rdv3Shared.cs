@@ -97,7 +97,7 @@ public sealed class Rdv3PendingStore
             string[] fields = File.ReadAllLines(companion, new UTF8Encoding(false, true));
             if (fields.Length != 3 || fields[0] != "RDV-LOCAL-1"
                 || !System.Text.RegularExpressions.Regex.IsMatch(fields[1], "^pending-[a-f0-9]{32}\\.dat$"))
-            { throw new InvalidDataException("未送信データの保存先情報が読めません。台帳と未送信データは変更していません: " + companion); }
+            { throw new InvalidDataException("未送信データの保存先情報が読めません。統合台帳と未送信データは変更していません: " + companion); }
             string previous = new UTF8Encoding(false, true).GetString(Convert.FromBase64String(fields[2]));
             selected = System.IO.Path.Combine(directory, fields[1]);
             if (!File.Exists(selected))

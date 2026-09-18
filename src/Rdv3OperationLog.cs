@@ -162,7 +162,7 @@ public sealed class Rdv3OperationLog
     public static string FailureNotice(string outcome)
     {
         return outcome != null && outcome.StartsWith("lost: ", StringComparison.Ordinal)
-            ? "台帳への保存は完了しました。操作ログと控えの保存に失敗しました。この操作の再送信・再実行は不要です。\n" + outcome
+            ? "統合台帳への保存は完了しました。操作ログと控えの保存に失敗しました。この操作の再送信・再実行は不要です。\n" + outcome
             : null;
     }
 
