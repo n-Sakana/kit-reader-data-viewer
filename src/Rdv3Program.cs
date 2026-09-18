@@ -1,4 +1,4 @@
-// Startup validation, path resolution and lifetime of the running app.
+﻿// Startup validation, path resolution and lifetime of the running app.
 using System;
 using System.Globalization;
 using System.IO;
@@ -36,11 +36,11 @@ public static class Rdv3Program
             cfg = Rdv3Config.Load(configPath);
             if (cfg.Screen.Bindings == null)
             {
-                throw new Rdv3LoadError("固定版の設定形式ではありません。この配布物に対応するsettings.jsonを使用してください。既存の設定は変更していません。", 0);
+                throw new Rdv3LoadError("この設定ファイルはこのアプリの形式ではありません。このアプリに付属の settings.json を使ってください。既存の設定は変更していません。", 0);
             }
             if (cfg.Screen.Work.Column != "確認状態")
             {
-                throw new Rdv3LoadError("固定版の台帳の状態列名は「確認状態」です。この設定の列名には対応していません。既存の台帳と未送信データは変更していません。", 0);
+                throw new Rdv3LoadError("台帳の状態列の名前は「確認状態」です。この設定の列名には対応していません。既存の台帳と未送信データは変更していません。", 0);
             }
         }
         catch (Rdv3LoadError ex)
@@ -70,46 +70,9 @@ public static class Rdv3Program
             return 6;
         }
 
-        // ---- the data the definition names: the files exist and their headers
-        // hold every column the definition uses
-        try
-        {
-            if (!Directory.Exists(dataDir)) { throw new Rdv3DataError(Rdv3Text.ErrDataDir + dataDir); }
-            string[][] heads = new string[cfg.Data.Tables.Count][];
-            for (int t = 0; t < cfg.Data.Tables.Count; t++)
-            {
-                string p = Path.Combine(dataDir, cfg.Data.Tables[t].File);
-                Rdv3Log.Phase("window input header " + p);
-                if (!File.Exists(p)) { throw new Rdv3DataError(Rdv3Text.ErrNoData + p); }
-                heads[t] = Rdv3Table.ReadHead(p, cfg.Data.Tables[t].Enc, cfg.Data.Tables[t].EncodingSetting,
-                    cfg.Data.SourceReferences(cfg.Data.Tables[t].Id), cfg.Data.Tables[t].HeaderRow, cfg.Data.Tables[t].Delimiter,
-                    cfg.Data.Tables[t].Sheet);
-            }
-            cfg.Data.Bind(heads);
-            Rdv3BusinessDefinition.BindFileInputs(cfg.Data, dataDir);
-            if (cfg.Data.TypeOrder.Count > 0)
-            {
-                Rdv3Table[] typedTables = new Rdv3Table[cfg.Data.Tables.Count];
-                for (int i = 0; i < cfg.Data.TypeOrder.Count; i++)
-                {
-                    int tableOrd = cfg.Data.TypeOrder[i].TableOrd;
-                    // a type on a column the update job makes has no file to check here
-                    if (tableOrd < 0 || typedTables[tableOrd] != null) { continue; }
-                    Rdv3TableDef table = cfg.Data.Tables[tableOrd];
-                    typedTables[tableOrd] = Rdv3Table.Read(Path.Combine(dataDir, table.File),
-                        table.Id, table.Enc, table.KeyColumns, table.KeyValidation, table.EncodingSetting, cfg.Data.SourceReferences(table.Id),
-                        table.HeaderRow, table.Delimiter, table.Sheet);
-                }
-                cfg.Data.ConvertWorkbookDates(typedTables);
-                cfg.Data.ValidateTypes(typedTables);
-            }
-        }
-        catch (Exception ex)
-        {
-            Stop(logPath, "data", "not started: " + ex.Message,
-                Rdv3Text.FatalDataTitle, Rdv3Text.FatalData.Replace("{reason}", ex.Message));
-            return 3;
-        }
+        // No input file is needed to start: a ledger alone is searchable. The
+        // CSVs are read by the update check, which reports what is missing.
+        Rdv3Log.Phase("window inputs deferred to the update check");
 
         // Every local store and shared companion file derives from this same
         // canonical ledger path.

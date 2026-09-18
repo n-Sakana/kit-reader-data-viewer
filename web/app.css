@@ -1,4 +1,4 @@
-:root{
+﻿:root{
   --card-width:780px;
   --card-gap:8px;
   --card-pad-t:8px;
@@ -54,6 +54,9 @@
 .runtime .band{height:max(var(--band-height),var(--judgment-height));min-height:max(var(--band-height),var(--judgment-height));}
 .runtime .band .ok{font-size:var(--judgment-font);}
 .runtime .band .ok.unsearched{font-size:var(--unsearched-font);color:#606060;letter-spacing:0;}
+/* no record to judge, but something to say: the key was not in the
+   configured form, or the ledger holds nothing for it */
+.runtime .band .ok.invalid,.runtime .band .ok.notfound{font-size:var(--unsearched-font);color:#800000;letter-spacing:0;}
 .runtime .band .ok.undefined{color:#303030;}
 .runtime .band .ok.error{color:#800000;}
 .runtime .band{position:relative;}

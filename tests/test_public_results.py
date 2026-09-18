@@ -14,11 +14,11 @@ with tempfile.TemporaryDirectory(prefix='rdv-public-evidence-') as temporary:
     except ValueError:
         pass
     before = dict(passed=3, failed=0, rows=['TRUE', 'FALSE'],
-                  file=r'C:\Users\test user\AppData\Local\sample.xlsx',
+                  file=r'E:\Users\test user\AppData\Local\sample.xlsx',
                   forward='D:/Users/利用者 名/Temp/trace.txt')
     raw = json.dumps(before, ensure_ascii=False)
     (root / 'result.json').write_text(raw, encoding='utf-8')
-    original_log = 'FAIL path c:\\Users\\example\\Temp\\case.log\r\nrows=3 archive=1\r\n'
+    original_log = 'FAIL path e:\\Users\\example\\Temp\\case.log\r\nrows=3 archive=1\r\n'
     (root / 'result.txt').write_bytes(original_log.encode('utf-16'))
     try:
         sanitize_tree(root, check=True)
@@ -30,7 +30,7 @@ with tempfile.TemporaryDirectory(prefix='rdv-public-evidence-') as temporary:
     assert after['passed'] == before['passed'] and after['failed'] == before['failed'] and after['rows'] == before['rows']
     assert after['file'] == r'<USERPROFILE>\AppData\Local\sample.xlsx'
     assert after['forward'] == '<USERPROFILE>/Temp/trace.txt'
-    assert (root / 'result.txt').read_bytes().decode('utf-16') == '<USERPROFILE>'.join(original_log.split(r'c:\Users\example'))
+    assert (root / 'result.txt').read_bytes().decode('utf-16') == '<USERPROFILE>'.join(original_log.split(r'e:\Users\example'))
     assert sanitize_tree(root) == 0 and sanitize_tree(root, check=True) == 0
     assert redact('PASS rows=3; C:/app/data/ledger.xlsx') == 'PASS rows=3; C:/app/data/ledger.xlsx'
     (root / 'new.txt').write_text('C:/Users/example/Temp/new.log', encoding='utf-8')

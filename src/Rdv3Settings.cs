@@ -29,6 +29,18 @@ public static class Rdv3SettingsForm
         sb.Append(",\"log\":").Append(Rdv3WebJson.Q(working.Log));
         sb.Append(",\"pattern\":").Append(Rdv3WebJson.Q(working.KeyPattern));
         sb.Append(",\"candidateRows\":").Append(working.CandidateRowsShown.ToString(CultureInfo.InvariantCulture));
+        sb.Append(",\"tables\":[");
+        for (int i = 0; i < working.TableFiles.Count; i++)
+        {
+            if (i > 0) { sb.Append(','); }
+            Rdv3TableFile entry = working.TableFiles[i];
+            sb.Append("{\"id\":").Append(Rdv3WebJson.Q(entry.Id));
+            sb.Append(",\"label\":").Append(Rdv3WebJson.Q(entry.Label.Length == 0 ? entry.Id : entry.Label));
+            sb.Append(",\"file\":").Append(Rdv3WebJson.Q(entry.File));
+            sb.Append(",\"match\":").Append(Rdv3WebJson.Q(entry.Match));
+            sb.Append(",\"required\":").Append(Rdv3WebJson.B(entry.Required)).Append('}');
+        }
+        sb.Append("]");
         sb.Append(",\"target\":").Append(TargetJson(before, working.PollMs)).Append('}');
         Rdv3Json result = owner.ShowModal("settings", sb.ToString());
         if (!Rdv3Form.Flag(result, "ok", false))
@@ -60,6 +72,34 @@ public static class Rdv3SettingsForm
             owner.Error(Rdv3Text.LblCandidateRows);
             owner.TakePickedTarget();
             return null;
+        }
+        Rdv3Json tables = result.Member("tables");
+        for (int i = 0; tables != null && tables.Kind == Rdv3Json.TArray && i < tables.Count; i++)
+        {
+            Rdv3Json item = tables.At(i);
+            string id = Rdv3Form.Text(item, "id");
+            string file = Rdv3Form.Text(item, "file").Trim();
+            string match = string.Equals(Rdv3Form.Text(item, "match").Trim(), "exact", StringComparison.OrdinalIgnoreCase) ? "exact" : "prefix";
+            Rdv3TableFile entry = null;
+            for (int k = 0; k < working.TableFiles.Count; k++) { if (working.TableFiles[k].Id == id) { entry = working.TableFiles[k]; } }
+            if (entry == null) { continue; }
+            if (file.Length == 0)
+            {
+                owner.Error(Rdv3Text.ErrFileBlank + id);
+                owner.TakePickedTarget();
+                return null;
+            }
+            // A name nothing answers to would stop the next start before the
+            // dialog could be reached again; refuse it here instead.
+            string missing = entry.Required ? Rdv3Files.CheckInputName(file, match, dataDir, ReaderDataViewer.App.BaseDirectory) : null;
+            if (missing != null)
+            {
+                owner.Error(missing);
+                owner.TakePickedTarget();
+                return null;
+            }
+            entry.File = file;
+            entry.Match = match;
         }
         working.DataDir = dataDir;
         working.Ledger = ledger;

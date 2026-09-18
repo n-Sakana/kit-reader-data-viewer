@@ -123,7 +123,11 @@ public sealed class Rdv3Table
         string[] head;
         string[][] rows;
         int[] rowNumbers;
-        Rdv3Csv.Read(path, enc, true, out head, out rows, out rowNumbers, encodingSetting, references, null, headerRow, delimiter);
+        byte[] bytes = File.ReadAllBytes(path);
+        Rdv3InputCounts counts = new Rdv3InputCounts();
+        enc = Rdv3Csv.ResolveEncoding(bytes, enc, counts, path);
+        delimiter = Rdv3Csv.ResolveDelimiter(bytes, enc, delimiter, headerRow, counts, path);
+        Rdv3Csv.Read(path, bytes, enc, true, out head, out rows, out rowNumbers, encodingSetting, references, counts, headerRow, delimiter);
         return head;
     }
 
@@ -178,11 +182,18 @@ public sealed class Rdv3Table
         Rdv3Table t = new Rdv3Table();
         t.Name = name;
         t.Path = path;
-        t.Enc = enc;
-        t.Delimiter = delimiter;
         t.KeyValidation = validation;
         t.Buf = File.ReadAllBytes(path);
-        if (Rdv3Csv.NeedsDecoded(t.Buf, enc)) { return ReadDecoded(path, name, enc, new string[] { keyName }, validation, false, encodingSetting, references, headerRow, delimiter); }
+        // What the file itself says (its BOM, its separator) wins over the
+        // configured value; the departure is noted with the table's warnings.
+        enc = Rdv3Csv.ResolveEncoding(t.Buf, enc, t.InputCounts, path);
+        delimiter = Rdv3Csv.ResolveDelimiter(t.Buf, enc, delimiter, headerRow, t.InputCounts, path);
+        t.Enc = enc;
+        t.Delimiter = delimiter;
+        List<string> notes = t.InputCounts.Notes;
+        // The byte path treats every control character as noise, which a tab
+        // separator is not: a tab-separated file takes the decoded path.
+        if (delimiter == '\t' || Rdv3Csv.NeedsDecoded(t.Buf, enc)) { return ReadDecoded(path, name, enc, new string[] { keyName }, validation, false, encodingSetting, references, headerRow, delimiter, "", notes); }
         Rdv3Input.ValidateEncoding(t.Buf, enc, path, encodingSetting, delimiter);
         string file = System.IO.Path.GetFileName(path);
 
@@ -229,13 +240,13 @@ public sealed class Rdv3Table
         t.Head = SplitHead(enc.GetString(b, st[0], en[0] - st[0]), file, physicalRows[0], out headerWarning, delimiter);
         Rdv3InputColumns columns = Rdv3InputColumns.Read(t.Head, path, physicalRows[0], references, t.InputCounts);
         if (t.InputCounts.HeaderColumns > 0)
-        { return ReadDecoded(path, name, enc, new string[] { keyName }, validation, false, encodingSetting, references, headerRow, delimiter); }
+        { return ReadDecoded(path, name, enc, new string[] { keyName }, validation, false, encodingSetting, references, headerRow, delimiter, "", notes); }
         t.Head = columns.Head;
         t.ControlCharacterWarning = headerWarning;
         int cols = t.Head.Length;
         t.KeyCol = -1;
         for (int i = 0; i < cols; i++) { if (t.Head[i] == keyName) { t.KeyCol = i; } }
-        if (t.KeyCol < 0) { throw new Rdv3DataError(Fmt(Rdv3Text.DataNoColumn, file, 1).Replace("{name}", keyName)); }
+        if (t.KeyCol < 0) { throw new Rdv3DataError(KeyNotInHead(file, name, keyName)); }
         t.KeyCols = new int[] { t.KeyCol };
 
         int sourceRows = rows - 1;
@@ -293,12 +304,13 @@ public sealed class Rdv3Table
                 continue;
             }
             if (controlCode >= 0 && t.ControlCharacterWarning.Length == 0) { t.ControlCharacterWarning = ControlChar(file, row, controlCode); }
-            while (keyEnd > keyAt && b[keyEnd - 1] == (byte)' ') { keyEnd--; }
+            while (keyEnd > keyAt && (b[keyEnd - 1] == (byte)' ' || b[keyEnd - 1] == (byte)'\t')) { keyEnd--; }
+            while (keyAt < keyEnd && (b[keyAt] == (byte)' ' || b[keyAt] == (byte)'\t')) { keyAt++; }
             for (int k = keyAt; k < keyEnd; k++)
             {
                 // Unicode digits occupy several bytes. Validate their normalized
                 // characters, rather than guessing widths from the encoded bytes.
-                if (b[k] > 127) { return ReadDecoded(path, name, enc, new string[] { keyName }, validation, false, encodingSetting, references, headerRow, delimiter); }
+                if (b[k] > 127) { return ReadDecoded(path, name, enc, new string[] { keyName }, validation, false, encodingSetting, references, headerRow, delimiter, "", notes); }
             }
             int klen = keyEnd - keyAt;
             if (klen <= 0)
@@ -367,14 +379,13 @@ public sealed class Rdv3Table
     private static Rdv3Table ReadDecoded(string path, string name, Encoding enc, string[] keyNames,
                                           Rdv3KeyValidation validation, bool workbook, string encodingSetting,
                                           HashSet<string> references, int headerRow, char delimiter,
-                                          string sheet = "")
+                                          string sheet = "", List<string> notes = null)
     {
         Rdv3Table t = new Rdv3Table();
         t.Name = name;
         t.Path = path;
-        t.Enc = enc;
-        t.Delimiter = delimiter;
         t.KeyValidation = validation;
+        if (notes != null) { t.InputCounts.Notes.AddRange(notes); }
         string warning = "";
         int[] originalRows = null;
         if (workbook)
@@ -382,14 +393,24 @@ public sealed class Rdv3Table
             Rdv3Xlsx.ReadTable(path, out t.Head, out t.Cells, out warning, references, t.InputCounts, headerRow, sheet);
             originalRows = t.InputCounts.SourceRows.ToArray();
         }
-        else { Rdv3Csv.Read(path, enc, false, out t.Head, out t.Cells, out originalRows, encodingSetting, references, t.InputCounts, headerRow, delimiter); }
+        else
+        {
+            byte[] bytes = File.ReadAllBytes(path);
+            // The fast path may have resolved these already; resolving again
+            // from the same bytes gives the same answer and adds no new note.
+            enc = Rdv3Csv.ResolveEncoding(bytes, enc, t.InputCounts, path);
+            delimiter = Rdv3Csv.ResolveDelimiter(bytes, enc, delimiter, headerRow, t.InputCounts, path);
+            Rdv3Csv.Read(path, bytes, enc, false, out t.Head, out t.Cells, out originalRows, encodingSetting, references, t.InputCounts, headerRow, delimiter);
+        }
+        t.Enc = enc;
+        t.Delimiter = delimiter;
         t.ControlCharacterWarning = warning;
         t.KeyCols = new int[keyNames.Length];
         for (int k = 0; k < keyNames.Length; k++)
         {
             t.KeyCols[k] = t.ColumnOf(keyNames[k]);
             if (t.KeyCols[k] < 0)
-            { throw new Rdv3DataError(Fmt(Rdv3Text.DataNoColumn, System.IO.Path.GetFileName(path), 1).Replace("{name}", keyNames[k])); }
+            { throw new Rdv3DataError(KeyNotInHead(System.IO.Path.GetFileName(path), name, keyNames[k])); }
         }
         t.KeyCol = t.KeyCols[0];
         string[][] source = t.Cells;
@@ -595,11 +616,26 @@ public sealed class Rdv3Table
         if (notice.Length > 0) { warnings.Add(notice); }
     }
 
+    // What the reader absorbed (encoding, separator, header spelling): for
+    // the log and the input list, not for an error dialog.
+    public void AddNotes(List<string> notes)
+    {
+        foreach (string note in InputCounts.Notes) { if (!notes.Contains(note)) { notes.Add(note); } }
+    }
+
     private Rdv3DataError KeyError(int row, string actual, string expected, string rule, string choice, int column = -1)
     {
         string path = KeyValidation.SettingsPath.Length == 0 ? "data.tables." + Name + ".keyValidation" : KeyValidation.SettingsPath;
         return Rdv3Input.Error(Path, row, Head[column < 0 ? KeyCol : column], expected, actual,
             Rdv3Text.InputFixKey.Replace("{path}", path + "." + rule).Replace("{choice}", choice));
+    }
+
+    // The key column the definition names is not in the header: say which
+    // setting names it, so the fix is made where it was written.
+    private static string KeyNotInHead(string file, string table, string keyName)
+    {
+        return Fmt(Rdv3Text.DataNoColumn, file, 1).Replace("{name}", keyName) + " "
+            + Rdv3Text.SettingsKeyNotInHead.Replace("{id}", table).Replace("{name}", keyName).Replace("{file}", file);
     }
 
     // A tab, a carriage return or any other control character, named by code.

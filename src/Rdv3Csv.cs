@@ -21,11 +21,130 @@ public static class Rdv3Csv
         return false;
     }
 
+    // The encoding a byte-order mark declares, or null without one.
+    public static Encoding BomEncoding(byte[] bytes, out int skip)
+    {
+        skip = 0;
+        if (bytes.Length >= 4 && bytes[0] == 255 && bytes[1] == 254 && bytes[2] == 0 && bytes[3] == 0) { skip = 4; return Encoding.GetEncoding(12000); }
+        if (bytes.Length >= 4 && bytes[0] == 0 && bytes[1] == 0 && bytes[2] == 254 && bytes[3] == 255) { skip = 4; return Encoding.GetEncoding(12001); }
+        if (bytes.Length >= 3 && bytes[0] == 239 && bytes[1] == 187 && bytes[2] == 191) { skip = 3; return new UTF8Encoding(false); }
+        if (bytes.Length >= 2 && bytes[0] == 255 && bytes[1] == 254) { skip = 2; return new UnicodeEncoding(false, false); }
+        if (bytes.Length >= 2 && bytes[0] == 254 && bytes[1] == 255) { skip = 2; return new UnicodeEncoding(true, false); }
+        return null;
+    }
+
+    private static bool DecodesStrictly(byte[] bytes, int skip, Encoding encoding)
+    {
+        Encoding strict = (Encoding)encoding.Clone();
+        strict.DecoderFallback = DecoderFallback.ExceptionFallback;
+        try { strict.GetCharCount(bytes, skip, bytes.Length - skip); return true; }
+        catch (DecoderFallbackException) { return false; }
+    }
+
+    private static Encoding SafeEncoding(int codePage)
+    {
+        try { return Encoding.GetEncoding(codePage); }
+        catch (Exception) { return null; }
+    }
+
+    // The encoding the file is read with. A byte-order mark decides; without
+    // one the configured encoding is tried strictly, then UTF-8, then
+    // Shift_JIS. A file that fits none is read with the configured encoding,
+    // whose strict read then names the offending bytes. Any departure from
+    // the configured value is noted so the absorption is never silent.
+    public static Encoding ResolveEncoding(byte[] bytes, Encoding configured, Rdv3InputCounts counts, string path)
+    {
+        int skip;
+        Encoding bom = BomEncoding(bytes, out skip);
+        if (bom != null)
+        {
+            if (bom.CodePage == configured.CodePage) { return configured; }
+            if (counts != null) { counts.Note(path, Rdv3Text.InputEncodingBom.Replace("{encoding}", bom.WebName)); }
+            return bom;
+        }
+        if (DecodesStrictly(bytes, 0, configured)) { return configured; }
+        Encoding[] candidates = { new UTF8Encoding(false), SafeEncoding(932) };
+        for (int i = 0; i < candidates.Length; i++)
+        {
+            Encoding candidate = candidates[i];
+            if (candidate == null || candidate.CodePage == configured.CodePage) { continue; }
+            if (!DecodesStrictly(bytes, 0, candidate)) { continue; }
+            if (counts != null)
+            { counts.Note(path, Rdv3Text.InputEncodingFallback.Replace("{configured}", configured.WebName).Replace("{encoding}", candidate.WebName)); }
+            return candidate;
+        }
+        return configured;
+    }
+
+    private static string HeaderLine(byte[] bytes, Encoding encoding, int headerRow)
+    {
+        int skip;
+        BomEncoding(bytes, out skip);
+        int length = Math.Min(bytes.Length - skip, 262144);
+        if (length <= 0) { return null; }
+        string text;
+        try { text = encoding.GetString(bytes, skip, length); }
+        catch (Exception) { return null; }
+        string[] lines = text.Split('\n');
+        if (headerRow < 1 || headerRow > lines.Length) { return null; }
+        return lines[headerRow - 1].TrimEnd('\r');
+    }
+
+    private static int CountOutsideQuotes(string line, char c)
+    {
+        int n = 0;
+        bool quoted = false;
+        for (int i = 0; i < line.Length; i++)
+        {
+            if (line[i] == '"') { quoted = !quoted; }
+            else if (line[i] == c && !quoted) { n++; }
+        }
+        return n;
+    }
+
+    public static string DelimiterName(char delimiter)
+    {
+        if (delimiter == '\t') { return "tab"; }
+        if (delimiter == ',') { return "comma"; }
+        if (delimiter == ';') { return "semicolon"; }
+        if (delimiter == '|') { return "pipe"; }
+        return delimiter.ToString();
+    }
+
+    // The field separator: the configured one when the header line holds it,
+    // otherwise the most frequent of tab / comma / semicolon / pipe there. A
+    // departure from the configured value is noted, never silent.
+    public static char ResolveDelimiter(byte[] bytes, Encoding encoding, char configured, int headerRow, Rdv3InputCounts counts, string path)
+    {
+        string header = HeaderLine(bytes, encoding, headerRow);
+        if (header == null || CountOutsideQuotes(header, configured) > 0) { return configured; }
+        char[] candidates = { '\t', ',', ';', '|' };
+        char best = configured;
+        int bestCount = 0;
+        for (int i = 0; i < candidates.Length; i++)
+        {
+            if (candidates[i] == configured) { continue; }
+            int n = CountOutsideQuotes(header, candidates[i]);
+            if (n > bestCount) { best = candidates[i]; bestCount = n; }
+        }
+        if (bestCount == 0) { return configured; }
+        if (counts != null)
+        { counts.Note(path, Rdv3Text.InputDelimiterDetected.Replace("{configured}", DelimiterName(configured)).Replace("{delimiter}", DelimiterName(best))); }
+        return best;
+    }
+
     // headerRow: the physical line that holds the header (1 = the first line).
     // Report exports often put a title and a print date above the header;
     // those lines are skipped without being counted as short or blank rows.
     // delimiter: the field separator; a tab for an Excel "Unicode text" export.
     public static void Read(string path, Encoding encoding, bool headOnly,
+                            out string[] head, out string[][] rows, out int[] rowNumbers, string encodingSetting = "data.encoding",
+                            HashSet<string> references = null, Rdv3InputCounts counts = null, int headerRow = 1, char delimiter = ',')
+    {
+        Read(path, File.ReadAllBytes(path), encoding, headOnly, out head, out rows, out rowNumbers, encodingSetting, references, counts, headerRow, delimiter);
+    }
+
+    public static void Read(string path, byte[] bytes, Encoding encoding, bool headOnly,
                             out string[] head, out string[][] rows, out int[] rowNumbers, string encodingSetting = "data.encoding",
                             HashSet<string> references = null, Rdv3InputCounts counts = null, int headerRow = 1, char delimiter = ',')
     {
@@ -37,7 +156,7 @@ public static class Rdv3Csv
         List<int> numbers = new List<int>();
         Encoding strict = (Encoding)encoding.Clone();
         strict.DecoderFallback = DecoderFallback.ExceptionFallback;
-        using (FileStream stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read | FileShare.Delete))
+        using (MemoryStream stream = new MemoryStream(bytes, false))
         {
             byte[] bom = new byte[4];
             int n = stream.Read(bom, 0, bom.Length);
@@ -62,11 +181,9 @@ public static class Rdv3Csv
                     try { cells = Record(reader, path, ref physical, out blank, delimiter); }
                     catch (DecoderFallbackException)
                     {
-                        // Use the same open file to locate the invalid byte; a
-                        // decoder's buffered read may run ahead of this record.
-                        stream.Position = 0;
-                        using (MemoryStream copy = new MemoryStream())
-                        { stream.CopyTo(copy); Rdv3Input.ValidateEncoding(copy.ToArray(), encoding, path, encodingSetting, delimiter); }
+                        // Locate the invalid byte in the whole file; a decoder's
+                        // buffered read may run ahead of this record.
+                        Rdv3Input.ValidateEncoding(bytes, encoding, path, encodingSetting, delimiter);
                         throw;
                     }
                     if (cells == null) { break; }

@@ -16,6 +16,11 @@ public sealed class Rdv3InputCounts
     public int InvalidRows;
     public readonly List<int> SourceRows = new List<int>();
     public readonly List<string> RowWarnings = new List<string>();
+    // What the reader absorbed on its own (a BOM that decided the encoding, a
+    // tab-separated file, a header spelled with other width characters). Not
+    // an exclusion: reported to the log so the absorption is never silent,
+    // but never raised as an error dialog.
+    public readonly List<string> Notes = new List<string>();
     // the workbook's date system: serial dates count from 1904-01-01 when set
     public bool Date1904;
     public readonly List<string> DuplicateHeaders = new List<string>();
@@ -35,6 +40,12 @@ public sealed class Rdv3InputCounts
         RowWarnings.Add(Rdv3Text.Format(Rdv3Text.RecordExcluded,
             Rdv3Text.Format(Rdv3Text.SourceRow, System.IO.Path.GetFileName(path), row),
             Rdv3Text.Format(Rdv3Text.RecordColumns, expected, actual)));
+    }
+
+    public void Note(string path, string text)
+    {
+        string line = System.IO.Path.GetFileName(path) + ": " + text;
+        if (!Notes.Contains(line)) { Notes.Add(line); }
     }
 
     public void AddWarnings(string path, List<string> warnings)
@@ -66,11 +77,34 @@ public sealed class Rdv3InputColumns
     public static Rdv3InputColumns Read(string[] head, string path, int row,
         HashSet<string> references, Rdv3InputCounts counts)
     {
+        for (int i = 0; i < head.Length; i++) { head[i] = head[i].Trim(); }
+        // A header spelled with other width characters, extra spaces or a
+        // different case than the definition is the definition's column: read
+        // it under the configured name. Only names the definition refers to
+        // are renamed, and only when no header carries the exact name already.
+        if (references != null)
+        {
+            HashSet<string> exact = new HashSet<string>(head, StringComparer.Ordinal);
+            Dictionary<string, string> wanted = new Dictionary<string, string>(StringComparer.Ordinal);
+            foreach (string reference in references)
+            {
+                if (reference.Length == 0 || exact.Contains(reference)) { continue; }
+                string key = Rdv3Input.NameKey(reference);
+                if (key.Length > 0 && !wanted.ContainsKey(key)) { wanted.Add(key, reference); }
+            }
+            for (int i = 0; i < head.Length && wanted.Count > 0; i++)
+            {
+                if (head[i].Length == 0) { continue; }
+                string alias;
+                if (!wanted.TryGetValue(Rdv3Input.NameKey(head[i]), out alias)) { continue; }
+                counts.Note(path, Rdv3Text.InputHeaderAlias.Replace("{actual}", head[i]).Replace("{name}", alias));
+                head[i] = alias;
+            }
+        }
         HashSet<string> seen = new HashSet<string>(StringComparer.Ordinal);
         HashSet<string> duplicates = new HashSet<string>(StringComparer.Ordinal);
         for (int i = 0; i < head.Length; i++)
         {
-            head[i] = head[i].Trim();
             // 名前の無い列は設定から参照できないので、落として続ける。
             // Excel の表は区切りに空列を挟むことがあり、そこで止めると
             // 使っていない列のせいでファイル全体が読めなくなる。
@@ -187,31 +221,99 @@ public static class Rdv3Input
     }
 
     public static bool IsPadding(char c)
-    { return c == ' ' || c == '\u3000' || c == '\u00a0'; }
+    { return c == ' ' || c == '　' || c == ' ' || c == '\t'; }
 
+    // An imported cell: padding on either side is dropped and full-width
+    // digits become ASCII digits. Letters keep their width and case here;
+    // matching keys fold them separately (Fold, SearchKey).
     public static string Cell(string value)
     {
         if (string.IsNullOrEmpty(value)) { return value ?? ""; }
         int end = value.Length;
         while (end > 0 && IsPadding(value[end - 1])) { end--; }
+        int start = 0;
+        while (start < end && IsPadding(value[start])) { start++; }
         char[] changed = null;
-        for (int i = 0; i < end; i++)
+        for (int i = start; i < end; i++)
         {
             char c = value[i];
-            if (c < '\uff10' || c > '\uff19') { continue; }
-            if (changed == null) { changed = value.Substring(0, end).ToCharArray(); }
-            changed[i] = (char)('0' + c - '\uff10');
+            if (c < '０' || c > '９') { continue; }
+            if (changed == null) { changed = value.Substring(start, end - start).ToCharArray(); }
+            changed[i - start] = (char)('0' + c - '０');
         }
-        return changed != null ? new string(changed) : (end == value.Length ? value : value.Substring(0, end));
+        if (changed != null) { return new string(changed); }
+        return (start == 0 && end == value.Length) ? value : value.Substring(start, end - start);
+    }
+
+    // Representation folding for values that are compared or pattern-matched:
+    // full-width ASCII letters, digits and punctuation become their ASCII
+    // forms, the hyphen variants become '-', and padding is dropped. The
+    // characters themselves (kanji, kana, case) are not changed.
+    public static string Fold(string value)
+    {
+        string text = Cell(value);
+        if (text.Length == 0) { return text; }
+        char[] changed = null;
+        for (int i = 0; i < text.Length; i++)
+        {
+            char c = text[i];
+            char folded = c;
+            if (c >= '！' && c <= '～') { folded = (char)(c - 0xfee0); }
+            // The katakana long vowel mark (U+30FC) is a letter of a station
+            // name, not a hyphen, and is deliberately left alone.
+            else if (c == '‐' || c == '‑' || c == '‒' || c == '–' || c == '—'
+                     || c == '―' || c == '−') { folded = '-'; }
+            else if (c == '　') { folded = ' '; }
+            if (folded == c) { continue; }
+            if (changed == null) { changed = text.ToCharArray(); }
+            changed[i] = folded;
+        }
+        return changed == null ? text : new string(changed);
+    }
+
+    // The typed, watched or indexed search key: folded and, for ASCII letters,
+    // upper-cased, so a number typed in lower case or full width still finds
+    // the record the systems wrote in upper-case ASCII.
+    public static string SearchKey(string value)
+    {
+        string text = Fold(value);
+        if (text.Length == 0) { return text; }
+        char[] changed = null;
+        for (int i = 0; i < text.Length; i++)
+        {
+            char c = text[i];
+            if (c < 'a' || c > 'z') { continue; }
+            if (changed == null) { changed = text.ToCharArray(); }
+            changed[i] = (char)(c - 32);
+        }
+        return changed == null ? text : new string(changed);
+    }
+
+    // The comparison key of a column name or a file name: folded, without any
+    // white space, and case-insensitive for ASCII. Two names with the same
+    // NameKey are the same name written differently.
+    public static string NameKey(string value)
+    {
+        string text = SearchKey(value);
+        if (text.Length == 0) { return text; }
+        StringBuilder sb = new StringBuilder(text.Length);
+        for (int i = 0; i < text.Length; i++)
+        {
+            char c = text[i];
+            if (char.IsWhiteSpace(c) || c == ' ') { continue; }
+            if (c == '_' || c == '＿') { c = '_'; }
+            sb.Append(c);
+        }
+        return sb.ToString();
     }
 
     public static bool TryNumber(string text, out decimal value)
     {
-        text = Cell(text).Trim().Replace('\uff0c', ',').Replace('\uff0e', '.')
-            .Replace('\uff0d', '-').Replace('\uff0b', '+').Replace('\uff08', '(').Replace('\uff09', ')');
+        text = Cell(text).Trim().Replace('，', ',').Replace('．', '.')
+            .Replace('－', '-').Replace('＋', '+').Replace('（', '(').Replace('）', ')');
         bool negative = text.Length >= 2 && text[0] == '(' && text[text.Length - 1] == ')';
         if (negative) { text = text.Substring(1, text.Length - 2).Trim(); }
-        if (text.StartsWith("\u00a5", StringComparison.Ordinal) || text.StartsWith("\uffe5", StringComparison.Ordinal))
+        if (text.StartsWith("¥", StringComparison.Ordinal) || text.StartsWith("￥", StringComparison.Ordinal))
         { text = text.Substring(1).TrimStart(); }
         if (negative && (text.StartsWith("-", StringComparison.Ordinal) || text.StartsWith("+", StringComparison.Ordinal)))
         { value = 0; return false; }

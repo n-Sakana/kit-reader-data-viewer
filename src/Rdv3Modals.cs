@@ -174,16 +174,18 @@ public static class Rdv3ProcessForm
         {
             if (i > 0) { sb.Append(','); }
             Rdv3ProcessInputDef input = job.Inputs[i];
-            string path = Path.IsPathRooted(input.File)
-                ? input.File : Path.Combine(dataDir, input.File);
+            string resolvedNote;
+            string path = Rdv3Files.ResolveInput(input.File, input.FileMatch, dataDir, out resolvedNote);
+            string shownFile = input.File;
             string rows = "";
             string validation;
             bool valid = true;
-            if (!File.Exists(path))
+            if (!Rdv3Files.Exists(path))
             {
                 valid = false;
                 inputsOk = false;
-                validation = Rdv3Text.ValidationMissing;
+                validation = (deleting ? Rdv3Text.DeleteFileMissing + " " : Rdv3Text.ValidationMissing + " ")
+                    + Rdv3Files.MissingInputMessage(input.File, input.FileMatch, dataDir);
             }
             else
             {
@@ -211,9 +213,14 @@ public static class Rdv3ProcessForm
                             table.InvalidEncodingRow.ToString(CultureInfo.InvariantCulture)));
                     }
                     table.AddWarnings(warnings);
+                    List<string> notes = new List<string>();
+                    if (resolvedNote != null) { notes.Add(resolvedNote); }
+                    table.AddNotes(notes);
+                    shownFile = Path.GetFileName(path);
                     validation = warnings.Count == 0
                         ? Rdv3Text.ValidationColumnsMatch
                         : string.Join(" / ", warnings.ToArray());
+                    if (notes.Count > 0) { validation += " / " + string.Join(" / ", notes.ToArray()); }
                 }
                 catch (Exception exception)
                 {
@@ -223,7 +230,7 @@ public static class Rdv3ProcessForm
                 }
             }
             sb.Append("{\"id\":").Append(Rdv3WebJson.Q(input.Id));
-            sb.Append(",\"file\":").Append(Rdv3WebJson.Q(input.File));
+            sb.Append(",\"file\":").Append(Rdv3WebJson.Q(shownFile));
             sb.Append(",\"key\":").Append(Rdv3WebJson.Q(input.Column));
             sb.Append(",\"rows\":").Append(Rdv3WebJson.Q(rows));
             sb.Append(",\"validation\":").Append(Rdv3WebJson.Q(validation));

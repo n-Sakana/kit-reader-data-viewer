@@ -1,4 +1,4 @@
-// Configuration for paths, search, monitoring and job timing. Data and screen
+﻿// Configuration for paths, search, monitoring and job timing. Data and screen
 // definitions are validated by their own readers before any settings apply.
 // The settings dialog replaces only paths/search/watch, preserving other text.
 // Re-reading and comparing the original content prevents a stale dialog from
@@ -232,10 +232,35 @@ public sealed class Rdv3Target
     }
 }
 
+// One input file as the settings dialog edits it: the table it feeds, the
+// name in the file and how that name is matched. The dialog works on this
+// copy; the running definition is updated only after the file was written.
+public sealed class Rdv3TableFile
+{
+    public string Id = "";
+    public string Label = "";
+    public string File = "";
+    public string Match = "prefix";
+    public bool Required = true;              // read by the update; a deletion list is not
+
+    public Rdv3TableFile Clone()
+    {
+        Rdv3TableFile t = new Rdv3TableFile();
+        t.Id = Id; t.Label = Label; t.File = File; t.Match = Match; t.Required = Required;
+        return t;
+    }
+}
+
 // ---------------------------------------------------------------------------
 public sealed class Rdv3Config
 {
     public const int Schema = 3;
+
+    // the input files, as the settings dialog shows and writes them
+    public List<Rdv3TableFile> TableFiles = new List<Rdv3TableFile>();
+    private Dictionary<string, Rdv3Json> tableNodes = new Dictionary<string, Rdv3Json>(StringComparer.Ordinal);
+    // the definition came from the business block, whose file entries use its words
+    private bool businessForm;
 
     // paths, as written in the file; resolved against the .cmd's folder
     public string DataDir = "data";
@@ -296,15 +321,15 @@ public sealed class Rdv3Config
         Rdv3Json root = Rdv3Json.Parse(text);
         if (!root.IsObject) { throw new Rdv3LoadError("the top level is not an object", root.Line); }
         if (collectErrors) { root.CollectErrors(new Rdv3Validation()); }
-        root.Only("schema", "paths", "search", "watch", "jobs", "data", "screen");
+        root.Only("schema", "paths", "search", "watch", "jobs", "data", "screen", Rdv3Text.BizRoot);
         Rdv3Config c = new Rdv3Config();
 
         root.Check(delegate {
         int schema = root.Int("schema", 1, 1000);
         if (schema != Schema)
         {
-            throw root.Member("schema").Fail("this program reads schema " + N(Schema)
-                + "; the file says " + N(schema) + ". この配布物に対応するsettings.jsonを使用してください。");
+            throw root.Member("schema").Fail("\u8A2D\u5B9A\u30D5\u30A1\u30A4\u30EB\u306E\u7248\u304C\u9055\u3044\u307E\u3059\uFF08schema " + N(schema)
+                + "\u3001\u3053\u306E\u30A2\u30D7\u30EA\u306F schema " + N(Schema) + "\uFF09\u3002\u3053\u306E\u30A2\u30D7\u30EA\u306B\u4ED8\u5C5E\u306E settings.json \u3092\u4F7F\u3063\u3066\u304F\u3060\u3055\u3044\u3002");
         }
         });
 
@@ -366,8 +391,51 @@ public sealed class Rdv3Config
         j.Check(delegate { c.MarkerPollMs = j.IntOr("markerPollMs", c.MarkerPollMs, 500, 60000); });
         });
 
-        root.Check(delegate { c.Data = Rdv3Data.Read(root.Obj("data", true)); });
-        root.Check(delegate { c.Screen = Rdv3Screen.Read(root.Obj("screen", true)); });
+        Rdv3Json business = root.Member(Rdv3Text.BizRoot);
+        Rdv3Json tables = null;
+        if (business != null)
+        {
+            // The business block is the definition: it is expanded into the
+            // generic data / screen members and those are read as always. A
+            // message about the generated members is turned back into the
+            // block's own words before anyone sees it.
+            c.businessForm = true;
+            root.Check(delegate {
+                if (root.Has("data") || root.Has("screen")) { throw root.Fail(Rdv3Text.BizConflict); }
+                if (business.Kind != Rdv3Json.TObject) { throw business.Fail("must be an object"); }
+                Rdv3Json generated = Rdv3Business.Expand(business);
+                if (root.Validation != null) { generated.CollectErrors(root.Validation); }
+                Rdv3Business.RememberCaptions(business);
+                try
+                {
+                    c.Data = Rdv3Data.Read(generated.Obj("data", true));
+                    c.Screen = Rdv3Screen.Read(generated.Obj("screen", true));
+                }
+                catch (Rdv3LoadError error) { throw new Rdv3LoadError(Rdv3Business.Localize(error.Message), error.Line); }
+            });
+            Rdv3Json files = business.Kind == Rdv3Json.TObject ? business.Member(Rdv3Text.BizFiles) : null;
+            tables = (files != null && files.Kind == Rdv3Json.TObject) ? files : null;
+        }
+        else
+        {
+            root.Check(delegate { c.Data = Rdv3Data.Read(root.Obj("data", true)); });
+            Rdv3Json dataNode = root.Member("data");
+            tables = (dataNode == null || dataNode.Kind != Rdv3Json.TObject) ? null : dataNode.Member("tables");
+            root.Check(delegate { c.Screen = Rdv3Screen.Read(root.Obj("screen", true)); });
+        }
+        if (c.Data != null)
+        {
+            for (int i = 0; i < c.Data.Tables.Count; i++)
+            {
+                Rdv3TableDef table = c.Data.Tables[i];
+                Rdv3TableFile entry = new Rdv3TableFile();
+                entry.Id = table.Id; entry.Label = table.Label; entry.File = table.File; entry.Match = table.FileMatch;
+                entry.Required = c.Data.IsUpdateInput(table.Ord);
+                c.TableFiles.Add(entry);
+                Rdv3Json node = (tables == null || tables.Kind != Rdv3Json.TObject) ? null : tables.Member(table.Id);
+                if (node != null && node.Kind == Rdv3Json.TObject) { c.tableNodes[table.Id] = node; }
+            }
+        }
         // the screen names ledger columns; they have to be the data's
         if (c.Data != null && c.Screen != null)
         {
@@ -408,7 +476,7 @@ public sealed class Rdv3Config
 
     public bool IsKey(string s)
     {
-        s = Rdv3Input.Cell(s);
+        s = Rdv3Input.SearchKey(s);
         if (string.IsNullOrEmpty(s) || s.Length > 4096) { return false; }
         try
         {
@@ -447,33 +515,59 @@ public sealed class Rdv3Config
             { throw new IOException(Rdv3Text.SettingsChangedExternally); }
             Rdv3Config now = Parse(text);
             string nl = (text.IndexOf("\r\n", StringComparison.Ordinal) >= 0) ? "\r\n" : "\n";
-            // latest offset first, so the earlier spans stay where they are
+            // Every replacement is a span of the text just read. They are
+            // applied from the latest offset backwards, so the earlier spans
+            // stay where they are.
+            List<int> starts = new List<int>();
+            List<int> ends = new List<int>();
+            List<string> bodies = new List<string>();
             Rdv3Json[] nodes = { now.pathsNode, now.searchNode, now.watchNode };
-            string[] bodies = { PathsJson(IndentOf(text, now.pathsNode), nl),
-                                SearchJson(),
-                                WatchJson(IndentOf(text, now.watchNode), nl) };
+            string[] nodeBodies = { PathsJson(IndentOf(text, now.pathsNode), nl),
+                                    SearchJson(),
+                                    WatchJson(IndentOf(text, now.watchNode), nl) };
             string[] names = { "paths", "search", "watch" };
             StringBuilder missing = new StringBuilder();
             for (int i = 0; i < nodes.Length; i++)
             {
                 if (nodes[i].Start < 0)
-                { missing.Append(nl).Append("  ").Append(Q(names[i])).Append(": ").Append(bodies[i]).Append(','); }
+                { missing.Append(nl).Append("  ").Append(Q(names[i])).Append(": ").Append(nodeBodies[i]).Append(','); }
+                else { starts.Add(nodes[i].Start); ends.Add(nodes[i].End); bodies.Add(nodeBodies[i]); }
             }
-            for (int a = 0; a < nodes.Length; a++)
+            // The input file names sit inside data.tables; only the file and
+            // fileMatch members of each table are touched, in place.
+            string fileMember = now.businessForm ? Rdv3Text.BizFileName : "file";
+            string matchMember = now.businessForm ? Rdv3Text.BizFileMatch : "fileMatch";
+            for (int i = 0; i < TableFiles.Count; i++)
             {
-                for (int b = a + 1; b < nodes.Length; b++)
+                Rdv3TableFile entry = TableFiles[i];
+                string matchText = now.businessForm
+                    ? (entry.Match == "prefix" ? Rdv3Text.BizMatchPrefix : Rdv3Text.BizMatchExact) : entry.Match;
+                Rdv3Json tableNode;
+                if (!now.tableNodes.TryGetValue(entry.Id, out tableNode)) { throw new IOException(entry.Id + " is no longer in the file"); }
+                Rdv3Json fileNode = tableNode.Member(fileMember);
+                if (fileNode == null || fileNode.Kind != Rdv3Json.TString) { throw new IOException(entry.Id + "." + fileMember + " is not text"); }
+                Rdv3Json matchNode = tableNode.Member(matchMember);
+                if (matchNode != null && matchNode.Kind == Rdv3Json.TString)
+                { starts.Add(matchNode.Start); ends.Add(matchNode.End); bodies.Add(Q(matchText)); }
+                else
+                { starts.Add(fileNode.End); ends.Add(fileNode.End); bodies.Add(", " + Q(matchMember) + ": " + Q(matchText)); }
+                starts.Add(fileNode.Start); ends.Add(fileNode.End); bodies.Add(Q(entry.File));
+            }
+            for (int a = 0; a < starts.Count; a++)
+            {
+                for (int b = a + 1; b < starts.Count; b++)
                 {
-                    if (nodes[b].Start > nodes[a].Start)
+                    if (starts[b] > starts[a] || (starts[b] == starts[a] && ends[b] > ends[a]))
                     {
-                        Rdv3Json tn = nodes[a]; nodes[a] = nodes[b]; nodes[b] = tn;
+                        int ts = starts[a]; starts[a] = starts[b]; starts[b] = ts;
+                        int te = ends[a]; ends[a] = ends[b]; ends[b] = te;
                         string tb = bodies[a]; bodies[a] = bodies[b]; bodies[b] = tb;
                     }
                 }
             }
-            for (int i = 0; i < nodes.Length; i++)
+            for (int i = 0; i < starts.Count; i++)
             {
-                if (nodes[i].Start < 0) { continue; }
-                text = text.Substring(0, nodes[i].Start) + bodies[i] + text.Substring(nodes[i].End);
+                text = text.Substring(0, starts[i]) + bodies[i] + text.Substring(ends[i]);
             }
             if (missing.Length > 0)
             {
@@ -601,6 +695,29 @@ public sealed class Rdv3Config
         Ledger = o.Ledger;
         Log = o.Log;
         sourceDigest = o.sourceDigest;
+        TableFiles = new List<Rdv3TableFile>();
+        for (int i = 0; i < o.TableFiles.Count; i++) { TableFiles.Add(o.TableFiles[i].Clone()); }
+    }
+
+    // The input file names differ from what the running definition reads.
+    public bool TableFilesDiffer(Rdv3Config o)
+    {
+        if (o == null || o.TableFiles.Count != TableFiles.Count) { return true; }
+        for (int i = 0; i < TableFiles.Count; i++)
+        {
+            if (TableFiles[i].Id != o.TableFiles[i].Id || TableFiles[i].File != o.TableFiles[i].File
+                || TableFiles[i].Match != o.TableFiles[i].Match) { return true; }
+        }
+        return false;
+    }
+
+    // Make the running definition read the files the dialog named. The CSVs
+    // are re-read by the next update check, which compares them with the
+    // saved ledger as any other input change.
+    public void ApplyTableFiles()
+    {
+        if (Data == null) { return; }
+        for (int i = 0; i < TableFiles.Count; i++) { Data.SetTableFile(TableFiles[i].Id, TableFiles[i].File, TableFiles[i].Match); }
     }
 
     // deep enough for the dialog to edit without touching the running settings
@@ -621,6 +738,10 @@ public sealed class Rdv3Config
         c.Data = Data; c.Screen = Screen;
         c.Targets = new List<Rdv3Target>();
         for (int i = 0; i < Targets.Count; i++) { c.Targets.Add(Targets[i].Clone()); }
+        c.TableFiles = new List<Rdv3TableFile>();
+        for (int i = 0; i < TableFiles.Count; i++) { c.TableFiles.Add(TableFiles[i].Clone()); }
+        c.tableNodes = tableNodes;
+        c.businessForm = businessForm;
         return c;
     }
 

@@ -34,7 +34,7 @@ C#回帰104件、静的42件、Web20件、Win98ブラウザー28件、README完�
 
 直し: `browse`と`window`のメッセージ、および例外時のエラー表示をキューへ回して（`PostOnUi`）ハンドラの外で実行する。両方の選択ダイアログの所有者を、開いている設定／出力のダイアログ面にする。フォルダー選択はOS標準の`IFileOpenDialog`（FOS_PICKFOLDERS、`src/Rdv3FolderDialog.cs`）にして、ファイル選択と同じ形式に揃えた（先生の「ファイルダイアログが新旧混在」に対応）。相対パスの初期位置はアプリ一式のフォルダー基準に解決する。
 
-検査: `tests/Test-Browse.ps1`（実窓、WindowHandle・pid・出力JSONを渡す）は、フォルダー／ファイルの各選択ダイアログが設定面に所有されること、開いている間は設定面のHWNDが無効なこと、閉じたあと設定面が応答し主画面が有効へ戻ることを確かめて 3/3。撮影した2枚は`work/freeze-20260909/native/picker-0.png`、`picker-1.png`（gitignore）。C#回帰 104/104、static exit 0、theme-static 72/72（新ソース1本を指紋へ追加）。試験コードの修理は1回（所有されたダイアログはUIAで所有者の下に現れるため、列挙を主画面の子孫にも広げた）。先生の実機（win-note）と先生の操作手順そのものは未確認で、他の固まり方が残っていれば`%LOCALAPPDATA%/ReaderDataViewer/logs/feedback.log`の`UI NOT RESPONDING`と`PHASE`が次の証拠になります。
+検査: `tests/Test-Browse.ps1`（実窓、WindowHandle・pid・出力JSONを渡す）は、フォルダー／ファイルの各選択ダイアログが設定面に所有されること、開いている間は設定面のHWNDが無効なこと、閉じたあと設定面が応答し主画面が有効へ戻ることを確かめて 3/3。撮影した2枚は`work/freeze-20260909/native/picker-0.png`、`picker-1.png`（gitignore）。C#回帰 104/104、static exit 0、theme-static 72/72（新ソース1本を指紋へ追加）。試験コードの修理は1回（所有されたダイアログはUIAで所有者の下に現れるため、列挙を主画面の子孫にも広げた）。先生の実機と先生の操作手順そのものは未確認で、他の固まり方が残っていれば`%LOCALAPPDATA%/ReaderDataViewer/logs/feedback.log`の`UI NOT RESPONDING`と`PHASE`が次の証拠になります。
 
 ## 2026-09-09 コードレビュー（hyogo）で再現した6件の修正
 

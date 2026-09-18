@@ -134,7 +134,7 @@ public sealed class Rdv3Json
         {
             bool ok = false;
             for (int k = 0; k < names.Length; k++) { if (names[k] == Order[i]) { ok = true; break; } }
-            if (!ok) { Report(FailAt(Order[i], "is not a member this program knows (" + string.Join(", ", names) + ")")); }
+            if (!ok) { Report(FailAt(Order[i], Rdv3Text.SettingsUnknownMember.Replace("{names}", string.Join(", ", names)))); }
         }
     }
 

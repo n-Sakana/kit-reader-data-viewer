@@ -1,4 +1,4 @@
-(function () {
+﻿(function () {
   'use strict';
 
   function logClientError(kind, message, file, line, column, stack) {
@@ -144,6 +144,52 @@
   }
 
   var fixedScreenBound = false;
+  // Captions the settings name: a field's row label (or, for a text
+  // section, its legend), the judgment band's label, the candidate headers.
+  // Anything the settings leave out keeps the page's own wording.
+  function applyLabels(definition) {
+    var labels = definition.labels || {};
+    Object.keys(labels).forEach(function (id) {
+      Array.prototype.forEach.call(stage.querySelectorAll('[data-bind="' + cssEscape(id) + '"]'), function (node) {
+        var row = node.closest('.row');
+        var caption = row ? row.querySelector('label') : null;
+        if (!caption) {
+          var section = node.closest('fieldset');
+          caption = section ? section.querySelector('legend') : null;
+        }
+        if (caption) { caption.textContent = labels[id]; }
+      });
+    });
+    var judgmentLabels = definition.judgmentLabels || {};
+    Object.keys(judgmentLabels).forEach(function (id) {
+      var band = stage.querySelector('[data-judgment="' + cssEscape(id) + '"] .band-label');
+      if (band) { band.textContent = judgmentLabels[id]; }
+    });
+    var headers = definition.candidateHeaders || [];
+    var template = document.querySelector('#fixed-candidate-columns');
+    if (template) {
+      Array.prototype.forEach.call(template.content.querySelectorAll('th'), function (th, index) {
+        if (headers[index]) { th.textContent = headers[index]; }
+      });
+    }
+    // frames the definition leaves unused stay out of sight
+    (definition.hidden || []).forEach(function (id) {
+      Array.prototype.forEach.call(stage.querySelectorAll('[data-bind="' + cssEscape(id) + '"]'), function (node) {
+        var row = node.closest('.row') || node.closest('fieldset');
+        if (row) { row.hidden = true; }
+      });
+    });
+    var boxNames = definition.boxNames || {};
+    [['user', '.fixed-user legend'], ['application', '.fixed-application legend']].forEach(function (entry) {
+      var legend = stage.querySelector(entry[1]);
+      if (legend && boxNames[entry[0]]) { legend.textContent = boxNames[entry[0]]; }
+    });
+    var searchLabel = stage.querySelector('label[for=input]');
+    if (searchLabel && definition.searchLabel) { searchLabel.textContent = definition.searchLabel; }
+    candidateHidden = (definition.candidateHidden || []).map(Number);
+  }
+  var candidateHidden = [];
+
   function renderScreen(definition) {
     if (!definition || definition.fixed !== true) { throw new Error('The fixed HTML screen requires compact settings.'); }
     stage.classList.add('runtime');
@@ -151,6 +197,7 @@
       var action = node.getAttribute('data-action');
       node.setAttribute('data-job', definition.actions[action] || '');
     });
+    applyLabels(definition);
     if (fixedScreenBound) { return; }
     fixedScreenBound = true;
     input = stage.querySelector('#input');
@@ -212,8 +259,12 @@
     }
     Array.prototype.forEach.call(stage.querySelectorAll('[data-action]'), function (node) {
       var action = node.getAttribute('data-action');
+      // without a ledger (BLOCKED) the update and reload buttons stay open,
+      // so the ledger can be built once the files are in place
       var enabled = action === 'settings' ? true : action === 'workState' ?
-        next.opsEnabled && next.workEnabled : next.opsEnabled;
+        next.opsEnabled && next.workEnabled :
+        (action === 'refreshLedger' || action === 'updateRecords') ? (next.opsEnabled || next.retryEnabled) :
+        next.opsEnabled;
       node.classList.toggle('dis', !enabled);
       node.setAttribute('aria-disabled', enabled ? 'false' : 'true');
       node.tabIndex = enabled ? 0 : -1;
@@ -440,6 +491,11 @@
     content.rowHeight = presentation.rowHeight;
     content.headerHeight = presentation.headerHeight;
     content.columns = presentation.columns;
+    if (candidateHidden.length) {
+      var keep = function (cell, index) { return candidateHidden.indexOf(index) < 0; };
+      content.columns = content.columns.filter(keep);
+      content.rows = (content.rows || []).map(function (row) { return row.filter(keep); });
+    }
     var shell = modalShell(shared ? 'v-shared' : 'v-cand', content.title);
     shell.dialog.style.width = px(content.width || 744);
     var hint = content.hint || '';
@@ -667,6 +723,22 @@
       var edit = editable(content[entry[0]], entry[0]);
       row.appendChild(edit); row.appendChild(browseButton(entry[0], entry[1], edit));
     });
+    // One row per input table: the file name in the data folder and how it
+    // is matched (the whole name, or the newest file starting with it).
+    var tablesSlot = shell.body.querySelector('[data-slot=tables]');
+    (content.tables || []).forEach(function (table) {
+      var row = element('div', 'kv');
+      row.appendChild(element('label', '', table.label || table.id));
+      row.appendChild(editable(table.file, 'table:' + table.id));
+      var select = selectNode([{ value: 'exact', text: '全部一致' }, { value: 'prefix', text: '前方一致' }]);
+      select.value = table.match === 'exact' ? 'exact' : 'prefix';
+      select.style.width = '104px';
+      select.style.flex = 'none';
+      select.setAttribute('data-match', table.id);
+      select.setAttribute('aria-label', (table.label || table.id) + ' のファイル名の一致方法');
+      row.appendChild(select);
+      tablesSlot.appendChild(row);
+    });
     shell.body.querySelector('[data-row=pattern]').appendChild(editable(content.pattern, 'pattern'));
     var candidateEditor = numberEditor(content.candidateRows, 'candidateRows', 1, 1000);
     shell.body.querySelector('[data-row=candidateRows]').appendChild(candidateEditor);
@@ -688,12 +760,16 @@
     var ledger = value('ledger');
     var log = value('log');
     var pattern = value('pattern');
+    var tables = ((settingsContent && settingsContent.tables) || []).map(function (table) {
+      var select = body.querySelector('select[data-match="' + cssEscape(table.id) + '"]');
+      return { id: table.id, file: value('table:' + table.id), match: select ? select.value : 'exact', required: table.required !== false };
+    });
     pendingSettings = { ok: true, dataDir: dataDir, ledger: ledger, log: log,
-      pattern: pattern, candidateRows: Number(value('candidateRows')) };
+      pattern: pattern, candidateRows: Number(value('candidateRows')), tables: tables };
     error.hidden = true;
     post({ type: 'settingsSubmit', token: currentToken, dataDir: dataDir,
       ledger: ledger, log: log, pattern: pattern,
-      candidateRows: pendingSettings.candidateRows });
+      candidateRows: pendingSettings.candidateRows, tables: tables });
   }
 
   function settingsValidation(message) {
