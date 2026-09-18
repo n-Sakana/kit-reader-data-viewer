@@ -154,7 +154,8 @@ function New-ProductPackage($Options) {
         [IO.Directory]::CreateDirectory($package) | Out-Null
         $seen = @{}
         foreach ($file in $spec.files) {
-            if ($file -notmatch '^[A-Za-z0-9_./-]+$' -or $file -match '(^/|(^|/)\.\.(/|$))' -or $seen.ContainsKey($file)) {
+            # the operator opens 設定エディタ.bat by its name, so a package path may be Japanese
+            if ($file -notmatch '^[A-Za-z0-9_./\-\p{IsHiragana}\p{IsKatakana}\p{IsCJKUnifiedIdeographs}]+$' -or $file -match '(^/|(^|/)\.\.(/|$))' -or $seen.ContainsKey($file)) {
                 throw ('Invalid or duplicate package path: ' + $file)
             }
             $seen[$file] = $true
