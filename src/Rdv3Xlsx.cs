@@ -182,18 +182,30 @@ public static class Rdv3Xlsx
     }
 
     // ---- write -------------------------------------------------------------
-    public static void Write(string path, string[] head, string stateHead, string[] lines, string[] states, string runId, string contract = null)
+    public static void Write(string path, string[] head, string stateHead, string[] lines, string[] states, string runId, string contract = null, Rdv3LedgerProtection protection = null, bool allowReplace = true)
     {
         ValidateWrite(head, stateHead, lines, states);
+        if (protection != null)
+        {
+            for (int i = 0; i < protection.Deleted.Count; i++)
+            { ValidateRow(head.Length, protection.Deleted[i].Line, protection.Deleted[i].State, i + 2); }
+        }
         string dir = Path.GetDirectoryName(Path.GetFullPath(path));
         string tmp = Path.Combine(dir, Path.GetFileName(path) + ".tmp-" + Guid.NewGuid().ToString("N"));
+        List<string> createdArchives = new List<string>();
+        bool committed = false;
         try
         {
+            Rdv3LedgerProtection savedProtection = protection == null ? null : protection.PrepareArchives(path, head, stateHead, runId, createdArchives);
             using (FileStream fs = new FileStream(tmp, FileMode.CreateNew, FileAccess.Write))
             using (ZipArchive z = new ZipArchive(fs, ZipArchiveMode.Create))
             {
                 if (!string.IsNullOrEmpty(contract))
                 { AddEntry(z, "rdv-contract.xml", "<contract>" + contract + "</contract>"); }
+                if (savedProtection != null) { savedProtection.Write(z); }
+                string metadataRelations = "", metadataTypes = "";
+                if (!string.IsNullOrEmpty(contract)) { LinkMetadata(z, "contract", ref metadataRelations, ref metadataTypes); }
+                if (savedProtection != null) { LinkMetadata(z, "protection", ref metadataRelations, ref metadataTypes); }
                 AddEntry(z, "[Content_Types].xml",
                     "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>" +
                     "<Types xmlns=\"http://schemas.openxmlformats.org/package/2006/content-types\">" +
@@ -202,7 +214,7 @@ public static class Rdv3Xlsx
                     "<Override PartName=\"/xl/workbook.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml\"/>" +
                     "<Override PartName=\"/xl/styles.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml\"/>" +
                     "<Override PartName=\"/xl/worksheets/sheet1.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml\"/>" +
-                    "</Types>");
+                    metadataTypes + "</Types>");
                 AddEntry(z, "_rels/.rels",
                     "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>" +
                     "<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\">" +
@@ -217,7 +229,7 @@ public static class Rdv3Xlsx
                     "<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\">" +
                     "<Relationship Id=\"rId1\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet\" Target=\"worksheets/sheet1.xml\"/>" +
                     "<Relationship Id=\"rId2\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles\" Target=\"styles.xml\"/>" +
-                    "</Relationships>");
+                    metadataRelations + "</Relationships>");
                 AddEntry(z, "xl/styles.xml",
                     "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>" +
                     "<styleSheet xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\">" +
@@ -262,7 +274,7 @@ public static class Rdv3Xlsx
                 }
             }
 
-            if (File.Exists(path))
+            if (allowReplace && File.Exists(path))
             {
                 File.Replace(tmp, path, null);
             }
@@ -270,9 +282,13 @@ public static class Rdv3Xlsx
             {
                 File.Move(tmp, path);
             }
+            committed = true;
+            if (protection != null) { protection.AdoptArchives(savedProtection); }
         }
         finally
         {
+            if (!committed)
+            { foreach (string archive in createdArchives) { try { File.Delete(archive); } catch (IOException) { } catch (UnauthorizedAccessException) { } } }
             if (File.Exists(tmp))
             {
                 try { File.Delete(tmp); }
@@ -328,6 +344,14 @@ public static class Rdv3Xlsx
     public static void Read(string path, string[] head, string stateHead, out string[] lines, out string[] states,
                             out string warning, string expectedContract = null)
     {
+        Rdv3LedgerProtection ignored;
+        ReadProtected(path, head, stateHead, out lines, out states, out warning, expectedContract, null, null, out ignored);
+    }
+
+    public static void ReadProtected(string path, string[] head, string stateHead, out string[] lines, out string[] states,
+                                    out string warning, string expectedContract, string legacyContract,
+                                    string expectedDefinition, out Rdv3LedgerProtection protection, bool loadArchives = true)
+    {
         warning = "";
         // ReadWrite | Delete: another copy of the app may replace the file
         // (write-temp-then-replace) while this one is still reading it. The
@@ -338,7 +362,9 @@ public static class Rdv3Xlsx
         using (ZipArchive z = new ZipArchive(fs, ZipArchiveMode.Read))
         {
             string[] shared = ReadSharedStrings(z);
-            CheckContract(z, expectedContract);
+            protection = Rdv3LedgerProtection.Read(z, expectedDefinition);
+            CheckContract(z, protection.Legacy && legacyContract != null ? legacyContract : expectedContract);
+            if (loadArchives) { protection.LoadArchives(path, head, stateHead); }
             ZipArchiveEntry sheet = FindSheet(z, true);
             if (sheet == null) { throw new InvalidDataException(Rdv3Text.Format(Rdv3Text.XlsxNoSheetPart, path)); }
 
@@ -634,10 +660,50 @@ public static class Rdv3Xlsx
         throw new InvalidDataException(Rdv3Text.Format(Rdv3Text.XlsxMissingRelation, selected.GetAttribute("name"), id));
     }
 
+    // Excel preserves workbook Custom XML parts and may rename them on save.
+    // Keep the old pathname on write for existing v1/v2 readers, but follow the
+    // relationship on read. No deleted row content is copied into this metadata.
+    private static void LinkMetadata(ZipArchive zip, string kind, ref string relations, ref string types)
+    {
+        string name = "rdv-" + kind;
+        string relNs = "http://schemas.openxmlformats.org/package/2006/relationships";
+        string office = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/";
+        relations += "<Relationship Id=\"" + name + "\" Type=\"" + office + "customXml\" Target=\"../" + name + ".xml\"/>";
+        types += "<Override PartName=\"/customXml/" + name + "-props.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.customXmlProperties+xml\"/>";
+        AddEntry(zip, "_rels/" + name + ".xml.rels", "<Relationships xmlns=\"" + relNs + "\"><Relationship Id=\"props\" Type=\"" + office
+            + "customXmlProps\" Target=\"customXml/" + name + "-props.xml\"/></Relationships>");
+        AddEntry(zip, "customXml/" + name + "-props.xml", "<ds:datastoreItem ds:itemID=\"" + Guid.NewGuid().ToString("B").ToUpperInvariant()
+            + "\" xmlns:ds=\"http://schemas.openxmlformats.org/officeDocument/2006/customXml\"><ds:schemaRefs/></ds:datastoreItem>");
+    }
+
+    internal static ZipArchiveEntry MetadataPart(ZipArchive zip, string kind)
+    {
+        ZipArchiveEntry result = zip.GetEntry("rdv-" + kind + ".xml");
+        XmlDocument relations = Document(zip.GetEntry("xl/_rels/workbook.xml.rels"));
+        if (relations == null) { return result; }
+        foreach (XmlNode node in relations.GetElementsByTagName("*"))
+        {
+            XmlElement rel = node as XmlElement;
+            if (rel == null || rel.LocalName != "Relationship"
+                || rel.GetAttribute("Type") != "http://schemas.openxmlformats.org/officeDocument/2006/relationships/customXml") { continue; }
+            Uri target = new Uri(new Uri("http://rdv.local/xl/workbook.xml"), rel.GetAttribute("Target"));
+            if (rel.GetAttribute("TargetMode") == "External" || target.Host != "rdv.local" || target.Scheme != "http")
+            { throw new InvalidDataException(Rdv3Text.ProtectionInvalid); }
+            ZipArchiveEntry part = zip.GetEntry(Uri.UnescapeDataString(target.AbsolutePath).TrimStart('/'));
+            if (part == null) { throw new InvalidDataException(Rdv3Text.ProtectionInvalid); }
+            if (result != null && part.FullName == result.FullName) { continue; }
+            XmlDocument doc = Document(part);
+            if (doc.DocumentElement == null || doc.DocumentElement.Name != kind) { continue; }
+            if (result != null) { throw new InvalidDataException(Rdv3Text.ProtectionInvalid); }
+            result = part;
+        }
+        return result;
+    }
+
     private static void CheckContract(ZipArchive zip, string expected)
     {
         if (string.IsNullOrEmpty(expected)) { return; }
-        ZipArchiveEntry entry = zip.GetEntry("rdv-contract.xml");
+        ZipArchiveEntry entry = MetadataPart(zip, "contract");
         if (entry == null) { return; } // Legacy ledger: header validation still applies.
         XmlDocument doc = Document(entry);
         if (doc.DocumentElement == null || doc.DocumentElement.LocalName != "contract"
@@ -663,13 +729,16 @@ public static class Rdv3Xlsx
         ValidateCell(stateHead, 0, 1);
         for (int c = 0; c < head.Length; c++) { ValidateCell(head[c], c + 1, 1); }
         for (int r = 0; r < lines.Length; r++)
-        {
-            ValidateCell(states[r], 0, r + 2);
-            if (lines[r] == null) { throw new InvalidDataException(Rdv3Text.Format(Rdv3Text.XlsxNullRow, r + 2)); }
-            string[] cells = lines[r].Split('\t');
-            if (cells.Length != head.Length) { throw new InvalidDataException(Rdv3Text.Format(Rdv3Text.LedgerRowColumns, r + 2, head.Length, cells.Length)); }
-            for (int c = 0; c < cells.Length; c++) { ValidateCell(cells[c], c + 1, r + 2); }
-        }
+        { ValidateRow(head.Length, lines[r], states[r], r + 2); }
+    }
+
+    private static void ValidateRow(int width, string line, string state, int row)
+    {
+        ValidateCell(state, 0, row);
+        if (line == null) { throw new InvalidDataException(Rdv3Text.Format(Rdv3Text.XlsxNullRow, row)); }
+        string[] cells = line.Split('\t');
+        if (cells.Length != width) { throw new InvalidDataException(Rdv3Text.Format(Rdv3Text.LedgerRowColumns, row, width, cells.Length)); }
+        for (int c = 0; c < cells.Length; c++) { ValidateCell(cells[c], c + 1, row); }
     }
 
     // "D5" -> 3. Letters only matter; the row digits are ignored.

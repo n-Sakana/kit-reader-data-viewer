@@ -21,6 +21,8 @@ public sealed class Rdv3Bind
     public Rdv3Format Format;                 // null = as is
     public string Empty = "N/A";              // a record is shown but the value is blank
     public string[] Requires = new string[0]; // show only when these saved fields are populated
+    public string Label = "";                 // fixed screen: the caption beside the value ("" = the page's own)
+    public bool Hidden;                       // fixed screen: the frame is not used and stays out of sight
     public int Line;                          // where it is written, for the column check
 
     public bool IsField { get { return Fields.Length > 0; } }
@@ -43,9 +45,11 @@ public sealed class Rdv3Bind
     public static Rdv3Bind Read(Rdv3Json o)
     {
         if (o == null) { throw new Rdv3LoadError("a value is required", 0); }
-        o.Only("field", "fields", "joiner", "state", "format", "empty", "requires");
+        o.Only("field", "fields", "joiner", "state", "format", "empty", "requires", "label", "hidden");
         Rdv3Bind b = new Rdv3Bind();
         b.Line = o.Line;
+        b.Label = o.StrOr("label", "").Trim();
+        if (o.BoolOr("hidden", false)) { b.Hidden = true; b.Empty = ""; return b; }
         string one = o.StrOr("field", "");
         string[] many = o.Strs("fields", false);
         string st = o.StrOr("state", "");
@@ -130,6 +134,7 @@ public sealed class Rdv3Judgment
     public const string Error = "error";
 
     public string Id = "";
+    public string Label = "";                // fixed screen: the caption of the band ("" = the page's own)
     public Rdv3Bind Source;
     public List<Rdv3Rule> Rules = new List<Rdv3Rule>();
     public Dictionary<string, Rdv3Result> Results = new Dictionary<string, Rdv3Result>(StringComparer.Ordinal);
@@ -149,9 +154,10 @@ public sealed class Rdv3Judgment
     public static Rdv3Judgment Read(string id, Rdv3Json o)
     {
         if (o.Kind != Rdv3Json.TObject) { throw o.Fail("must be an object"); }
-        o.Only("source", "rules", "results");
+        o.Only("source", "rules", "results", "label");
         Rdv3Judgment j = new Rdv3Judgment();
         j.Id = id;
+        j.Label = o.StrOr("label", "").Trim();
         j.Source = Rdv3Bind.Read(o.Obj("source", true));
         List<Rdv3Json> rules = o.Objs("rules", true);
         for (int i = 0; i < rules.Count; i++)
@@ -231,6 +237,28 @@ public sealed class Rdv3WorkState
     // automatic: a single hit from the watched application advances the
     // state; manual: only the work-state button can advance it.
     public string Trigger = "manual";
+    public string AutomaticJudgment = "";
+    public string AutomaticResult = "";
+    private int automaticLine;
+
+    public bool AllowsAutomatic(Rdv3Screen screen, Rdv3View view, Rdv3Fields fields)
+    {
+        if (Trigger != "automatic" || view == null || view.Record == null) { return false; }
+        if (AutomaticJudgment.Length == 0) { return true; }
+        Rdv3Verdict verdict = Rdv3Eval.Judge(screen.JudgmentOf(AutomaticJudgment), view, fields);
+        return verdict.Result != null && verdict.Result.Id == AutomaticResult;
+    }
+
+    public void CheckAutomatic(Rdv3Screen screen)
+    {
+        if (AutomaticJudgment.Length == 0) { return; }
+        Rdv3Judgment judgment = screen.JudgmentOf(AutomaticJudgment);
+        if (judgment == null)
+        { throw new Rdv3LoadError("screen.workState.automaticWhen.judgment: " + AutomaticJudgment + " is not defined under judgments", automaticLine); }
+        if (AutomaticResult == Rdv3Judgment.Error || AutomaticResult == Rdv3Judgment.Undefined
+            || !judgment.Results.ContainsKey(AutomaticResult))
+        { throw new Rdv3LoadError("screen.workState.automaticWhen.result: " + AutomaticResult + " must name a defined non-error result", automaticLine); }
+    }
 
     public Rdv3StateDef ById(string id)
     {
@@ -266,9 +294,17 @@ public sealed class Rdv3WorkState
 
     public static Rdv3WorkState Read(Rdv3Json o)
     {
-        o.Only("store", "states", "initial", "transitions", "button", "trigger");
+        o.Only("store", "states", "initial", "transitions", "button", "trigger", "automaticWhen");
         Rdv3WorkState w = new Rdv3WorkState();
         w.Trigger = o.Word("trigger", w.Trigger, "automatic", "manual");
+        Rdv3Json automatic = o.Obj("automaticWhen", false);
+        if (automatic != null)
+        {
+            automatic.Only("judgment", "result");
+            w.AutomaticJudgment = automatic.Need("judgment");
+            w.AutomaticResult = automatic.Need("result");
+            w.automaticLine = automatic.Line;
+        }
         Rdv3Json store = o.Obj("store", true);
         store.Only("column");
         w.Column = store.Need("column");
@@ -339,7 +375,7 @@ public sealed class Rdv3ButtonDef
     public bool Primary;
 
     public static readonly string[] Actions =
-    { "search", "clear", "workState", "tableExport", "updateRecords", "deleteRecords", "sendChanges", "refreshLedger", "settings" };
+    { "search", "clear", "workState", "tableExport", "updateRecords", "deleteRecords", "restoreRecords", "sendChanges", "refreshLedger", "settings" };
 }
 
 public sealed class Rdv3RowDef
@@ -621,6 +657,8 @@ public sealed class Rdv3CandidatesDef
 // ---------------------------------------------------------------------------
 public sealed class Rdv3Screen
 {
+    public Dictionary<string, Rdv3Bind> Bindings;
+    public Dictionary<string, string> FixedActions = new Dictionary<string, string>(StringComparer.Ordinal);
     public double CardWidth = 1240;
     // Client size in CSS px; window borders and physical DPI are separate.
     public double StartWidth = 840;
@@ -654,6 +692,7 @@ public sealed class Rdv3Screen
     public List<Rdv3Bind> AllBindings()
     {
         List<Rdv3Bind> all = new List<Rdv3Bind>();
+        if (Bindings != null) { all.AddRange(Bindings.Values); }
         for (int i = 0; i < Sections.Count; i++) { Collect(Sections[i], all); }
         if (Candidates != null) { for (int i = 0; i < Candidates.Columns.Count; i++) { if (Candidates.Columns[i].Value != null) { all.Add(Candidates.Columns[i].Value); } } }
         foreach (KeyValuePair<string, Rdv3Judgment> kv in Judgments) { if (kv.Value.Source != null) { all.Add(kv.Value.Source); } }
@@ -672,6 +711,7 @@ public sealed class Rdv3Screen
     // ---- reading the "screen" member -------------------------------------------
     public static Rdv3Screen Read(Rdv3Json root)
     {
+        if (root.Has("bindings")) { return Rdv3FixedScreen.Read(root); }
         int before = root.ErrorCount;
         root.Only("card", "judgments", "workState", "export", "sections", "candidates");
         Rdv3Screen s = new Rdv3Screen();
@@ -752,6 +792,8 @@ public sealed class Rdv3Screen
     // a confirm text -- must be one of data.ledger.columns.
     public void Check(Rdv3Data data, Rdv3Validation validation = null)
     {
+        try { Work.CheckAutomatic(this); }
+        catch (Rdv3LoadError error) { Report(validation, error); }
         List<Rdv3Bind> all = AllBindings();
         for (int i = 0; i < all.Count; i++)
         {
@@ -760,7 +802,8 @@ public sealed class Rdv3Screen
             {
                 if (data.IndexOf(b.Requires[k]) < 0)
                 {
-                    Report(validation, new Rdv3LoadError("screen.requires: " + b.Requires[k] + " is not one of data.ledger.columns", b.Line));
+                    Report(validation, new Rdv3LoadError("screen.requires: " + b.Requires[k] + " is not one of data.ledger.columns. "
+                        + Rdv3Text.SettingsScreenNotSaved.Replace("{name}", b.Requires[k]), b.Line));
                 }
             }
             if (!b.IsField) { continue; }
@@ -768,7 +811,8 @@ public sealed class Rdv3Screen
             {
                 if (data.IndexOf(b.Fields[k]) < 0)
                 {
-                    Report(validation, new Rdv3LoadError("screen: " + b.Fields[k] + " is not one of data.ledger.columns", b.Line));
+                    Report(validation, new Rdv3LoadError("screen: " + b.Fields[k] + " is not one of data.ledger.columns. "
+                        + Rdv3Text.SettingsScreenNotSaved.Replace("{name}", b.Fields[k]), b.Line));
                 }
             }
         }
@@ -793,6 +837,12 @@ public sealed class Rdv3Screen
             }
         }
         for (int i = 0; i < Sections.Count; i++) { CheckButtons(Sections[i], data, validation); }
+        foreach (KeyValuePair<string, string> action in FixedActions)
+        {
+            Rdv3Section routing = new Rdv3Section();
+            routing.Buttons.Add(new Rdv3ButtonDef { Action = action.Key, Job = action.Value });
+            CheckButtons(routing, data, validation);
+        }
     }
 
     private static void Report(Rdv3Validation validation, Rdv3LoadError error)
@@ -840,6 +890,14 @@ public sealed class Rdv3Screen
     public string Describe()
     {
         StringBuilder sb = new StringBuilder();
+        if (Bindings != null)
+        {
+            sb.Append("layout=fixed-html bindings=").Append(Bindings.Count.ToString(CultureInfo.InvariantCulture));
+            sb.Append(" judgments=").Append(Judgments.Count.ToString(CultureInfo.InvariantCulture));
+            sb.Append(" states=").Append((Work == null) ? "0" : Work.States.Count.ToString(CultureInfo.InvariantCulture));
+            sb.Append(" trigger=").Append((Work == null) ? "-" : Work.Trigger);
+            return sb.ToString();
+        }
         sb.Append("sections=").Append(Sections.Count.ToString(CultureInfo.InvariantCulture));
         sb.Append(" judgments=").Append(Judgments.Count.ToString(CultureInfo.InvariantCulture));
         sb.Append(" states=").Append((Work == null) ? "0" : Work.States.Count.ToString(CultureInfo.InvariantCulture));

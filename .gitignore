@@ -23,7 +23,12 @@ dist/
 /data-1k/
 /data-100k/
 /data-tiny/
-/samples/
+/samples/*
+!/samples/current/
+!/samples/next-period/
+!/samples/partial-pay/
+!/samples/expected.json
+!/samples/README.md
 /work/
 /showcase/
 /build/fixtures/
@@ -37,9 +42,12 @@ dist/
 *.log
 *.pid
 *.xlsx
+!samples/current/data/*.xlsx
 *.xlsx.lock
 *.xlsx.version
+*.xlsx.local-*.state
 !tests/fixtures/sample-v4/*.xlsx
+!samples/next-period/*.xlsx
 
 # 退役した Excel / VBA 系のビルド生成物 (archive/vba, archive/comparisons)
 *.xlsm
@@ -77,5 +85,8 @@ dist/
 __pycache__/
 *.pyc
 
-# User-supplied production settings stay local (2026-09-10).
+# Environment-specific settings are kept locally.
 /configs/production/
+
+# Generated build candidates, separate from published releases.
+/build/packages/

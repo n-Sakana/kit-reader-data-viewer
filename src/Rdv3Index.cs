@@ -108,8 +108,10 @@ public sealed class Rdv3Index
             List<string> seen = new List<string>(scanColumns.Length);
             for (int c = 0; c < scanColumns.Length; c++)
             {
-                string value = Rdv3Input.Cell(Rdv3Ledger.FieldOf(scanLines[row], scanColumns[c]));
-                if (seen.Contains(value)) { continue; }
+                // Indexed and looked up under the same folding (width, hyphen,
+                // ASCII case), so the ledger's spelling and the typist's meet.
+                string value = Rdv3Input.SearchKey(Rdv3Ledger.FieldOf(scanLines[row], scanColumns[c]));
+                if (value.Length == 0 || seen.Contains(value)) { continue; }
                 seen.Add(value);
                 List<int> rows;
                 if (!map.TryGetValue(value, out rows))
@@ -124,7 +126,8 @@ public sealed class Rdv3Index
 
     public List<int> Find(string key)
     {
-        key = Rdv3Input.Cell(key);
+        key = (scanLines != null) ? Rdv3Input.SearchKey(key) : Rdv3Input.Cell(key);
+        if (key.Length == 0) { return null; }
         if (contains)
         {
             List<int> hits = new List<int>();
@@ -132,7 +135,7 @@ public sealed class Rdv3Index
             {
                 for (int c = 0; c < scanColumns.Length; c++)
                 {
-                    string value = Rdv3Input.Cell(Rdv3Ledger.FieldOf(scanLines[row], scanColumns[c]));
+                    string value = Rdv3Input.SearchKey(Rdv3Ledger.FieldOf(scanLines[row], scanColumns[c]));
                     if (value.IndexOf(key, StringComparison.Ordinal) < 0) { continue; }
                     hits.Add(row);
                     break;

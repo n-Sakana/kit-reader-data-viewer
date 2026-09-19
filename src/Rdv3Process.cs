@@ -28,6 +28,7 @@ public sealed class Rdv3ProcessResult
 {
     public readonly List<Rdv3JoinResult> Joins = new List<Rdv3JoinResult>();
     public readonly List<string> Warnings = new List<string>();
+    public readonly List<string> Notes = new List<string>();
     public string Kind = "";
     public string[] Columns = new string[0];
     public string[] Lines = new string[0];
@@ -118,6 +119,7 @@ internal sealed class Rdv3PreparedProcess
 {
     public readonly List<Rdv3InputResult> InputResults = new List<Rdv3InputResult>();
     public readonly List<string> Warnings = new List<string>();
+    public readonly List<string> Notes = new List<string>();
     public Rdv3Data Data;
     public Rdv3ProcessJobDef Job;
     public Dictionary<string, object> Inputs = new Dictionary<string, object>(StringComparer.Ordinal);
@@ -152,13 +154,19 @@ public static class Rdv3Process
             Rdv3Table table = (input.IsTable && tables != null) ? tables[input.TableOrd] : null;
             if (table == null)
             {
-                string path = Path.IsPathRooted(input.File) ? input.File : Path.Combine(dataDir, input.File);
+                string note;
+                string path = Rdv3Files.ResolveInput(input.File, input.FileMatch, dataDir, out note);
+                if (note != null) { prepared.Notes.Add(note); }
+                if (!Rdv3Files.Exists(path)) { throw new Rdv3DataError(Rdv3Files.MissingInputMessage(input.File, input.FileMatch, dataDir)); }
                 table = Rdv3Table.Read(path, input.Id, input.Enc, input.Columns ?? new string[] { input.Column }, input.KeyValidation, input.EncodingSetting, data.SourceReferences(input), input.HeaderRow, input.Delimiter, input.Sheet);
                 if (input.IsTable) { data.ValidateInput(table, input.TableOrd); }
                 new Rdv3Index(table);                    // enforce the configured duplicate rule
                 table.AddWarnings(prepared.Warnings);
+                table.AddNotes(prepared.Notes);
             }
             prepared.InputResults.Add(new Rdv3InputResult(input.Id, table));
+            if (input.IsTable) { data.Tables[input.TableOrd].Head = table.Head; }
+            else { input.Head = table.Head; }
             prepared.Inputs.Add(input.Id, input.IsTable
                 ? RelationOfTable(input, table) : RelationOfValues(input, table));
         }
@@ -177,9 +185,7 @@ public static class Rdv3Process
             Rdv3Relation relation = new Rdv3Relation();
             if (input.IsTable)
             {
-                string[] head = heads[input.TableOrd];
-                relation.Columns = new string[head.Length];
-                for (int c = 0; c < head.Length; c++) { relation.Columns[c] = input.Table + "." + head[c]; }
+                throw new InvalidDataException("$work requires the ledger's application-owned states");
             }
             else { relation.Columns = new string[] { input.Key }; }
             prepared.Inputs.Add(input.Id, relation);
@@ -196,6 +202,10 @@ public static class Rdv3Process
         for (int i = 0; i < data.Jobs.Count; i++)
         {
             Rdv3ProcessJobDef job = data.Jobs[i];
+            // a job whose table was not read this time is walked when it runs
+            bool headsKnown = true;
+            foreach (Rdv3ProcessInputDef input in job.Inputs) { if (input.IsTable && heads[input.TableOrd] == null) { headsKnown = false; } }
+            if (!headsKnown) { continue; }
             Action check = delegate {
             Rdv3PreparedProcess prepared = PrepareFromHeads(data, job, heads);
             Rdv3ProcessResult result = Execute(prepared, new string[0], new string[0], "", true);
@@ -244,6 +254,7 @@ public static class Rdv3Process
         object last = null;
         Rdv3ProcessResult result = new Rdv3ProcessResult();
         result.Warnings.AddRange(prepared.Warnings);
+        result.Notes.AddRange(prepared.Notes);
         int directUpdated = 0;
         List<string> directReset = new List<string>();
         for (int i = 0; i < job.Steps.Count; i++)
@@ -251,6 +262,47 @@ public static class Rdv3Process
             Rdv3ProcessStepDef step = job.Steps[i];
             object left = values[step.Target1];
             object right = (step.Target2.Length == 0) ? null : values[step.Target2];
+            object output;
+            try { output = RunStep(data, job, step, left, right, initialStored, result, directReset, ref directUpdated); }
+            catch (InvalidDataException error)
+            {
+                // Say which step of which job did not line up, in the words of
+                // the settings file, so a misspelt column is found where it was written.
+                string where = Rdv3Text.SettingsStepPrefix.Replace("{job}", job.Id)
+                    .Replace("{n}", (i + 1).ToString(CultureInfo.InvariantCulture))
+                    .Replace("{operation}", Rdv3Text.OperationLabel(step.Operation)).Replace("{target}", step.Target1);
+                string hint = error.Message.StartsWith(Rdv3Text.ProcessMissingColumn.Substring(0, 4), StringComparison.Ordinal) ? Rdv3Text.SettingsStepColumnHint : "";
+                throw new InvalidDataException(where + error.Message + hint);
+            }
+            Rdv3Relation outputTable = output as Rdv3Relation;
+            if (outputTable != null && outputTable.Kind != "ledger")
+            { output = ValidResultTypes(data, outputTable, step, result); }
+            values[step.Output] = output;
+            last = output;
+        }
+
+        Rdv3Relation finalLedger = last as Rdv3Relation;
+        if (finalLedger != null && finalLedger.Kind == "ledger")
+        {
+            ValidateLedgerIdentity(data, job, finalLedger);
+        }
+        FillResult(result, last);
+        if (result.Update == null && last is Rdv3Relation) { result.Update = new Rdv3UpdateResult(); }
+        if (result.Update != null)
+        {
+            result.Update.Lines = result.Lines;
+            result.Update.States = result.States;
+            result.Update.Deleted = result.Deleted;
+            result.Update.Updated += directUpdated;
+            result.Update.ResetLines.AddRange(directReset);
+        }
+        if (capture) { Capture(values, result); }
+        return result;
+    }
+
+    private static object RunStep(Rdv3Data data, Rdv3ProcessJobDef job, Rdv3ProcessStepDef step, object left, object right,
+                                  string initialStored, Rdv3ProcessResult result, List<string> directReset, ref int directUpdated)
+    {
             object output;
             if (step.Operation == "join")
             {
@@ -308,30 +360,7 @@ public static class Rdv3Process
                 result.Deleted += update.Deleted;
             }
             else { throw new InvalidOperationException(Rdv3Text.Format(Rdv3Text.ProcessUnknownOperation, step.Operation)); }
-            Rdv3Relation outputTable = output as Rdv3Relation;
-            if (outputTable != null && outputTable.Kind != "ledger")
-            { output = ValidResultTypes(data, outputTable, step, result); }
-            values[step.Output] = output;
-            last = output;
-        }
-
-        Rdv3Relation finalLedger = last as Rdv3Relation;
-        if (finalLedger != null && finalLedger.Kind == "ledger")
-        {
-            ValidateLedgerIdentity(data, job, finalLedger);
-        }
-        FillResult(result, last);
-        if (result.Update == null && last is Rdv3Relation) { result.Update = new Rdv3UpdateResult(); }
-        if (result.Update != null)
-        {
-            result.Update.Lines = result.Lines;
-            result.Update.States = result.States;
-            result.Update.Deleted = result.Deleted;
-            result.Update.Updated += directUpdated;
-            result.Update.ResetLines.AddRange(directReset);
-        }
-        if (capture) { Capture(values, result); }
-        return result;
+            return output;
     }
 
     private static Rdv3Relation RelationOfTable(Rdv3ProcessInputDef input, Rdv3Table table)
@@ -576,11 +605,16 @@ public static class Rdv3Process
 
     private static bool Matches(string value, Rdv3ProcessWhereDef where)
     {
-        if (where.Operator == "equals") { return value == where.Value; }
-        if (where.Operator == "notEquals") { return value != where.Value; }
-        if (where.Operator == "contains") { return value.IndexOf(where.Value, StringComparison.Ordinal) >= 0; }
-        if (where.Operator == "startsWith") { return value.StartsWith(where.Value, StringComparison.Ordinal); }
-        if (where.Operator == "endsWith") { return value.EndsWith(where.Value, StringComparison.Ordinal); }
+        // A text predicate compares the folded forms (width, hyphen, ASCII
+        // case, padding): "success" in the definition meets "SUCCESS " in the
+        // file. The characters themselves still have to be the same.
+        string actual = Rdv3Input.Fold(value);
+        string wanted = Rdv3Input.Fold(where.Value);
+        if (where.Operator == "equals") { return string.Equals(actual, wanted, StringComparison.OrdinalIgnoreCase); }
+        if (where.Operator == "notEquals") { return !string.Equals(actual, wanted, StringComparison.OrdinalIgnoreCase); }
+        if (where.Operator == "contains") { return actual.IndexOf(wanted, StringComparison.OrdinalIgnoreCase) >= 0; }
+        if (where.Operator == "startsWith") { return actual.StartsWith(wanted, StringComparison.OrdinalIgnoreCase); }
+        if (where.Operator == "endsWith") { return actual.EndsWith(wanted, StringComparison.OrdinalIgnoreCase); }
         if (where.Operator == "empty") { return value.Length == 0; }
         if (where.Operator == "notEmpty") { return value.Length > 0; }
         if (value.Length == 0) { return false; }

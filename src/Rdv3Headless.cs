@@ -46,6 +46,11 @@ public static class Rdv3Headless
                     + " unmatchedRight=" + join.Member("unmatchedRight").Num.ToString(CultureInfo.InvariantCulture));
             }
             Rdv3Log configuredLog = new Rdv3Log(Rdv3Files.Full(cfg.Log, appDir));
+            foreach (Rdv3Json note in parsed.Member("notes").Items)
+            {
+                configuredLog.Write(execute ? "RunUpdate" : "ValidateOnly", "input", note.Str);
+                Console.WriteLine("NOTE " + note.Str);
+            }
             foreach (Rdv3Json warning in parsed.Member("warnings").Items)
             {
                 configuredLog.Write(execute ? "RunUpdate" : "ValidateOnly", "warning", warning.Str);
@@ -61,13 +66,13 @@ public static class Rdv3Headless
             if (validation == null)
             {
                 feedback.AppendLine("FAIL 1 error");
-                feedback.AppendLine("  " + configPath + ": " + error.Message);
+                feedback.AppendLine("  " + configPath + ": " + Rdv3Business.Localize(error.Message));
                 feedback.AppendLine("STOP " + stage + "; subsequent checks were not performed.");
             }
             else
             {
                 feedback.AppendLine("FAIL " + N(validation.Errors.Length) + " errors");
-                foreach (string detail in validation.Errors) { feedback.AppendLine("  " + configPath + ": " + detail); }
+                foreach (string detail in validation.Errors) { feedback.AppendLine("  " + configPath + ": " + Rdv3Business.Localize(detail)); }
                 feedback.AppendLine("STOP " + validation.Stage);
                 foreach (string remaining in validation.Unchecked) { feedback.AppendLine("NOT CHECKED " + remaining); }
             }
@@ -87,13 +92,22 @@ public static class Rdv3Headless
         Rdv3Table[] tables = new Rdv3Table[data.Tables.Count];
         string[][] heads = new string[tables.Length][];
         List<string> warnings = new List<string>();
+        List<string> notes = new List<string>();
         Rdv3Validation validation = execute ? null : new Rdv3Validation();
         for (int i = 0; i < tables.Length; i++)
         {
             Rdv3TableDef def = data.Tables[i];
             Action read = delegate {
-            Rdv3Log.Phase("reading input " + def.Id + " " + Rdv3Files.Full(def.File, dataDir));
-            tables[i] = Rdv3Table.Read(Rdv3Files.Full(def.File, dataDir), def.Id, def.Enc,
+            string note;
+            string path = Rdv3Files.ResolveInput(def.File, def.FileMatch, dataDir, out note);
+            if (note != null) { notes.Add(note); }
+            Rdv3Log.Phase("reading input " + def.Id + " " + path);
+            // a table only a deletion reads is optional here: without its file
+            // the deletion definition stays unchecked and says so
+            if (!Rdv3Files.Exists(path) && !data.IsUpdateInput(i))
+            { notes.Add(Rdv3Text.HeadlessDeleteSkipped.Replace("{file}", def.File)); return; }
+            if (!Rdv3Files.Exists(path)) { throw new Rdv3DataError(Rdv3Files.MissingInputMessage(def.File, def.FileMatch, dataDir)); }
+            tables[i] = Rdv3Table.Read(path, def.Id, def.Enc,
                 def.KeyColumns, def.KeyValidation, def.EncodingSetting, data.SourceReferences(def.Id), def.HeaderRow, def.Delimiter, def.Sheet);
             heads[i] = tables[i].Head;
             };
@@ -105,16 +119,20 @@ public static class Rdv3Headless
         data.Bind(heads, validation);
         data.ConvertWorkbookDates(tables);
         data.ValidateTypes(tables, validation);
-        foreach (Rdv3Table table in tables) { new Rdv3Index(table); table.AddWarnings(warnings); }
+        foreach (Rdv3Table table in tables) { if (table == null) { continue; } new Rdv3Index(table); table.AddWarnings(warnings); table.AddNotes(notes); }
         if (validation != null) { validation.Finish("input types", "job preparation"); }
         Rdv3PreparedProcess update = null;
         List<Rdv3InputResult> inputs = new List<Rdv3InputResult>();
         for (int j = 0; j < data.Jobs.Count; j++)
         {
+            bool inputsRead = true;
+            foreach (Rdv3ProcessInputDef input in data.Jobs[j].Inputs) { if (input.IsTable && tables[input.TableOrd] == null) { inputsRead = false; } }
+            if (!inputsRead) { continue; }
             Action prepare = delegate {
             Rdv3Log.Phase("preparing job " + data.Jobs[j].Id);
             Rdv3PreparedProcess prepared = Rdv3Process.Prepare(data, data.Jobs[j], dataDir, tables);
             warnings.AddRange(prepared.Warnings);
+            foreach (string note in prepared.Notes) { if (!notes.Contains(note)) { notes.Add(note); } }
             if (data.Jobs[j] == data.UpdateJob) { update = prepared; inputs.AddRange(prepared.InputResults); }
             };
             if (validation == null) { prepare(); }
@@ -122,16 +140,23 @@ public static class Rdv3Headless
         }
         if (validation != null) { validation.Finish("job preparation", "job execution (use -RunUpdate after fixing the errors)"); }
         string[] before = new string[0], states = new string[0];
+        Rdv3LedgerProtection protection = Rdv3LedgerProtection.Create(data);
         if (execute && !string.IsNullOrEmpty(baselinePath))
         {
             Rdv3Log.Phase("reading baseline " + baselinePath);
             Rdv3LedgerSnapshot snapshot = new Rdv3LedgerStore(baselinePath, data, cfg.Screen.Work, null).Read(data.Head);
             before = snapshot.Lines; states = snapshot.States;
+            protection = snapshot.Protection;
             if (snapshot.Warning.Length > 0) { warnings.Add(snapshot.Warning); }
         }
         Rdv3Log.Phase(execute ? "executing update job " + data.UpdateJob.Id : "validation finished");
         Rdv3ProcessResult result = execute
             ? Rdv3Process.Execute(update, before, states, cfg.Screen.Work.InitialStored, true) : null;
+        if (result != null && result.Update != null)
+        {
+            protection.ProtectUpdate(data, cfg.Screen.Work.InitialStored, before, states, result.Lines, result.Update);
+            result.Lines = result.Update.Lines; result.States = result.Update.States;
+        }
         if (result != null) { warnings.AddRange(result.Warnings); }
         List<string> reset = result == null ? new List<string>()
             : new Rdv3ResetNotice(data.IdentityCols, cfg.Screen.Work.InitialStored).ChangedRows(before, states, result.Lines, result.States);
@@ -165,6 +190,7 @@ public static class Rdv3Headless
             sb.Append(",\"skippedInvalid\":").Append(N(input.SkippedInvalid)).Append('}');
         }
         sb.Append("],\"warnings\":").Append(Rdv3WebJson.S(new List<string>(new HashSet<string>(warnings)).ToArray()));
+        sb.Append(",\"notes\":").Append(Rdv3WebJson.S(notes.ToArray()));
         sb.Append(",\"joins\":[");
         if (result != null)
         {
@@ -183,6 +209,7 @@ public static class Rdv3Headless
         if (result != null)
         {
             sb.Append(",\"columns\":").Append(Rdv3WebJson.S(data.ColumnRefs));
+            sb.Append(",\"ledgerHead\":").Append(Rdv3WebJson.S(data.Head));
             sb.Append(",\"rows\":").Append(Rows(result.Lines));
             sb.Append(",\"states\":").Append(Rdv3WebJson.S(result.States));
             sb.Append(",\"resetRows\":").Append(Rows(reset.ToArray()));

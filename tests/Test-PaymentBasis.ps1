@@ -4,7 +4,7 @@ $ErrorActionPreference='Stop'
 if(-not $Root){$Root=Split-Path -Parent $PSScriptRoot}
 if(-not $DataDir){$DataDir=Join-Path $Root 'tests/fixtures/sample-v4'}
 if(-not $Config){$Config=Join-Path $DataDir 'settings.json'}
-if(-not $ActualConfig){$ActualConfig=Join-Path $Root 'configs/production/settings.json'}
+if(-not $ActualConfig){$ActualConfig=Join-Path $Root 'configs/sample/settings.json'}
 . (Join-Path $Root 'build/test_support.ps1')
 Import-RdvProduct -Root $Root
 $cfg=[Rdv3Config]::Load($Config)
@@ -102,14 +102,14 @@ try{[Rdv3Config]::Load($invalid)|Out-Null}catch{$rejected=$true}
 Assert $rejected 'Application state was allowed on an input table'
 $actual=[Rdv3Config]::Load($ActualConfig)
 $actual.Screen.Check($actual.Data)
-Assert ($actual.Data.IdentityRefs[0] -eq 'PAY.オーダーID') 'Production identity is not PAY based'
-Assert ($actual.Screen.Judgments['paymentStatus'].Source.Fields[0] -eq 'PAYMAP.決済確認済') 'Production verdict does not use both statuses'
+Assert ($actual.Data.IdentityRefs[0] -eq 'PAY.オーダーID') 'Supplied config identity is not PAY based'
+Assert ($actual.Screen.Judgments['paymentStatus'].Source.Fields[0] -eq 'PAYMAP.決済確認済') 'Supplied config verdict does not use both statuses'
 $actualDelete=@($actual.Data.Jobs|Where-Object {$_.Kind -eq 'delete'})[0]
-Assert ($actualDelete.Steps[1].Where.Column -eq '$work' -and $actualDelete.Steps[1].Where.Value -eq 'TRUE') 'Production lacks processed-only deletion'
+Assert ($actualDelete.Steps[1].Where.Column -eq '$work' -and $actualDelete.Steps[1].Where.Value -eq 'TRUE') 'Supplied config lacks processed-only deletion'
 [Rdv3Xlsx]::Write((Join-Path $evidence 'ledger-after.xlsx'),$cfg.Data.Head,$cfg.Screen.Work.Column,$deleted.Lines,$deleted.States,'payment-check',[Rdv3Files]::StorageContract($cfg.Data,$cfg.Screen.Work))
 $reloadLines=[string[]]@();$reloadStates=[string[]]@()
 [Rdv3Xlsx]::Read((Join-Path $evidence 'ledger-after.xlsx'),$cfg.Data.Head,$cfg.Screen.Work.Column,[ref]$reloadLines,[ref]$reloadStates)
 Assert ($reloadLines.Length -eq 80 -and @($reloadStates|Where-Object {$_ -eq 'TRUE'}).Count -eq 1) 'Saved ledger lost retained state'
-$report=@{rows=$result.Lines.Length;paid=$counts.paid;unpaid=$counts.unpaid;withoutApplication=$noApp;repeatRows=$repeat.Lines.Length;deleted=$deleted.Deleted;remaining=$deleted.Lines.Length;unprocessedDeleted=$unprocessed.Deleted;mixedDeleted=$mixed.Deleted;crossedPairDeleted=$crossed.Deleted;productionConfigChecked=$true}
+$report=@{rows=$result.Lines.Length;paid=$counts.paid;unpaid=$counts.unpaid;withoutApplication=$noApp;repeatRows=$repeat.Lines.Length;deleted=$deleted.Deleted;remaining=$deleted.Lines.Length;unprocessedDeleted=$unprocessed.Deleted;mixedDeleted=$mixed.Deleted;crossedPairDeleted=$crossed.Deleted;suppliedConfigChecked=$true}
 [IO.File]::WriteAllText((Join-Path $evidence 'verified.json'),($report|ConvertTo-Json),$utf8)
 Write-Output ('Evidence: '+$evidence)

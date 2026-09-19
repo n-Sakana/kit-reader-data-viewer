@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.ComponentModel;
 using System.Globalization;
 using System.IO;
@@ -69,6 +69,17 @@ namespace ReaderDataViewer
         private CoreWebView2Environment webViewEnvironment;
         private DialogWindow dialogWindow;
         private DispatcherFrame dialogFrame;
+        private WindowState restoredState = WindowState.Normal;
+
+        [DllImport("user32.dll")]
+        private static extern IntPtr GetForegroundWindow();
+
+        public bool BringToFrontForRead()
+        {
+            if (WindowState == WindowState.Minimized) { WindowState = restoredState; }
+            Activate();
+            return GetForegroundWindow() == new WindowInteropHelper(this).Handle;
+        }
 
         public event EventHandler PageLoaded;
         public event Action<string> WebMessage;
@@ -81,6 +92,7 @@ namespace ReaderDataViewer
             targetClientWidth = Math.Max(480.0, screen.StartWidth);
             targetClientHeight = Math.Max(300.0, screen.StartHeight);
             Title = "Reader Data Viewer";
+            StateChanged += delegate { if (WindowState != WindowState.Minimized) { restoredState = WindowState; } };
             Width = targetClientWidth;
             Height = targetClientHeight;
             MinWidth = 480;
@@ -136,7 +148,8 @@ namespace ReaderDataViewer
             get
             {
                 Point p = PointToScreen(new Point(0, 0));
-                return new Rect(p.X, p.Y, ActualWidth, ActualHeight);
+                Point end = PointToScreen(new Point(ActualWidth, ActualHeight));
+                return new Rect(p, end);
             }
         }
 
@@ -651,10 +664,32 @@ namespace ReaderDataViewer
                 frameWidth = ActualWidth - webView.ActualWidth;
                 frameHeight = ActualHeight - webView.ActualHeight;
             }
-            Width = clientWidth + frameWidth;
-            Height = clientHeight + frameHeight;
-            Left = Owner.Left + (Owner.ActualWidth - Width) / 2;
-            Top = Owner.Top + (Owner.ActualHeight - Height) / 2;
+            // A dialog taller than the desktop was centred on the owner from
+            // its unclamped height and ended up entirely above the screen: the
+            // owner was disabled by a modal nobody could see or close. The
+            // window is limited to the work area, and its position is kept on
+            // the visible desktop; the page scrolls what does not fit.
+            Rect area = SystemParameters.WorkArea;
+            Width = Math.Min(clientWidth + frameWidth, Math.Max(240.0, area.Width));
+            Height = Math.Min(clientHeight + frameHeight, Math.Max(160.0, area.Height));
+            double left = Owner.Left + (Owner.ActualWidth - Width) / 2;
+            double top = Owner.Top + (Owner.ActualHeight - Height) / 2;
+            double screenLeft = SystemParameters.VirtualScreenLeft;
+            double screenTop = SystemParameters.VirtualScreenTop;
+            double screenRight = screenLeft + SystemParameters.VirtualScreenWidth;
+            double screenBottom = screenTop + SystemParameters.VirtualScreenHeight;
+            // An owner kept off the desktop on purpose (the headless probe)
+            // keeps its dialogs there too; only a visible owner's dialog is
+            // pulled onto the screen.
+            bool ownerOnScreen = Owner.Left < screenRight && Owner.Left + Owner.ActualWidth > screenLeft
+                && Owner.Top < screenBottom && Owner.Top + Owner.ActualHeight > screenTop;
+            if (ownerOnScreen)
+            {
+                left = Math.Max(screenLeft, Math.Min(left, screenRight - Width));
+                top = Math.Max(screenTop, Math.Min(top, screenBottom - Height));
+            }
+            Left = left;
+            Top = top;
             sized = true;
             webView.SetValue(UIElement.OpacityProperty, 1.0);
             Activate();

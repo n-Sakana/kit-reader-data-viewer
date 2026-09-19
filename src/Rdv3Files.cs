@@ -44,17 +44,88 @@ public static class Rdv3Files
     private static List<string> InputPaths(Rdv3Data data, string dataDir)
     {
         HashSet<string> seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        for (int i = 0; i < data.Tables.Count; i++) { seen.Add(Full(data.Tables[i].File, dataDir)); }
+        string note;
+        for (int i = 0; i < data.Tables.Count; i++)
+        { seen.Add(ResolveInput(data.Tables[i].File, data.Tables[i].FileMatch, dataDir, out note)); }
         // File-only job inputs (for example delete.csv) are inputs too.
         for (int j = 0; j < data.Jobs.Count; j++)
         {
             for (int i = 0; i < data.Jobs[j].Inputs.Count; i++)
             {
-                string file = data.Jobs[j].Inputs[i].File;
-                if (!string.IsNullOrEmpty(file)) { seen.Add(Full(file, dataDir)); }
+                Rdv3ProcessInputDef input = data.Jobs[j].Inputs[i];
+                if (!string.IsNullOrEmpty(input.File)) { seen.Add(ResolveInput(input.File, input.FileMatch, dataDir, out note)); }
             }
         }
         return new List<string>(seen);
+    }
+
+    // extensionKey is a NameKey (upper-cased ASCII), so the constants are too.
+    private static bool IsInputExtension(string extensionKey)
+    {
+        return extensionKey == ".CSV" || extensionKey == ".TXT" || extensionKey == ".TSV" || extensionKey == ".XLSX";
+    }
+
+    // The settings dialog names a file: say now, not at the next start, when
+    // nothing in the data folder answers to that name. Returns null when it resolves.
+    public static string CheckInputName(string file, string match, string dataDirSetting, string appDir)
+    {
+        string dataDir;
+        try { dataDir = Full(dataDirSetting, appDir); }
+        catch (Exception) { return Rdv3Text.ErrDataDir + dataDirSetting; }
+        if (!Directory.Exists(dataDir)) { return Rdv3Text.ErrDataDir + dataDir; }
+        string note;
+        string path = ResolveInput(file, match, dataDir, out note);
+        return Exists(path) ? null : MissingInputMessage(file, match, dataDir);
+    }
+
+    // Where an input file is. "exact": the name as written when that file
+    // exists, else the one file whose name reads the same (width, spacing,
+    // ASCII case). "prefix": the newest file whose name starts with the
+    // configured stem and carries its extension. A departure from the name as
+    // written comes back as a note; a name that matches nothing resolves to
+    // the configured path, so the caller reports the missing file by name.
+    public static string ResolveInput(string file, string match, string dataDir, out string note)
+    {
+        note = null;
+        string configured = Full(file, dataDir);
+        bool prefix = string.Equals(match, "prefix", StringComparison.OrdinalIgnoreCase);
+        if (!prefix && Exists(configured)) { return configured; }
+        string directory = Path.GetDirectoryName(configured);
+        string name = Path.GetFileName(configured);
+        if (directory == null || !Directory.Exists(directory)) { return configured; }
+        string wantStem = Rdv3Input.NameKey(Path.GetFileNameWithoutExtension(name));
+        string wantExt = Rdv3Input.NameKey(Path.GetExtension(name));
+        if (wantStem.Length == 0) { return configured; }
+        FileInfo best = null;
+        int matched = 0;
+        foreach (FileInfo candidate in new DirectoryInfo(directory).GetFiles())
+        {
+            string stem = Rdv3Input.NameKey(Path.GetFileNameWithoutExtension(candidate.Name));
+            string extension = Rdv3Input.NameKey(candidate.Extension);
+            bool extensionOk = (wantExt.Length == 0) ? IsInputExtension(extension) : extension == wantExt;
+            bool stemOk = prefix ? stem.StartsWith(wantStem, StringComparison.Ordinal) : stem == wantStem;
+            if (!extensionOk || !stemOk) { continue; }
+            matched++;
+            if (best == null || candidate.LastWriteTimeUtc > best.LastWriteTimeUtc
+                || (candidate.LastWriteTimeUtc == best.LastWriteTimeUtc && string.CompareOrdinal(candidate.Name, best.Name) > 0))
+            { best = candidate; }
+        }
+        if (best == null) { return configured; }
+        if (!Same(best.FullName, configured) || matched > 1)
+        {
+            note = Rdv3Text.InputFileResolved.Replace("{configured}", file)
+                .Replace("{mode}", prefix ? Rdv3Text.FileMatchPrefix : Rdv3Text.FileMatchExact)
+                .Replace("{actual}", best.Name + (matched > 1 ? " (" + matched.ToString(System.Globalization.CultureInfo.InvariantCulture) + ")" : ""));
+        }
+        return best.FullName;
+    }
+
+    public static string MissingInputMessage(string file, string match, string dataDir)
+    {
+        bool prefix = string.Equals(match, "prefix", StringComparison.OrdinalIgnoreCase);
+        return Rdv3Text.InputFileNotFound.Replace("{configured}", file)
+            .Replace("{mode}", prefix ? Rdv3Text.FileMatchPrefix : Rdv3Text.FileMatchExact)
+            .Replace("{dir}", Path.GetDirectoryName(Full(file, dataDir)) ?? dataDir);
     }
 
     public static void ValidateLayout(Rdv3Config cfg, string appDir, string configPath)
@@ -84,12 +155,16 @@ public static class Rdv3Files
                                      string logPath, string configPath, Rdv3Data data)
     { return NewOutputPath(value, appDir, dataDir, ledgerPath, logPath, configPath, data, ".json"); }
 
+    public static string MigrationPath(string value, string appDir, string dataDir, string ledgerPath,
+                                       string logPath, string configPath, Rdv3Data data)
+    { return NewOutputPath(value, appDir, dataDir, ledgerPath, logPath, configPath, data, ".xlsx"); }
+
     private static string NewOutputPath(string value, string appDir, string dataDir, string ledgerPath,
                                          string logPath, string configPath, Rdv3Data data, string extension)
     {
         string path = Full(value, appDir);
         if (!string.Equals(Path.GetExtension(path), extension, StringComparison.OrdinalIgnoreCase))
-        { throw new IOException(extension == ".csv" ? Rdv3Text.ExportCsvOnly : "-Output: use a new .json file"); }
+        { throw new IOException(extension == ".csv" ? Rdv3Text.ExportCsvOnly : "-Output: use a new " + extension + " file"); }
         if (ProgramFile(path, appDir, configPath) || Same(path, ledgerPath) || Same(path, logPath)
             || Same(path, ledgerPath + ".lock") || Same(path, ledgerPath + ".version")
             || Rdv3OperationLog.IsOperationLog(path, ledgerPath))
@@ -111,7 +186,7 @@ public static class Rdv3Files
         {
             int column = fields[i] == "$work" ? -1 : data.IndexOf(fields[i]);
             if (column < 0 && fields[i] != "$work") { throw new InvalidDataException("unknown export field: " + fields[i]); }
-            headers[i] = column < 0 ? stateColumn : data.Columns[column].Column;
+            headers[i] = column < 0 ? stateColumn : data.Columns[column].Heading;
             int count; counts.TryGetValue(headers[i], out count); counts[headers[i]] = count + 1;
         }
         HashSet<string> used = new HashSet<string>(StringComparer.Ordinal);
@@ -170,6 +245,13 @@ public static class Rdv3Files
     }
 
     public static string StorageContract(Rdv3Data data, Rdv3WorkState work)
+    {
+        // Old clients must reject the new ledger rather than drop its archive.
+        return Rdv3PendingStore.DigestOf("RDV-STORAGE-2:" + LegacyStorageContract(data, work)
+            + ":" + Rdv3BusinessDefinition.Bound(data));
+    }
+
+    public static string LegacyStorageContract(Rdv3Data data, Rdv3WorkState work)
     {
         List<string> entries = new List<string>();
         entries.Add("RDV-STORAGE-1");

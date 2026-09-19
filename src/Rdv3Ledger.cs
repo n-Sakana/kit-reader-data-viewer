@@ -27,10 +27,14 @@ public sealed class Rdv3MergeResult
     public int Rows;
     public long Checksum;
     public readonly List<string> Warnings = new List<string>();
-    // per table (definition order): read ms, index ms, distinct keys
+    // what the readers absorbed (file chosen by prefix, BOM, separator,
+    // header spelling): for the log, not for a dialog
+    public readonly List<string> Notes = new List<string>();
+    // per table (definition order): read ms, index ms, distinct keys, rows kept
     public double[] ReadMs;
     public double[] IndexMs;
     public int[] Keys;
+    public int[] TableRows;
     // per join (definition order): join ms, matched spine rows
     public double[] JoinMs;
     public int[] Matched;
@@ -50,6 +54,8 @@ public sealed class Rdv3MergeResult
 
 public sealed class Rdv3UpdateResult
 {
+    public int Protected;
+    public int SkippedDeleted;
     public string[] Lines;
     public string[] States;
     public readonly List<string> ResetLines = new List<string>();
@@ -63,6 +69,7 @@ public sealed class Rdv3UpdateResult
 public sealed class Rdv3DeleteResult
 {
     public readonly List<string> Warnings = new List<string>();
+    public readonly List<string> Notes = new List<string>();
     public string[] Lines;
     public string[] States;
     public int Deleted;
@@ -91,6 +98,7 @@ public static class Rdv3Ledger
         r.ReadMs = new double[nt];
         r.IndexMs = new double[nt];
         r.Keys = new int[nt];
+        r.TableRows = new int[nt];
         r.JoinMs = new double[job.Joins.Count];
         r.Matched = new int[job.Joins.Count];
 
@@ -99,8 +107,15 @@ public static class Rdv3Ledger
         string[][] heads = new string[nt][];
         for (int t = 0; t < nt; t++)
         {
+            // only the tables this job reads; a deletion list is read by the deletion
+            if (!IsInput(job, t)) { r.TableRows[t] = -1; continue; }
             long m = Rdv3Clock.Now();
-            tables[t] = Rdv3Table.Read(Path.Combine(dataDir, d.Tables[t].File), d.Tables[t].Id,
+            string note;
+            string path = Rdv3Files.ResolveInput(d.Tables[t].File, d.Tables[t].FileMatch, dataDir, out note);
+            if (note != null) { r.Notes.Add(note); }
+            if (!Rdv3Files.Exists(path))
+            { throw new Rdv3DataError(Rdv3Files.MissingInputMessage(d.Tables[t].File, d.Tables[t].FileMatch, dataDir)); }
+            tables[t] = Rdv3Table.Read(path, d.Tables[t].Id,
                 d.Tables[t].Enc, d.Tables[t].KeyColumns, d.Tables[t].KeyValidation, d.Tables[t].EncodingSetting, d.SourceReferences(d.Tables[t].Id),
                 d.Tables[t].HeaderRow, d.Tables[t].Delimiter, d.Tables[t].Sheet);
             r.ReadMs[t] = Rdv3Clock.MsSince(m);
@@ -112,7 +127,10 @@ public static class Rdv3Ledger
         d.ValidateTypes(tables);
         for (int t = 0; t < nt; t++)
         {
+            if (tables[t] == null) { continue; }
             tables[t].AddWarnings(r.Warnings);
+            tables[t].AddNotes(r.Notes);
+            r.TableRows[t] = tables[t].Rows;
             long m = Rdv3Clock.Now();
             index[t] = new Rdv3Index(tables[t]);
             r.IndexMs[t] = Rdv3Clock.MsSince(m);
@@ -126,6 +144,7 @@ public static class Rdv3Ledger
             r.Prepared = Rdv3Process.Prepare(d, job, dataDir, tables);
             Rdv3ProcessResult process = Rdv3Process.Execute(r.Prepared, new string[0], new string[0], "", false);
             r.Warnings.AddRange(process.Warnings);
+            foreach (string note in process.Notes) { if (!r.Notes.Contains(note)) { r.Notes.Add(note); } }
             if (process.Kind != "ledger") { throw new InvalidDataException(Rdv3Text.LedgerNoResult); }
             r.Head = d.Head;
             r.Lines = process.Lines;
@@ -188,6 +207,12 @@ public static class Rdv3Ledger
         r.Head = d.Head;
         r.Lines = ComposeLines(d, job, tables, joined);
         return r;
+    }
+
+    private static bool IsInput(Rdv3ProcessJobDef job, int tableOrd)
+    {
+        foreach (Rdv3ProcessInputDef input in job.Inputs) { if (input.IsTable && input.TableOrd == tableOrd) { return true; } }
+        return false;
     }
 
     private static string[] ComposeLines(Rdv3Data d, Rdv3ProcessJobDef job,
@@ -461,6 +486,7 @@ public static class Rdv3Ledger
         result.States = run.States;
         result.Deleted = run.Deleted;
         result.Warnings.AddRange(run.Warnings);
+        result.Notes.AddRange(run.Notes);
         return result;
     }
 

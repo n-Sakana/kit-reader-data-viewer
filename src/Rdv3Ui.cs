@@ -1,4 +1,4 @@
-﻿// ============================================================================
+// ============================================================================
 // Rdv3Ui.cs -- settings-driven WebView2 UI bridge.
 //
 // The browser owns pixels and focus.  Rdv3App still owns every operation and
@@ -74,9 +74,15 @@ public sealed class Rdv3Form
     private bool shown;
     private bool opsEnabled;
     private bool workEnabled;
+    // BLOCKED (no ledger yet): only the update and reload buttons are open
+    private bool retryEnabled;
     private string keyText = "";
     private string notice = "";
     private bool noticeError;
+    // what the judgment band says while there is no record: a key outside
+    // the configured form, or a key the ledger does not hold
+    private string judgmentNotice = "";
+    private string judgmentLook = "";
     private readonly DispatcherTimer noticeTimer = new DispatcherTimer();
     private Rdv3Data exportFilterData;
     private int modalToken;
@@ -97,6 +103,9 @@ public sealed class Rdv3Form
     public Action OnTableExport;
     public Action<string> OnUpdateRecords;
     public Action<string> OnDeleteRecords;
+    public Action OnRestoreRecords;
+
+    public bool BringToFrontForRead() { return host.BringToFrontForRead(); }
     public Action OnSendChanges;
     public Action OnSettings;
 
@@ -208,12 +217,29 @@ public sealed class Rdv3Form
         Ui(delegate { workEnabled = on; RefreshValues(); });
     }
 
+    public void EnableRetry(bool on)
+    {
+        Ui(delegate { retryEnabled = on; RefreshValues(); });
+    }
+
+    public void SetJudgmentNotice(string text, string look)
+    {
+        Ui(delegate
+        {
+            judgmentNotice = text ?? "";
+            judgmentLook = look ?? "";
+            RefreshValues();
+        });
+    }
+
     public void ShowCandidates(string key, List<Rdv3CandRow> rows, int totalHits)
     {
         Ui(delegate
         {
             View.SearchKey = key ?? "";
             keyText = View.SearchKey;
+            judgmentNotice = "";
+            judgmentLook = "";
             candidates = rows ?? new List<Rdv3CandRow>();
             candidateTotal = totalHits;
             View.CandidateCount = totalHits;
@@ -262,6 +288,8 @@ public sealed class Rdv3Form
         Ui(delegate
         {
             if (!keepKey) { keyText = ""; }
+            judgmentNotice = "";
+            judgmentLook = "";
             View.SearchKey = "";
             candidates = new List<Rdv3CandRow>();
             candidateTotal = 0;
@@ -318,7 +346,7 @@ public sealed class Rdv3Form
     public bool Ask(string title, string body) { return Rdv3ConfirmForm.Ask(this, title, body); }
     public void Tell(string title, string body) { Rdv3ConfirmForm.Tell(this, title, body); }
     public bool AskLedgerSwitch(List<Rdv3CandRow> rows) { return Rdv3LedgerUpdateForm.Ask(this, rows); }
-    public void TellResetRows(List<Rdv3CandRow> rows) { Rdv3LedgerUpdateForm.TellReset(this, rows); }
+    public void TellResetRows(List<Rdv3CandRow> rows, string body) { Rdv3LedgerUpdateForm.TellReset(this, rows, body); }
     public bool TellUnmatched(List<Rdv3UnmatchedChange> rows) { return Rdv3UnmatchedForm.Tell(this, rows); }
 
     public void Fatal(string title, string body)
@@ -345,9 +373,7 @@ public sealed class Rdv3Form
         {
             return "client=" + ((int)Math.Round(host.ActualWidth)).ToString(CultureInfo.InvariantCulture)
                 + "x" + ((int)Math.Round(host.ActualHeight)).ToString(CultureInfo.InvariantCulture)
-                + " card=" + Screen.CardWidth.ToString(CultureInfo.InvariantCulture)
-                + " font=" + Screen.FontFamily
-                + " sections=" + Screen.Sections.Count.ToString(CultureInfo.InvariantCulture)
+                + " layout=fixed-html"
                 + " bridge=webview2";
         }
     }
@@ -389,10 +415,13 @@ public sealed class Rdv3Form
         else if (action == "sendChanges" && OnSendChanges != null) { OnSendChanges(); }
         else if (action == "updateRecords" && OnUpdateRecords != null) { OnUpdateRecords(JobOf(action)); }
         else if (action == "deleteRecords" && OnDeleteRecords != null) { OnDeleteRecords(JobOf(action)); }
+        else if (action == "restoreRecords" && OnRestoreRecords != null) { OnRestoreRecords(); }
     }
 
     private string JobOf(string action)
     {
+        string fixedJob;
+        if (Screen.FixedActions.TryGetValue(action, out fixedJob)) { return fixedJob; }
         for (int i = 0; i < Screen.Sections.Count; i++)
         {
             for (int k = 0; k < Screen.Sections[i].Buttons.Count; k++)
@@ -499,6 +528,8 @@ public sealed class Rdv3Form
             else if (type == "modalResult") { CompleteModal(root); }
             else if (type == "dialogSize")
             {
+                // A delayed size message must not move a closed or newer dialog.
+                if (waitingToken == 0 || Number(root, "token", 0) != waitingToken) { return; }
                 host.SizeDialogSurface(
                     Number(root, "width", 0),
                     Number(root, "height", 0),
@@ -540,7 +571,8 @@ public sealed class Rdv3Form
         int candidateRows = Number(root, "candidateRows", -1);
         string error = "";
         string field = "";
-        string patternError = Rdv3Config.PatternError(pattern);
+        // the dialog leaves the number form out when the settings derive it
+        string patternError = (root.Member("pattern") == null) ? null : Rdv3Config.PatternError(pattern);
         if (patternError != null)
         {
             error = Rdv3Text.ErrPatternTyped + patternError;
@@ -555,6 +587,32 @@ public sealed class Rdv3Form
         {
             error = Rdv3Text.LblCandidateRows;
             field = "candidateRows";
+        }
+        else
+        {
+            Rdv3Json tables = root.Member("tables");
+            for (int i = 0; tables != null && tables.Kind == Rdv3Json.TArray && i < tables.Count; i++)
+            {
+                Rdv3Json item = tables.At(i);
+                string id = Text(item, "id");
+                string file = Text(item, "file").Trim();
+                if (file.Length == 0)
+                {
+                    error = Rdv3Text.ErrFileBlank + id;
+                    field = "table:" + id;
+                    break;
+                }
+                // only a file the update reads has to be there to save the
+                // settings; a deletion list is checked when the deletion runs
+                if (!Flag(item, "required", true)) { continue; }
+                string missing = Rdv3Files.CheckInputName(file, Text(item, "match"), dataDir, ReaderDataViewer.App.BaseDirectory);
+                if (missing != null)
+                {
+                    error = missing;
+                    field = "table:" + id;
+                    break;
+                }
+            }
         }
         host.PostSurfaceJson("{\"type\":\"settingsValidation\",\"token\":" +
             token.ToString(CultureInfo.InvariantCulture) +
@@ -609,6 +667,7 @@ public sealed class Rdv3Form
         }
         host.PostSurfaceJson("{\"type\":\"exportFilterValidation\",\"token\":" +
             token.ToString(CultureInfo.InvariantCulture) +
+            ",\"requestId\":" + Number(root, "requestId", 0).ToString(CultureInfo.InvariantCulture) +
             ",\"ok\":" + Rdv3WebJson.B(error.Length == 0) +
             ",\"error\":" + Rdv3WebJson.Q(error) +
             ",\"first\":" + Rdv3WebJson.Q(firstText) +
@@ -627,6 +686,7 @@ public sealed class Rdv3Form
         else if (action == "tableExport" && OnTableExport != null) { OnTableExport(); }
         else if (action == "updateRecords" && OnUpdateRecords != null) { OnUpdateRecords(job); }
         else if (action == "deleteRecords" && OnDeleteRecords != null) { OnDeleteRecords(job); }
+        else if (action == "restoreRecords" && OnRestoreRecords != null) { OnRestoreRecords(); }
         else if (action == "sendChanges" && OnSendChanges != null) { OnSendChanges(); }
         else if (action == "settings" && OnSettings != null) { OnSettings(); }
     }
@@ -728,27 +788,52 @@ public sealed class Rdv3Form
 
     private string BuildInitJson()
     {
-        StringBuilder sb = new StringBuilder(32768);
-        sb.Append("{\"type\":\"init\",\"screen\":{");
-        sb.Append("\"card\":{");
-        sb.Append("\"width\":").Append(Rdv3WebJson.N(Screen.CardWidth));
-        sb.Append(",\"startWidth\":").Append(Rdv3WebJson.N(Screen.StartWidth));
-        sb.Append(",\"startHeight\":").Append(Rdv3WebJson.N(Screen.StartHeight));
-        sb.Append(",\"gap\":").Append(Rdv3WebJson.N(Screen.Gap));
-        sb.Append(",\"padding\":").Append(Rdv3WebJson.A(Screen.Padding));
-        sb.Append(",\"font\":").Append(Rdv3WebJson.Q(Screen.FontFamily));
-        sb.Append(",\"fontSize\":").Append(Rdv3WebJson.N(Screen.FontSize));
-        sb.Append(",\"keyValueFontSize\":").Append(Rdv3WebJson.N(Screen.KeyValueFontSize));
-        sb.Append(",\"judgmentFontSize\":").Append(Rdv3WebJson.N(Screen.JudgmentFontSize));
-        sb.Append(",\"unsearchedFontSize\":").Append(Rdv3WebJson.N(Screen.UnsearchedFontSize));
-        sb.Append("},\"sections\":[");
-        for (int i = 0; i < Screen.Sections.Count; i++)
+        StringBuilder sb = new StringBuilder();
+        sb.Append("{\"type\":\"init\",\"screen\":{\"fixed\":true,\"actions\":{");
+        bool comma = false;
+        foreach (KeyValuePair<string, string> action in Screen.FixedActions)
+        {
+            if (comma) { sb.Append(','); }
+            comma = true;
+            sb.Append(Rdv3WebJson.Q(action.Key)).Append(':').Append(Rdv3WebJson.Q(action.Value));
+        }
+        // Captions the definition sets: the page keeps its own for the rest.
+        sb.Append("},\"labels\":{");
+        comma = false;
+        foreach (KeyValuePair<string, Rdv3Bind> binding in Screen.Bindings)
+        {
+            if (binding.Value.Label.Length == 0) { continue; }
+            if (comma) { sb.Append(','); }
+            comma = true;
+            sb.Append(Rdv3WebJson.Q(binding.Key)).Append(':').Append(Rdv3WebJson.Q(binding.Value.Label));
+        }
+        sb.Append("},\"judgmentLabels\":{");
+        comma = false;
+        foreach (KeyValuePair<string, Rdv3Judgment> judgment in Screen.Judgments)
+        {
+            if (judgment.Value.Label.Length == 0) { continue; }
+            if (comma) { sb.Append(','); }
+            comma = true;
+            sb.Append(Rdv3WebJson.Q(judgment.Key)).Append(':').Append(Rdv3WebJson.Q(judgment.Value.Label));
+        }
+        sb.Append("},\"candidateHeaders\":[");
+        List<Rdv3ColumnDef> columns = (Screen.Candidates == null) ? new List<Rdv3ColumnDef>() : Screen.Candidates.Columns;
+        List<string> hiddenColumns = new List<string>();
+        for (int i = 0; i < columns.Count; i++)
         {
             if (i > 0) { sb.Append(','); }
-            AppendSection(sb, Screen.Sections[i], "s" + i.ToString(CultureInfo.InvariantCulture));
+            sb.Append(Rdv3WebJson.Q(columns[i].Header ?? ""));
+            if (columns[i].Value != null && columns[i].Value.Hidden) { hiddenColumns.Add(i.ToString(CultureInfo.InvariantCulture)); }
         }
-        // Candidate columns are sent with the modal rows, not during init.
-        sb.Append("]},\"state\":").Append(BuildStateBody()).Append('}');
+        sb.Append("],\"candidateHidden\":[").Append(string.Join(",", hiddenColumns.ToArray())).Append(']');
+        // frames the definition does not use, and captions that are not a binding's
+        List<string> hidden = new List<string>();
+        foreach (KeyValuePair<string, Rdv3Bind> binding in Screen.Bindings) { if (binding.Value.Hidden) { hidden.Add(binding.Key); } }
+        sb.Append(",\"hidden\":").Append(Rdv3WebJson.S(hidden.ToArray()));
+        sb.Append(",\"searchLabel\":").Append(Rdv3WebJson.Q(Rdv3Business.SearchLabel));
+        sb.Append(",\"boxNames\":{\"user\":").Append(Rdv3WebJson.Q(Rdv3Business.UserBoxName));
+        sb.Append(",\"application\":").Append(Rdv3WebJson.Q(Rdv3Business.AppBoxName)).Append('}');
+        sb.Append("},\"state\":").Append(BuildStateBody()).Append('}');
         return sb.ToString();
     }
 
@@ -762,32 +847,23 @@ public sealed class Rdv3Form
         StringBuilder sb = new StringBuilder(16384);
         sb.Append("{\"values\":{");
         bool comma = false;
-        for (int i = 0; i < Screen.Sections.Count; i++)
+        foreach (KeyValuePair<string, Rdv3Bind> binding in Screen.Bindings)
         {
-            AppendSectionValues(
-                sb,
-                Screen.Sections[i],
-                "s" + i.ToString(CultureInfo.InvariantCulture),
-                ref comma);
+            AppendValue(sb, binding.Key, binding.Value, ref comma);
         }
         sb.Append("},\"judgments\":{");
         comma = false;
-        for (int i = 0; i < Screen.Sections.Count; i++)
+        foreach (KeyValuePair<string, Rdv3Judgment> judgment in Screen.Judgments)
         {
-            Rdv3Section section = Screen.Sections[i];
-            if (section.Type != "statusBand") { continue; }
             if (comma) { sb.Append(','); }
             comma = true;
-            string id = "s" + i.ToString(CultureInfo.InvariantCulture);
-            Rdv3Verdict verdict = Rdv3Eval.Judge(
-                Screen.JudgmentOf(section.Judgment),
-                View,
-                fields);
-            sb.Append(Rdv3WebJson.Q(id)).Append(":{");
+            Rdv3Verdict verdict = Rdv3Eval.Judge(judgment.Value, View, fields);
+            sb.Append(Rdv3WebJson.Q(judgment.Key)).Append(":{");
             if (!View.HasRecord || verdict.Result == null)
             {
-                sb.Append("\"text\":").Append(Rdv3WebJson.Q(Rdv3Text.Unsearched));
-                sb.Append(",\"look\":\"unsearched\",\"icon\":\"\"");
+                bool noticed = judgmentNotice.Length > 0;
+                sb.Append("\"text\":").Append(Rdv3WebJson.Q(noticed ? judgmentNotice : Rdv3Text.Unsearched));
+                sb.Append(",\"look\":").Append(Rdv3WebJson.Q(noticed ? judgmentLook : "unsearched")).Append(",\"icon\":\"\"");
             }
             else
             {
@@ -795,13 +871,7 @@ public sealed class Rdv3Form
                 sb.Append(",\"look\":").Append(Rdv3WebJson.Q(verdict.Result.Look));
                 sb.Append(",\"icon\":").Append(Rdv3WebJson.Q(verdict.Result.Icon));
             }
-            List<string> subs = new List<string>();
-            for (int k = 0; k < section.Sub.Count; k++)
-            {
-                string value = Rdv3Eval.Evaluate(section.Sub[k], View, fields, Screen.Work).Text;
-                if (!string.IsNullOrEmpty(value)) { subs.Add(value); }
-            }
-            sb.Append(",\"sub\":").Append(Rdv3WebJson.Q(string.Join(section.Joiner, subs.ToArray()))).Append('}');
+            sb.Append(",\"sub\":").Append(Rdv3WebJson.Q(UnpaidNote(verdict))).Append('}');
         }
         Rdv3StateDef workState = View.HasRecord
             ? Screen.Work.ByStored(View.StoredState) : Screen.Work.InitialState;
@@ -811,6 +881,7 @@ public sealed class Rdv3Form
         sb.Append("},\"key\":").Append(Rdv3WebJson.Q(keyText));
         sb.Append(",\"opsEnabled\":").Append(Rdv3WebJson.B(opsEnabled));
         sb.Append(",\"workEnabled\":").Append(Rdv3WebJson.B(workEnabled));
+        sb.Append(",\"retryEnabled\":").Append(Rdv3WebJson.B(retryEnabled));
         sb.Append(",\"workText\":").Append(Rdv3WebJson.Q(buttonText));
         sb.Append(",\"workDown\":").Append(Rdv3WebJson.B(down));
         sb.Append(",\"pending\":").Append(View.PendingCount.ToString(CultureInfo.InvariantCulture));
@@ -820,29 +891,22 @@ public sealed class Rdv3Form
         return sb.ToString();
     }
 
-    private void AppendSectionValues(
-        StringBuilder sb,
-        Rdv3Section section,
-        string path,
-        ref bool comma)
+    // Unpaid is one answer over several input files. The band says which of
+    // them is not done, so the reason a record does not become confirmed on
+    // its own does not have to be guessed.
+    private string UnpaidNote(Rdv3Verdict verdict)
     {
-        if (section.Value != null) { AppendValue(sb, path + ".value", section.Value, ref comma); }
-        for (int i = 0; i < section.Rows.Count; i++)
+        if (!View.HasRecord || verdict.Result == null || verdict.Result.Id != "unpaid") { return ""; }
+        List<string> names = new List<string>();
+        foreach (string[] condition in Rdv3Business.PaidConditions)
         {
-            AppendValue(sb, path + ".row" + i.ToString(CultureInfo.InvariantCulture), section.Rows[i].Value, ref comma);
+            int col = fields.IndexOf(condition[1]);
+            string value = (col >= 0 && col < View.Record.Length && View.Record[col] != null) ? View.Record[col] : "";
+            if (string.Equals(value, condition[2], StringComparison.Ordinal)) { continue; }
+            if (!names.Contains(condition[0])) { names.Add(condition[0]); }
         }
-        for (int i = 0; i < section.Sub.Count; i++)
-        {
-            AppendValue(sb, path + ".sub" + i.ToString(CultureInfo.InvariantCulture), section.Sub[i], ref comma);
-        }
-        for (int i = 0; i < section.Segments.Count; i++)
-        {
-            AppendValue(sb, path + ".segment" + i.ToString(CultureInfo.InvariantCulture), section.Segments[i].Value, ref comma);
-        }
-        for (int i = 0; i < section.Items.Count; i++)
-        {
-            AppendSectionValues(sb, section.Items[i], path + ".item" + i.ToString(CultureInfo.InvariantCulture), ref comma);
-        }
+        if (names.Count == 0) { return ""; }
+        return Rdv3Text.JudgeUnpaidSubFmt.Replace("{names}", string.Join(Rdv3Text.JudgeUnpaidSep, names.ToArray()));
     }
 
     private void AppendValue(StringBuilder sb, string id, Rdv3Bind bind, ref bool comma)
@@ -854,118 +918,6 @@ public sealed class Rdv3Form
         sb.Append("\"text\":").Append(Rdv3WebJson.Q(value.Text));
         sb.Append(",\"tone\":").Append(value.Tone.ToString(CultureInfo.InvariantCulture));
         sb.Append('}');
-    }
-
-    private static void AppendSection(StringBuilder sb, Rdv3Section section, string path)
-    {
-        sb.Append('{');
-        sb.Append("\"type\":").Append(Rdv3WebJson.Q(section.Type));
-        sb.Append(",\"id\":").Append(Rdv3WebJson.Q(path));
-        if (section.Margin != null) { sb.Append(",\"margin\":").Append(Rdv3WebJson.A(section.Margin)); }
-        if (section.Type == "titleBar")
-        {
-            sb.Append(",\"brand\":").Append(Rdv3WebJson.Q(section.Brand));
-            sb.Append(",\"tags\":[");
-            for (int i = 0; i < section.Tags.Count; i++)
-            {
-                if (i > 0) { sb.Append(','); }
-                sb.Append("{\"text\":").Append(Rdv3WebJson.Q(section.Tags[i].Text));
-                sb.Append(",\"look\":").Append(Rdv3WebJson.Q(section.Tags[i].Look)).Append('}');
-            }
-            sb.Append(']');
-        }
-        else if (section.Type == "keyPanel")
-        {
-            sb.Append(",\"title\":").Append(Rdv3WebJson.Q(section.Title));
-            sb.Append(",\"label\":").Append(Rdv3WebJson.Q(section.Label));
-            sb.Append(",\"value\":").Append(Rdv3WebJson.Q(path + ".value"));
-            sb.Append(",\"inputLabel\":").Append(Rdv3WebJson.Q(section.InputLabel));
-            sb.Append(",\"placeholder\":").Append(Rdv3WebJson.Q(section.Placeholder));
-            sb.Append(",\"inputWidth\":").Append(Rdv3WebJson.N(section.InputWidth));
-            sb.Append(",\"maxLength\":").Append(section.MaxLength.ToString(CultureInfo.InvariantCulture));
-        }
-        else if (section.Type == "columns")
-        {
-            sb.Append(",\"gap\":").Append(Rdv3WebJson.N(section.Gap));
-            sb.Append(",\"stackBelow\":").Append(Rdv3WebJson.N(section.StackBelow));
-            sb.Append(",\"weights\":").Append(Rdv3WebJson.A(section.Weights));
-            sb.Append(",\"items\":[");
-            for (int i = 0; i < section.Items.Count; i++)
-            {
-                if (i > 0) { sb.Append(','); }
-                AppendSection(sb, section.Items[i], path + ".item" + i.ToString(CultureInfo.InvariantCulture));
-            }
-            sb.Append(']');
-        }
-        else if (section.Type == "fieldList")
-        {
-            sb.Append(",\"title\":").Append(Rdv3WebJson.Q(section.Title));
-            sb.Append(",\"labelWidth\":").Append(Rdv3WebJson.N(section.LabelWidth));
-            sb.Append(",\"rowHeight\":").Append(Rdv3WebJson.N(section.RowHeight));
-            sb.Append(",\"rows\":[");
-            for (int i = 0; i < section.Rows.Count; i++)
-            {
-                if (i > 0) { sb.Append(','); }
-                sb.Append("{\"label\":").Append(Rdv3WebJson.Q(section.Rows[i].Label));
-                sb.Append(",\"value\":").Append(Rdv3WebJson.Q(path + ".row" + i.ToString(CultureInfo.InvariantCulture))).Append('}');
-            }
-            sb.Append(']');
-        }
-        else if (section.Type == "textBox")
-        {
-            sb.Append(",\"title\":").Append(Rdv3WebJson.Q(section.Title));
-            sb.Append(",\"lines\":").Append(section.Lines.ToString(CultureInfo.InvariantCulture));
-            sb.Append(",\"value\":").Append(Rdv3WebJson.Q(path + ".value"));
-        }
-        else if (section.Type == "statusBand")
-        {
-            sb.Append(",\"label\":").Append(Rdv3WebJson.Q(section.Label));
-            sb.Append(",\"height\":").Append(Rdv3WebJson.N(section.Height));
-            sb.Append(",\"judgment\":").Append(Rdv3WebJson.Q(path));
-        }
-        else if (section.Type == "sendBar")
-        {
-            sb.Append(",\"height\":").Append(Rdv3WebJson.N(section.Height));
-            sb.Append(",\"value\":").Append(Rdv3WebJson.Q(path + ".value"));
-        }
-        else if (section.Type == "statusBar")
-        {
-            sb.Append(",\"height\":").Append(Rdv3WebJson.N(section.Height));
-            sb.Append(",\"segments\":[");
-            for (int i = 0; i < section.Segments.Count; i++)
-            {
-                if (i > 0) { sb.Append(','); }
-                Rdv3SegmentDef segment = section.Segments[i];
-                sb.Append("{\"prefix\":").Append(Rdv3WebJson.Q(segment.Prefix));
-                sb.Append(",\"value\":").Append(Rdv3WebJson.Q(path + ".segment" + i.ToString(CultureInfo.InvariantCulture)));
-                sb.Append(",\"bold\":").Append(Rdv3WebJson.B(segment.Bold));
-                sb.Append(",\"dot\":").Append(Rdv3WebJson.B(segment.Dot));
-                sb.Append(",\"clock\":").Append(Rdv3WebJson.B(
-                    segment.Value != null && segment.Value.IsState && segment.Value.State == "clock")).Append('}');
-            }
-            sb.Append(']');
-        }
-        if (section.Buttons.Count > 0)
-        {
-            sb.Append(",\"buttons\":[");
-            for (int i = 0; i < section.Buttons.Count; i++)
-            {
-                if (i > 0) { sb.Append(','); }
-                AppendButton(sb, section.Buttons[i]);
-            }
-            sb.Append(']');
-        }
-        sb.Append('}');
-    }
-
-    private static void AppendButton(StringBuilder sb, Rdv3ButtonDef button)
-    {
-        sb.Append("{\"action\":").Append(Rdv3WebJson.Q(button.Action));
-        sb.Append(",\"text\":").Append(Rdv3WebJson.Q(button.Text));
-        sb.Append(",\"icon\":").Append(Rdv3WebJson.Q(button.Icon));
-        sb.Append(",\"tip\":").Append(Rdv3WebJson.Q(button.Tip));
-        sb.Append(",\"job\":").Append(Rdv3WebJson.Q(button.Job));
-        sb.Append(",\"primary\":").Append(Rdv3WebJson.B(button.Primary)).Append('}');
     }
 
     internal static string Text(Rdv3Json root, string name)

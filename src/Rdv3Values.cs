@@ -111,7 +111,7 @@ public static class Rdv3Eval
     // ---- one binding -> text ----------------------------------------------
     public static Rdv3Value Evaluate(Rdv3Bind b, Rdv3View v, Rdv3Fields f, Rdv3WorkState w)
     {
-        if (b == null) { return new Rdv3Value("", Rdv3Value.Muted); }
+        if (b == null || b.Hidden) { return new Rdv3Value("", Rdv3Value.Muted); }
         int required = RequiredFields(b, v, f);
         if (required < 0) { return new Rdv3Value(Rdv3Text.FieldUnresolved, Rdv3Value.Error); }
         if (required == 0) { return new Rdv3Value("", Rdv3Value.Muted); }
@@ -232,7 +232,7 @@ public static class Rdv3Eval
         if (fmt.Kind == "date")
         {
             DateTime t;
-            if (DateTime.TryParseExact(raw.Trim(), fmt.From, CultureInfo.InvariantCulture, DateTimeStyles.None, out t))
+            if (Rdv3Dates.TryParse(raw, fmt.From, out t))
             {
                 try { return t.ToString(fmt.To, CultureInfo.InvariantCulture); }
                 catch (FormatException) { return raw; }

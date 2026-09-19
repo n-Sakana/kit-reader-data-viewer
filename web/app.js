@@ -1,4 +1,4 @@
-(function () {
+﻿(function () {
   'use strict';
 
   function logClientError(kind, message, file, line, column, stack) {
@@ -25,6 +25,7 @@
   var mainFocusDone = false;
 
   var dialogMode = window.location.hash === '#dialog';
+  var dialogSizePending = false;
   if (dialogMode) { document.documentElement.classList.add('dialogmode'); }
 
   // The dialog window opens off screen at a generous size; report what the
@@ -39,15 +40,15 @@
     var width = Math.ceil(box.width);
     var height = Math.ceil(box.height);
     if (width < 1 || height < 1) { return; }
-    // Say nothing while the window already fits. Not a de-duplicate on the
-    // reported value -- a dialog can be swapped back and forth in place -- but
-    // on whether the window still needs changing, which also stops the report
-    // and the resize chasing each other.
-    if (Math.abs(width - window.innerWidth) <= 1 &&
+    // Opening hides and moves the native window, even when its size still
+    // fits. Always acknowledge that opening before suppressing resize loops.
+    if (!dialogSizePending && Math.abs(width - window.innerWidth) <= 1 &&
         Math.abs(height - window.innerHeight) <= 1) { return; }
+    dialogSizePending = false;
     var title = dialog.querySelector('.tb .ttl');
     post({
       type: 'dialogSize',
+      token: currentToken,
       width: width,
       height: height,
       title: title ? title.textContent : ''
@@ -116,96 +117,9 @@
     });
   }
 
-  var actionCounts = {};
-
-  function button(definition, extraClass) {
-    var action = definition.action || '';
-    var node = element('div', (action === 'workState' ? 'tog' : 'btn') +
-      (definition.primary ? ' def' : '') + (extraClass ? ' ' + extraClass : ''));
-    node.tabIndex = 0;
-    node.setAttribute('role', 'button');
-    node.setAttribute('data-action', action);
-    node.setAttribute('data-job', definition.job || '');
-    var count = (actionCounts[action] || 0) + 1;
-    actionCounts[action] = count;
-    node.id = actionId(action) + (count > 1 ? '-' + count : '');
-    if (definition.tip) { node.title = definition.tip; node.setAttribute('aria-label', definition.tip); }
-    setMnemonic(node, definition.text || action);
-    activate(node, function () {
-      post({ type: 'action', name: action, job: definition.job || '', key: keyValue() });
-    });
-    return node;
-  }
-
-  function actionId(action) {
-    var ids = {
-      search: 'b-search', clear: 'b-clear', workState: 'b-work',
-      tableExport: 'b-out', updateRecords: 'b-upd', deleteRecords: 'b-del',
-      settings: 'b-set', sendChanges: 'b-send', refreshLedger: 'b-refresh'
-    };
-    return ids[action] || ('b-' + action);
-  }
-
-  function applyMargin(node, definition) {
-    if (definition.margin) { node.style.margin = box(definition.margin); }
-  }
-
-  function boundField(id, className) {
-    var field = element('div', 'fld ' + (className || ''));
-    field.setAttribute('data-bind', id);
-    return field;
-  }
-
   function fieldset(title) {
     var set = element('fieldset', 'gb');
     set.appendChild(element('legend', '', title || ''));
-    return set;
-  }
-
-  function renderKeyPanel(definition) {
-    var set = fieldset(definition.title);
-    var line = element('div', 'keyline');
-    var figure = element('div', 'keyfigure');
-    figure.appendChild(element('div', 'lab', definition.label || ''));
-    figure.appendChild(boundField(definition.value, 'keyvalue'));
-    line.appendChild(figure);
-    var actions = element('div', 'keyactions');
-    var inputBox = element('div', 'keyinput');
-    var label = element('label', 'lab');
-    setMnemonic(label, definition.inputLabel || '');
-    inputBox.appendChild(label);
-    input = boundField('', 'inp');
-    input.id = 'input';
-    input.contentEditable = 'true';
-    input.tabIndex = 0;
-    input.setAttribute('role', 'textbox');
-    input.setAttribute('aria-label', (definition.inputLabel || '').replace(/&/g, ''));
-    input.setAttribute('data-max-length', String(definition.maxLength || 64));
-    input.style.width = px(definition.inputWidth);
-    input.style.flex = 'none';
-    if (definition.placeholder) { input.setAttribute('data-placeholder', definition.placeholder); }
-    input.addEventListener('input', function (event) { if (!event.isComposing) { onKeyInput(); } });
-    input.addEventListener('compositionend', onKeyInput);
-    input.addEventListener('paste', function (event) {
-      event.preventDefault();
-      var text = (event.clipboardData || window.clipboardData).getData('text/plain').replace(/[\r\n\t]/g, '');
-      document.execCommand('insertText', false, text);
-      onKeyInput();
-    });
-    input.addEventListener('keydown', function (event) {
-      if (event.key === 'Enter') {
-        event.preventDefault();
-        if (input.getAttribute('aria-disabled') !== 'true') {
-          post({ type: 'action', name: 'search', job: '', key: keyValue() });
-        }
-      }
-    });
-    inputBox.appendChild(input);
-    actions.appendChild(inputBox);
-    (definition.buttons || []).forEach(function (entry) { actions.appendChild(button(entry)); });
-    line.appendChild(actions);
-    set.appendChild(line);
-    applyMargin(set, definition);
     return set;
   }
 
@@ -229,212 +143,134 @@
     selection.addRange(range);
   }
 
-  function renderFieldList(definition) {
-    var set = fieldset(definition.title);
-    (definition.rows || []).forEach(function (row) {
-      var line = element('div', 'row dynamic-row');
-      line.style.setProperty('--row-height', px(definition.rowHeight));
-      line.style.setProperty('--label-width', px(definition.labelWidth));
-      line.appendChild(element('label', '', row.label || ''));
-      line.appendChild(boundField(row.value, 'r v'));
-      set.appendChild(line);
-    });
-    applyMargin(set, definition);
-    return set;
-  }
-
-  function renderTextBox(definition) {
-    var set = fieldset(definition.title);
-    set.classList.add('text-section');
-    var value = boundField(definition.value, 'v txt dynamic-text');
-    set.style.setProperty('--text-height', px((Number(definition.lines) || 1) * 14 + 8));
-    set.appendChild(value);
-    applyMargin(set, definition);
-    return set;
-  }
-
-  function renderColumns(definition) {
-    var columns = element('div', 'cols');
-    columns.setAttribute('data-stack-below', String(definition.stackBelow || 0));
-    columns.style.setProperty('--section-gap', px(definition.gap));
-    (definition.items || []).forEach(function (entry, index) {
-      var item = renderSection(entry);
-      var weight = definition.weights && definition.weights[index] ? definition.weights[index] : 1;
-      item.style.flex = String(weight) + ' 1 0';
-      columns.appendChild(item);
-    });
-    applyMargin(columns, definition);
-    return columns;
-  }
-
-  function renderStatusBand(definition) {
-    var band = element('div', 'band');
-    band.style.setProperty('--band-height', px(definition.height));
-    band.setAttribute('data-judgment', definition.judgment);
-    band.appendChild(element('span', 'band-label', definition.label || ''));
-    var center = element('span');
-    center.style.flex = '1';
-    center.style.textAlign = 'center';
-    var result = element('span', 'ok unsearched');
-    result.id = 'judge';
-    var sub = element('span');
-    sub.id = 'jsub';
-    center.appendChild(result);
-    center.appendChild(sub);
-    band.appendChild(center);
-    applyMargin(band, definition);
-    return band;
-  }
-
-  function renderSendBar(definition) {
-    var bar = element('div', 'sendbar');
-    bar.style.setProperty('--send-height', px(definition.height));
-    var count = boundField(definition.value, 'sendn');
-    count.className = 'sendn';
-    count.id = 'sn';
-    bar.appendChild(count);
-    (definition.buttons || []).forEach(function (entry) { bar.appendChild(button(entry)); });
-    applyMargin(bar, definition);
-    return bar;
-  }
-
-  function renderCommandBar(definition) {
-    var bar = element('div', 'commandbar');
-    (definition.buttons || []).forEach(function (entry) { bar.appendChild(button(entry)); });
-    applyMargin(bar, definition);
-    return bar;
-  }
-
-  function renderStatusBar(definition) {
-    var bar = element('div', 'sb');
-    bar.style.setProperty('--status-height', px(definition.height));
-    bar.setAttribute('role', 'status');
-    bar.setAttribute('aria-live', 'polite');
-    statusSegments = [];
-    (definition.segments || []).forEach(function (entry, index) {
-      var segment = element('div', 'sp');
-      segment.setAttribute('data-prefix', entry.prefix || '');
-      segment.setAttribute('data-bind', entry.value);
-      if (entry.clock) { segment.setAttribute('data-clock', 'true'); }
-      if (entry.bold) { segment.style.fontWeight = 'bold'; }
-      if (entry.dot) { segment.setAttribute('data-dot', 'true'); }
-      if (index === 2) { segment.style.flex = '1 1 0'; }
-      else { segment.style.flex = '0 1 auto'; }
-      statusSegments.push(segment);
-      bar.appendChild(segment);
-    });
-    bar.appendChild(element('div', 'grip'));
-    return bar;
-  }
-
-  function renderSection(definition) {
-    if (definition.type === 'keyPanel') { return renderKeyPanel(definition); }
-    if (definition.type === 'columns') { return renderColumns(definition); }
-    if (definition.type === 'fieldList') { return renderFieldList(definition); }
-    if (definition.type === 'textBox') { return renderTextBox(definition); }
-    if (definition.type === 'statusBand') { return renderStatusBand(definition); }
-    if (definition.type === 'sendBar') { return renderSendBar(definition); }
-    return element('div');
-  }
-
-  function renderTitle(definition) {
-    var bar = element('div', 'tb');
-    bar.appendChild(element('div', 'ic', 'R'));
-    bar.appendChild(element('div', 'ttl', definition && definition.brand ? definition.brand : 'Reader Data Viewer'));
-    var tags = element('div', 'tb-tags');
-    if (definition) {
-      (definition.tags || []).forEach(function (entry) {
-        tags.appendChild(element('div', 'tb-tag ' + (entry.look || ''), entry.text));
+  var fixedScreenBound = false;
+  // Captions the settings name: a field's row label (or, for a text
+  // section, its legend), the judgment band's label, the candidate headers.
+  // Anything the settings leave out keeps the page's own wording.
+  function applyLabels(definition) {
+    var labels = definition.labels || {};
+    Object.keys(labels).forEach(function (id) {
+      Array.prototype.forEach.call(stage.querySelectorAll('[data-bind="' + cssEscape(id) + '"]'), function (node) {
+        var row = node.closest('.row');
+        var caption = row ? row.querySelector('label') : null;
+        if (!caption) {
+          var section = node.closest('fieldset');
+          caption = section ? section.querySelector('legend') : null;
+        }
+        if (caption) { caption.textContent = labels[id]; }
       });
-      (definition.buttons || []).forEach(function (entry) { tags.appendChild(button(entry, 'sm')); });
+    });
+    var judgmentLabels = definition.judgmentLabels || {};
+    Object.keys(judgmentLabels).forEach(function (id) {
+      var band = stage.querySelector('[data-judgment="' + cssEscape(id) + '"] .band-label');
+      if (band) { band.textContent = judgmentLabels[id]; }
+    });
+    var headers = definition.candidateHeaders || [];
+    var template = document.querySelector('#fixed-candidate-columns');
+    if (template) {
+      Array.prototype.forEach.call(template.content.querySelectorAll('th'), function (th, index) {
+        if (headers[index]) { th.textContent = headers[index]; }
+      });
     }
-    bar.appendChild(tags);
-    [['minimize', '_'], ['maximize', '□'], ['close', '✕']].forEach(function (entry) {
-      var control = element('div', 'bx' + (entry[0] === 'close' ? ' cl' : ''), entry[1]);
-      control.tabIndex = 0;
-      control.setAttribute('role', 'button');
-      control.setAttribute('aria-label', entry[0]);
-      activate(control, function () { post({ type: 'window', command: entry[0] }); });
-      bar.appendChild(control);
+    // frames the definition leaves unused stay out of sight
+    (definition.hidden || []).forEach(function (id) {
+      Array.prototype.forEach.call(stage.querySelectorAll('[data-bind="' + cssEscape(id) + '"]'), function (node) {
+        var row = node.closest('.row') || node.closest('fieldset');
+        if (row) { row.hidden = true; }
+      });
     });
-    bar.addEventListener('mousedown', function (event) {
-      if (event.button === 0 && !event.target.closest('.bx,.btn,.tog')) {
-        post({ type: 'window', command: 'drag' });
-      }
+    var boxNames = definition.boxNames || {};
+    [['user', '.fixed-user legend'], ['application', '.fixed-application legend']].forEach(function (entry) {
+      var legend = stage.querySelector(entry[1]);
+      if (legend && boxNames[entry[0]]) { legend.textContent = boxNames[entry[0]]; }
     });
-    bar.addEventListener('dblclick', function (event) {
-      if (!event.target.closest('.bx,.btn,.tog')) { post({ type: 'window', command: 'maximize' }); }
+    var searchLabel = stage.querySelector('label[for=input]');
+    if (searchLabel && definition.searchLabel) { searchLabel.textContent = definition.searchLabel; }
+    if (definition.searchLabel) { searchLabelText = definition.searchLabel; }
+    candidateHidden = (definition.candidateHidden || []).map(Number);
+  }
+  var candidateHidden = [];
+
+  // ホバーチップ。「ヘルプ」が入っている間だけ、部品の上に説明を出す。
+  // data-help を持たない表示欄は、切れた値そのものを出す。
+  var helpOn = false;
+  function applyHelp() {
+    Array.prototype.forEach.call(stage.querySelectorAll('.win [data-help],.win [data-bind]'), function (node) {
+      if (!helpOn) { node.removeAttribute('title'); return; }
+      var text = node.getAttribute('data-help');
+      node.title = (text === null) ? node.textContent : text;
     });
-    return bar;
+    var button = stage.querySelector('#b-help');
+    if (!button) { return; }
+    button.classList.toggle('on', helpOn);
+    button.setAttribute('aria-pressed', helpOn ? 'true' : 'false');
   }
 
-  function applyCardStyle(card) {
-    stage.classList.add('runtime');
-    stage.style.setProperty('--card-width', px(card.width));
-    stage.style.setProperty('--card-gap', px(card.gap));
-    var padding = card.padding || [0, 0, 0, 0];
-    stage.style.setProperty('--card-pad-t', px(padding[0]));
-    stage.style.setProperty('--card-pad-r', px(padding[1]));
-    stage.style.setProperty('--card-pad-b', px(padding[2]));
-    stage.style.setProperty('--card-pad-l', px(padding[3]));
-    stage.style.setProperty('--ff', '"' + String(card.font).replace(/"/g, '') + '","Segoe UI",sans-serif');
-    stage.style.setProperty('--body-font', String(card.fontSize) + 'pt');
-    stage.style.setProperty('--key-font', String(card.keyValueFontSize) + 'pt');
-    stage.style.setProperty('--key-height', px(Math.max(34, Math.ceil(Number(card.keyValueFontSize) * 4 / 3 * 1.35 + 6))));
-    stage.style.setProperty('--judgment-font', String(card.judgmentFontSize) + 'pt');
-    stage.style.setProperty('--judgment-height', px(Math.max(30, Math.ceil(Number(card.judgmentFontSize) * 4 / 3 * 1.25 + 8))));
-    stage.style.setProperty('--unsearched-font', String(card.unsearchedFontSize) + 'pt');
-    var controlHeight = Math.max(20, Math.ceil(Number(card.fontSize) * 4 / 3) + 7);
-    stage.style.setProperty('--control-height', px(controlHeight));
-    stage.style.setProperty('--control-button-width', px(controlHeight));
-    stage.style.setProperty('--number-editor-width', px(Math.max(
-      controlHeight * 3,
-      Math.ceil(Number(card.fontSize) * 4 / 3) * 5)));
-    stage.style.setProperty('--calendar-cell', px(Math.max(
-      controlHeight,
-      Math.ceil(Number(card.fontSize) * 4 / 3) + Number(card.gap) * 2)));
+  // 検索欄の下の補足。番号の形式が違うときと、台帳に無いときを書き分ける。
+  var searchNotes = {
+    invalid: '入力した文字が番号の形式ではありません。{label}の形式で入れ直してください。',
+    notfound: '番号の形式は合っていますが、この番号は統合台帳にありません。「データ更新」で台帳を新しくするか、番号を確かめてください。'
+  };
+  var searchLabelText = '識別番号／受付番号';
+  function showSearchNote(look) {
+    var note = stage.querySelector('#s-search');
+    if (!note) { return; }
+    var text = searchNotes[look];
+    note.textContent = text ? text.replace('{label}', searchLabelText) : '';
+    note.classList.toggle('warn', !!text);
+    note.hidden = !text;
   }
 
   function renderScreen(definition) {
-    actionCounts = {};
-    applyCardStyle(definition.card);
-
-    var windowNode = stage.querySelector('.win');
-    windowNode.textContent = '';
-    var titleDefinition = null;
-    var statusDefinition = null;
-    definition.sections.forEach(function (entry) {
-      if (entry.type === 'titleBar') { titleDefinition = entry; }
-      if (entry.type === 'statusBar') { statusDefinition = entry; }
+    if (!definition || definition.fixed !== true) { throw new Error('The fixed HTML screen requires compact settings.'); }
+    stage.classList.add('runtime');
+    Array.prototype.forEach.call(stage.querySelectorAll('.win [data-action]'), function (node) {
+      var action = node.getAttribute('data-action');
+      node.setAttribute('data-job', definition.actions[action] || '');
     });
-    if (titleDefinition) { windowNode.appendChild(renderTitle(titleDefinition)); }
-    var client = element('div', 'client');
-    var stack = element('div', 'stack');
-    var commandsPlaced = false;
-    definition.sections.forEach(function (entry) {
-      if (entry.type === 'titleBar') { return; }
-      if (entry.type === 'statusBar') { return; }
-      if (entry.type === 'sendBar' && statusDefinition && statusDefinition.buttons && statusDefinition.buttons.length) {
-        stack.appendChild(renderCommandBar(statusDefinition));
-        stack.appendChild(element('div', 'sep'));
-        commandsPlaced = true;
+    applyLabels(definition);
+    if (fixedScreenBound) { return; }
+    fixedScreenBound = true;
+    input = stage.querySelector('#input');
+    statusSegments = Array.prototype.slice.call(stage.querySelectorAll('.win .sb .sp'));
+    Array.prototype.forEach.call(stage.querySelectorAll('.win [data-action]'), function (node) {
+      activate(node, function () {
+        post({ type: 'action', name: node.getAttribute('data-action'), job: node.getAttribute('data-job') || '', key: keyValue() });
+      });
+    });
+    var help = stage.querySelector('#b-help');
+    if (help) { activate(help, function () { helpOn = !helpOn; applyHelp(); }); }
+    input.addEventListener('input', function (event) { if (!event.isComposing) { onKeyInput(); } });
+    input.addEventListener('compositionend', onKeyInput);
+    input.addEventListener('paste', function (event) {
+      event.preventDefault();
+      var text = (event.clipboardData || window.clipboardData).getData('text/plain').replace(/[\r\n\t]/g, '');
+      document.execCommand('insertText', false, text);
+      onKeyInput();
+    });
+    input.addEventListener('keydown', function (event) {
+      if (event.key === 'Enter') {
+        event.preventDefault();
+        if (input.getAttribute('aria-disabled') !== 'true') {
+          post({ type: 'action', name: 'search', job: '', key: keyValue() });
+        }
       }
-      stack.appendChild(renderSection(entry));
     });
-    if (!commandsPlaced && statusDefinition && statusDefinition.buttons && statusDefinition.buttons.length) {
-      stack.appendChild(renderCommandBar(statusDefinition));
-    }
-    client.appendChild(stack);
-    windowNode.appendChild(client);
-    if (statusDefinition) { windowNode.appendChild(renderStatusBar(statusDefinition)); }
-    updateColumns();
   }
 
-  function updateColumns() {
-    Array.prototype.forEach.call(stage.querySelectorAll('.cols'), function (node) {
-      var limit = Number(node.getAttribute('data-stack-below')) || 0;
-      node.classList.toggle('stacked', limit > 0 && stage.clientWidth < limit);
-    });
+  function updateColumns() { /* The fixed layout responds through CSS. */ }
+
+  function fixedCandidatePresentation() {
+    var table = document.querySelector('#fixed-candidate-columns').content.querySelector('table');
+    return {
+      title: table.dataset.title, hint: table.dataset.hint,
+      width: Number(table.dataset.width), maxHeight: Number(table.dataset.maxHeight),
+      rowHeight: Number(table.dataset.rowHeight), headerHeight: Number(table.dataset.headerHeight),
+      columns: Array.prototype.map.call(table.querySelectorAll('th'), function (th) {
+        return { header: th.textContent, width: Number(th.dataset.width) || 0,
+          align: th.dataset.align || 'left', muted: th.dataset.muted === 'true', render: th.dataset.render || 'text' };
+      })
+    };
   }
 
   function applyState(next) {
@@ -448,7 +284,6 @@
         node.textContent = text;
         node.classList.toggle('tone-muted', item.tone === 1);
         node.classList.toggle('tone-error', item.tone === 2);
-        node.title = text;
       });
     });
     if (input && document.activeElement !== input && input.textContent !== (next.key || '')) {
@@ -456,8 +291,12 @@
     }
     Array.prototype.forEach.call(stage.querySelectorAll('[data-action]'), function (node) {
       var action = node.getAttribute('data-action');
+      // without a ledger (BLOCKED) the update and reload buttons stay open,
+      // so the ledger can be built once the files are in place
       var enabled = action === 'settings' ? true : action === 'workState' ?
-        next.opsEnabled && next.workEnabled : next.opsEnabled;
+        next.opsEnabled && next.workEnabled :
+        (action === 'refreshLedger' || action === 'updateRecords') ? (next.opsEnabled || next.retryEnabled) :
+        next.opsEnabled;
       node.classList.toggle('dis', !enabled);
       node.setAttribute('aria-disabled', enabled ? 'false' : 'true');
       node.tabIndex = enabled ? 0 : -1;
@@ -496,14 +335,15 @@
       var sub = band.querySelector('#jsub');
       head.className = 'ok ' + (result.look || 'unsearched');
       head.textContent = result.text || '';
-      sub.textContent = result.sub ? ' ' + result.sub : '';
+      sub.textContent = result.sub || '';
+      if (id === 'paymentStatus') { showSearchNote(result.look); }
     });
+    applyHelp();
     if (statusSegments.length) {
       statusSegments.forEach(function (node) { node.classList.remove('notice', 'error'); });
       if (next.notice) {
         var target = statusSegments[Math.min(2, statusSegments.length - 1)];
         target.textContent = next.notice;
-        target.title = next.notice;
         target.classList.add('notice');
         if (next.noticeError) { target.classList.add('error'); }
       }
@@ -552,6 +392,7 @@
     veil.classList.add('show');
     currentModal = veil;
     if (dialogMode) {
+      dialogSizePending = true;
       requestAnimationFrame(function () { requestAnimationFrame(reportDialogSize); });
     }
     return { veil: veil, dialog: dialog, body: body };
@@ -676,6 +517,18 @@
   }
 
   function openCandidates(content, shared, tellOnly) {
+    var presentation = fixedCandidatePresentation();
+    if (!shared) { content.title = presentation.title; content.hint = presentation.hint; }
+    content.width = presentation.width;
+    content.maxHeight = presentation.maxHeight;
+    content.rowHeight = presentation.rowHeight;
+    content.headerHeight = presentation.headerHeight;
+    content.columns = presentation.columns;
+    if (candidateHidden.length) {
+      var keep = function (cell, index) { return candidateHidden.indexOf(index) < 0; };
+      content.columns = content.columns.filter(keep);
+      content.rows = (content.rows || []).map(function (row) { return row.filter(keep); });
+    }
     var shell = modalShell(shared ? 'v-shared' : 'v-cand', content.title);
     shell.dialog.style.width = px(content.width || 744);
     var hint = content.hint || '';
@@ -720,48 +573,94 @@
     shell.body.appendChild(foot);
   }
 
+  function installFixedBody(shell, name, content) {
+    shell.body.appendChild(document.querySelector('#fixed-' + name).content.cloneNode(true));
+    Array.prototype.forEach.call(shell.body.querySelectorAll('[data-text]'), function (node) {
+      node.textContent = content[node.dataset.text] || '';
+    });
+    activate(shell.body.querySelector('[data-command=cancel]'), function () { finishModal({ ok: false }); });
+  }
+
+  function openArchive(content) {
+    var shell = modalShell('v-archive', content.title);
+    shell.body.appendChild(element('div', 'hint', content.hint));
+    var selected = {};
+    (content.selected || []).forEach(function (index) { selected[index] = true; });
+    function indices() { return Object.keys(selected).map(Number); }
+    var summary = element('div', 'hint');
+    shell.body.appendChild(summary);
+    var list = element('div', 'lv archive-list');
+    var table = element('table'), thead = element('thead'), head = element('tr');
+    ['復元', '識別キー', '確認状態', '削除日時'].forEach(function (title) { head.appendChild(element('th', '', title)); });
+    thead.appendChild(head); table.appendChild(thead);
+    var body = element('tbody'); table.appendChild(body); list.appendChild(table); shell.body.appendChild(list);
+    var details = fieldset('削除時の全内容'); details.classList.add('archive-details');
+    var detailTable = element('table'); details.appendChild(detailTable); shell.body.appendChild(details);
+    function detail(row) {
+      detailTable.textContent = '';
+      content.labels.forEach(function (label, index) {
+        var tr = element('tr'); tr.appendChild(element('th', '', label)); tr.appendChild(element('td', '', row.values[index])); detailTable.appendChild(tr);
+      });
+    }
+    var restoreButton;
+    function update() {
+      var count = indices().length;
+      summary.textContent = '保管 ' + content.total + ' 件 / 選択 ' + count + ' 件 / ' + (content.page + 1) + ' ページ';
+      if (restoreButton) { setDisabled(restoreButton, count === 0); }
+    }
+    content.rows.forEach(function (row) {
+      var tr = element('tr'); tr.setAttribute('data-archive-index', row.index);
+      var choice = element('input'); choice.type = 'checkbox'; choice.checked = !!selected[row.index];
+      choice.setAttribute('aria-label', row.identity + ' を復元対象にする');
+      choice.onchange = function () { if (choice.checked) { selected[row.index] = true; } else { delete selected[row.index]; } detail(row); update(); };
+      var td = element('td'); td.appendChild(choice); tr.appendChild(td);
+      var identity = element('td');
+      var show = modalButton(row.identity, false, function () { detail(row); }); show.classList.add('archive-detail-button'); identity.appendChild(show); tr.appendChild(identity);
+      tr.appendChild(element('td', '', row.state));
+      tr.appendChild(element('td', '', new Date(row.deletedAt).toLocaleString('ja-JP')));
+      body.appendChild(tr);
+    });
+    if (content.rows.length) { detail(content.rows[0]); }
+    else { details.appendChild(element('div', 'hint', '保管中のレコードはありません。')); }
+    var foot = element('div', 'foot');
+    foot.appendChild(modalButton('このページを選択', false, function () {
+      content.rows.forEach(function (row) { selected[row.index] = true; });
+      Array.prototype.forEach.call(body.querySelectorAll('input[type=checkbox]'), function (box) { box.checked = true; });
+      update();
+    }, !content.rows.length));
+    foot.appendChild(modalButton('前へ', false, function () { finishModal({ page: content.page - 1, selected: indices() }); }, content.page === 0));
+    foot.appendChild(modalButton('次へ', false, function () { finishModal({ page: content.page + 1, selected: indices() }); }, (content.page + 1) * content.pageSize >= content.total));
+    restoreButton = modalButton('選択したレコードを復元', true, function () { finishModal({ ok: true, selected: indices() }); });
+    foot.appendChild(restoreButton);
+    foot.appendChild(modalButton('閉じる', false, function () { finishModal({ ok: false }); }));
+    shell.body.appendChild(foot); update();
+  }
+
   function openProcess(content, deleting) {
     var shell = modalShell(deleting ? 'v-del' : 'v-upd', content.title);
-    shell.body.appendChild(element('div', 'hint', content.hint));
-    var inputs = fieldset(content.inputTitle);
-    inputs.appendChild(tableNode([
-      { header: deleting ? '指定' : '表', width: 40 },
-      { header: 'ファイル', width: 150 },
-      { header: 'キー', width: 62 },
-      { header: '行数', width: 74, align: 'right' },
-      { header: '検証' }
+    installFixedBody(shell, 'process', content);
+    shell.body.querySelector('[data-slot=inputs]').appendChild(tableNode([
+      { header: deleting ? '指定' : '表', width: 40 }, { header: 'ファイル', width: 150 },
+      { header: 'キー', width: 62 }, { header: '行数', width: 74, align: 'right' }, { header: '検証' }
     ], content.inputs.map(function (entry) {
       return [entry.id, entry.file, entry.key, entry.rows, { text: entry.validation, tone: entry.valid ? 0 : 2 }];
     }), { readOnly: true }));
-    shell.body.appendChild(inputs);
-    shell.body.appendChild(element('div', 'process-gap'));
-    var steps = fieldset('処理内容');
-    steps.appendChild(tableNode([
+    shell.body.querySelector('[data-slot=steps]').appendChild(tableNode([
       { header: '#', width: 26, align: 'right' }, { header: '操作', width: 46 },
-      { header: '対象1', width: 64 }, { header: '対象2', width: 76 },
-      { header: 'キー', width: 120 }, { header: '条件', width: 240 }, { header: '出力' }
+      { header: '対象1', width: 64 }, { header: '対象2', width: 76 }, { header: 'キー', width: 120 },
+      { header: '条件', width: 240 }, { header: '出力' }
     ], content.steps, { readOnly: true, maxHeight: 128 }));
-    shell.body.appendChild(steps);
-    shell.body.appendChild(element('div', 'process-gap'));
-    var output = fieldset('書き出し先');
-    ['パス', 'ファイル名', '最終更新'].forEach(function (label, index) {
-      var row = element('div', 'kv');
-      row.appendChild(element('label', '', label));
-      var value = element('div', 'fld', content.output[index] || '');
-      value.style.flex = '1';
-      row.appendChild(value);
-      output.appendChild(row);
+    Array.prototype.forEach.call(shell.body.querySelectorAll('[data-output]'), function (node) {
+      node.textContent = content.output[Number(node.dataset.output)] || '';
     });
-    shell.body.appendChild(output);
-    var foot = element('div', 'foot');
-    var execute = modalButton(content.executeText, true, function () { finishModal({ ok: true }); }, !content.canRun);
+    var execute = shell.body.querySelector('[data-command=execute]');
+    setMnemonic(execute, content.executeText);
+    setDisabled(execute, !content.canRun);
+    activate(execute, function () { finishModal({ ok: true }); });
     if (!content.canRun && content.cannotRunText) {
       execute.title = content.cannotRunText;
       execute.setAttribute('aria-label', content.executeText + ': ' + content.cannotRunText);
     }
-    foot.appendChild(execute);
-    foot.appendChild(modalButton('キャンセル', false, function () { finishModal({ ok: false }); }));
-    shell.body.appendChild(foot);
   }
 
   function editable(value, field, width) {
@@ -851,60 +750,41 @@
   function openSettings(content) {
     settingsContent = content;
     var shell = modalShell('v-set', content.title);
-    shell.body.appendChild(element('div', 'hint', content.hint));
-    var paths = fieldset('場所');
-    [['データ', 'dataDir', 'folder'], ['統合台帳', 'ledger', 'ledger'], ['ログ', 'log', 'log']].forEach(function (entry) {
-      var row = element('div', 'kv');
-      row.appendChild(element('label', '', entry[0]));
-      var edit = editable(content[entry[1]], entry[1]);
-      row.appendChild(edit);
-      row.appendChild(browseButton(entry[1], entry[2], edit));
-      paths.appendChild(row);
+    installFixedBody(shell, 'settings', content);
+    [['dataDir','folder'], ['ledger','ledger'], ['log','log']].forEach(function (entry) {
+      var row = shell.body.querySelector('[data-row="' + entry[0] + '"]');
+      var edit = editable(content[entry[0]], entry[0]);
+      row.appendChild(edit); row.appendChild(browseButton(entry[0], entry[1], edit));
     });
-    shell.body.appendChild(paths);
-    shell.body.appendChild(element('div', 'process-gap'));
-    var search = fieldset('検索');
-    var patternRow = element('div', 'kv');
-    patternRow.appendChild(element('label', '', '番号の形式'));
-    patternRow.appendChild(editable(content.pattern, 'pattern'));
-    search.appendChild(patternRow);
-    var countRow = element('div', 'kv');
-    countRow.appendChild(element('label', '', '候補の表示件数'));
+    // One row per input table: the file name in the data folder and how it
+    // is matched (the whole name, or the newest file starting with it).
+    var tablesSlot = shell.body.querySelector('[data-slot=tables]');
+    (content.tables || []).forEach(function (table) {
+      var row = element('div', 'kv');
+      row.appendChild(element('label', '', table.label || table.id));
+      row.appendChild(editable(table.file, 'table:' + table.id));
+      var select = selectNode([{ value: 'exact', text: '全部一致' }, { value: 'prefix', text: '前方一致' }]);
+      select.value = table.match === 'exact' ? 'exact' : 'prefix';
+      select.style.width = '104px';
+      select.style.flex = 'none';
+      select.setAttribute('data-match', table.id);
+      select.setAttribute('aria-label', (table.label || table.id) + ' のファイル名の一致方法');
+      row.appendChild(select);
+      tablesSlot.appendChild(row);
+    });
+    var patternRow = shell.body.querySelector('[data-row=pattern]');
+    // 業務設定が番号の形式を導くときは、設定で触る項目ではないので出さない
+    if (content.pattern === undefined) { patternRow.hidden = true; }
+    else { patternRow.appendChild(editable(content.pattern, 'pattern')); }
     var candidateEditor = numberEditor(content.candidateRows, 'candidateRows', 1, 1000);
-    countRow.appendChild(candidateEditor);
-    search.appendChild(countRow);
-    shell.body.appendChild(search);
-    shell.body.appendChild(element('div', 'process-gap'));
-    var watch = fieldset('監視対象');
-    var targetRow = element('div', 'kv');
-    targetRow.appendChild(element('label', '', '対象'));
-    var target = element('div', 'fld', content.target.summary || '');
-    target.setAttribute('data-target-summary', 'true');
-    target.style.flex = '1';
-    targetRow.appendChild(target);
-    var pick = modalButton('画面から選ぶ', false, startPicker);
-    pick.id = 'b-pick';
-    targetRow.appendChild(pick);
-    watch.appendChild(targetRow);
-    var readRow = element('div', 'kv');
-    readRow.appendChild(element('label', '', '読み取り'));
-    var read = element('div', 'fld', content.target.read || '');
-    read.setAttribute('data-target-read', 'true');
-    read.style.flex = '1';
-    readRow.appendChild(read);
-    watch.appendChild(readRow);
-    shell.body.appendChild(watch);
-    var error = element('div', 'setting-error');
-    error.setAttribute('role', 'alert');
-    error.hidden = true;
-    shell.body.appendChild(error);
-    var foot = element('div', 'foot');
-    foot.appendChild(modalButton('OK', true, function () {
-      candidateEditor.normalizeValue();
-      submitSettings(shell.body, error);
-    }));
-    foot.appendChild(modalButton('キャンセル', false, function () { finishModal({ ok: false }); }));
-    shell.body.appendChild(foot);
+    shell.body.querySelector('[data-row=candidateRows]').appendChild(candidateEditor);
+    shell.body.querySelector('[data-target-summary]').textContent = content.target.summary || '';
+    shell.body.querySelector('[data-target-read]').textContent = content.target.read || '';
+    activate(shell.body.querySelector('#b-pick'), startPicker);
+    var error = shell.body.querySelector('.setting-error');
+    activate(shell.body.querySelector('[data-command=execute]'), function () {
+      candidateEditor.normalizeValue(); submitSettings(shell.body, error);
+    });
   }
 
   function submitSettings(body, error) {
@@ -915,13 +795,21 @@
     var dataDir = value('dataDir');
     var ledger = value('ledger');
     var log = value('log');
-    var pattern = value('pattern');
+    var tables = ((settingsContent && settingsContent.tables) || []).map(function (table) {
+      var select = body.querySelector('select[data-match="' + cssEscape(table.id) + '"]');
+      return { id: table.id, file: value('table:' + table.id), match: select ? select.value : 'exact', required: table.required !== false };
+    });
     pendingSettings = { ok: true, dataDir: dataDir, ledger: ledger, log: log,
-      pattern: pattern, candidateRows: Number(value('candidateRows')) };
+      candidateRows: Number(value('candidateRows')), tables: tables };
+    var submission = { type: 'settingsSubmit', token: currentToken, dataDir: dataDir,
+      ledger: ledger, log: log,
+      candidateRows: pendingSettings.candidateRows, tables: tables };
+    if (settingsContent && settingsContent.pattern !== undefined) {
+      pendingSettings.pattern = value('pattern');
+      submission.pattern = pendingSettings.pattern;
+    }
     error.hidden = true;
-    post({ type: 'settingsSubmit', token: currentToken, dataDir: dataDir,
-      ledger: ledger, log: log, pattern: pattern,
-      candidateRows: pendingSettings.candidateRows });
+    post(submission);
   }
 
   function settingsValidation(message) {
@@ -976,8 +864,20 @@
   }
 
   function pickerResult(target) {
+    if (!currentModal || currentModal.id !== 'v-pick' || !settingsContent) { return; }
     if (target && settingsContent) { settingsContent.target = target; }
-    openSettings(settingsContent);
+    // The settings body still holds the draft (including raw editor text).
+    // Rebuilding it from the host's original content discards unsaved edits.
+    closeVeils(false);
+    currentModal = document.getElementById('v-set');
+    currentModal.querySelector('[data-target-summary]').textContent = settingsContent.target.summary || '';
+    currentModal.querySelector('[data-target-read]').textContent = settingsContent.target.read || '';
+    currentModal.classList.add('show');
+    currentModal.querySelector('#b-pick').focus();
+    if (dialogMode) {
+      dialogSizePending = true;
+      requestAnimationFrame(function () { requestAnimationFrame(reportDialogSize); });
+    }
   }
 
   function padNumber(value, count) {
@@ -1281,14 +1181,11 @@
   function exportFilterEditor(content, token, isActive, showError) {
     var byRef = {};
     content.fields.forEach(function (field) { byRef[field.ref] = field; });
-    var pendingFilter = null;
+    var pendingFilters = {};
+    var nextRequestId = 0;
     var filters = [];
-    var filterSet = fieldset('絞り込み条件（すべてに一致）');
-    var grid = element('div', 'fgrid');
-    grid.appendChild(element('div', 'fh', '項目'));
-    grid.appendChild(element('div', 'fh', '条件'));
-    var valueHead = element('div', 'fh', '値'); valueHead.style.gridColumn = '3 / span 3'; grid.appendChild(valueHead);
-    grid.appendChild(element('div'));
+    var filterSet = document.querySelector('#fixed-filter').content.firstElementChild.cloneNode(true);
+    var grid = filterSet.querySelector('.fgrid');
     var fieldSelect = selectNode(content.fields.map(function (field) { return { value: field.ref, text: field.label }; }));
     var operatorSelect = selectNode([]);
     var firstHost = element('div', 'filter-value-host');
@@ -1336,15 +1233,18 @@
       var field = byRef[fieldSelect.value];
       var firstValue = editorValue(firstHost, 'filterFirst');
       var lastValue = editorValue(lastHost, 'filterLast');
-      pendingFilter = { field: field.ref, operator: operatorSelect.value, first: firstValue,
+      var requestId = ++nextRequestId;
+      var pendingFilter = { field: field.ref, operator: operatorSelect.value, first: firstValue,
         last: field.kind === 'text' ? '' : lastValue };
-      post({ type: 'validateExportFilter', token: token, field: field.ref,
+      pendingFilters[requestId] = pendingFilter;
+      post({ type: 'validateExportFilter', token: token, requestId: requestId, field: field.ref,
         first: pendingFilter.first, last: pendingFilter.last });
     }
     function redrawFilters(selectedIndex, focus) {
       if (selectedIndex === undefined) { selectedIndex = filters.length - 1; }
       var replacement = tableNode([{ header: '項目', width: 180 }, { header: '条件', width: 110 }, { header: '値' }],
-        filters.map(function (entry) {
+        filters.map(function (item) {
+          var entry = item.value;
           return [byRef[entry.field].label, operatorLabels[entry.operator] || entry.operator,
             entry.last ? entry.first + ' ～ ' + entry.last : entry.first];
         }), { readOnly: false, selected: selectedIndex });
@@ -1363,23 +1263,26 @@
       }
     }
     function exportFilterValidation(message) {
+      var requestId = Number(message.requestId);
+      var pendingFilter = pendingFilters[requestId];
       if (!pendingFilter || Number(message.token) !== token || !isActive()) { return; }
+      delete pendingFilters[requestId];
       if (!message.ok) {
         showError(message.error || '');
         var target = firstHost.querySelector('[data-field]');
         if (target) { target.focus(); }
-        pendingFilter = null;
         return;
       }
       pendingFilter.first = message.first === undefined ? pendingFilter.first : message.first;
       pendingFilter.last = message.last === undefined ? pendingFilter.last : message.last;
-      filters.push(pendingFilter);
-      pendingFilter = null;
+      filters.push({ id: requestId, value: pendingFilter });
+      filters.sort(function (a, b) { return a.id - b.id; });
       showError(null);
       redrawFilters(filters.length - 1, true);
     }
     updateOperators();
-    return { node: filterSet, values: function () { return filters.slice(); }, validate: exportFilterValidation };
+    return { node: filterSet, values: function () { return filters.map(function (item) { return item.value; }); },
+      pending: function () { return Object.keys(pendingFilters).length > 0; }, validate: exportFilterValidation };
   }
 
   function exportDestination(content) {
@@ -1397,37 +1300,32 @@
 
   function openExport(content) {
     var shell = modalShell('v-out', content.title);
+    installFixedBody(shell, 'export', content);
     var token = currentToken;
-    var error = element('div', 'setting-error'); error.hidden = true; error.setAttribute('role', 'alert');
+    var error = shell.body.querySelector('.setting-error');
     function showError(message) { error.textContent = message || ''; error.hidden = message === null; }
     function isActive() { return currentToken === token && currentModal === shell.veil; }
 
     var fields = exportFieldPicker(content);
     var filters = exportFilterEditor(content, token, isActive, showError);
     var destination = exportDestination(content);
-    shell.body.appendChild(element('div', 'hint', content.hint));
-    shell.body.appendChild(fields.node);
-    shell.body.appendChild(element('div', 'process-gap'));
-    shell.body.appendChild(filters.node);
-    destination.nodes.forEach(function (node) { shell.body.appendChild(node); });
-    shell.body.appendChild(error);
-
-    var foot = element('div', 'foot');
-    foot.appendChild(modalButton('OK', true, function () {
+    shell.body.querySelector('[data-slot=fields]').appendChild(fields.node);
+    shell.body.querySelector('[data-slot=filters]').appendChild(filters.node);
+    destination.nodes.forEach(function (node) { shell.body.querySelector('[data-slot=destination]').appendChild(node); });
+    activate(shell.body.querySelector('[data-command=execute]'), function () {
+      if (filters.pending()) { showError('追加した条件を確認しています。確認が終わってからOKを押してください。'); return; }
       var selected = fields.values();
       if (!selected.length) { showError('出力する項目を 1 つ以上選んでください。'); return; }
       var path = destination.path();
       if (!/\.csv$/i.test(path)) { showError('出力先には .csv ファイルを指定してください。'); return; }
       finishModal({ ok: true, path: path, fields: selected, filters: filters.values(), excelSafe: destination.excelSafe() });
-    }));
-    foot.appendChild(modalButton('キャンセル', false, function () { finishModal({ ok: false }); }));
-    shell.body.appendChild(foot);
+    });
     shell.dialog.exportFilterValidation = filters.validate;
   }
 
   function selectNode(entries) {
     var select = element('select', 'fld inp');
-    select.style.width = '100%'; select.style.padding = '0 2px';
+    select.style.width = '100%';
     entries.forEach(function (entry) { var option = element('option', '', entry.text); option.value = entry.value; select.appendChild(option); });
     return select;
   }
@@ -1466,6 +1364,7 @@
     else if (modal === 'shared') { openCandidates(content, true, false); }
     else if (modal === 'sharedTell') { openCandidates(content, true, true); }
     else if (modal === 'unmatched') { openUnmatched(content); }
+    else if (modal === 'archive') { openArchive(content); }
     else if (modal === 'update') { openProcess(content, false); }
     else if (modal === 'delete') { openProcess(content, true); }
     else if (modal === 'settings') { openSettings(content); }

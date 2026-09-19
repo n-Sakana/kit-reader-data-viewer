@@ -20,6 +20,9 @@ public sealed class Rdv3TableDef
     public string Id = "";
     public string Label = "";
     public string File = "";
+    // exact: the file named (a same name in other width/spacing/case is also
+    // accepted); prefix: the newest file whose name starts with the stem
+    public string FileMatch = "prefix";
     public int HeaderRow = 1;                 // the line/row that holds the header
     public string Sheet = "";                 // xlsx: which worksheet (empty = the first)
     public char Delimiter = ',';              // the CSV field separator
@@ -43,8 +46,13 @@ public sealed class Rdv3ColumnRef
     public string Ref = "";
     public string Table = "";
     public string Column = "";
+    // the heading this column carries in the ledger file and in an export,
+    // when the settings gave it one; otherwise the column's own name is used
+    public string Name = "";
     public int TableOrd;
     public int Field = -1;
+
+    public string Heading { get { return (Name.Length > 0) ? Name : Column; } }
 }
 
 public sealed class Rdv3ApplicationColumnDef
@@ -64,13 +72,40 @@ public sealed class Rdv3ColumnTypeDef
 
     public bool TryDate(string value, out DateTime parsed)
     {
-        return DateTime.TryParseExact(Rdv3Input.Cell(value), Format, CultureInfo.InvariantCulture,
-            DateTimeStyles.None, out parsed);
+        return Rdv3Dates.TryParse(value, Format, out parsed);
     }
 
     public bool TryNumber(string value, out decimal parsed)
     {
         return Rdv3Input.TryNumber(value, out parsed);
+    }
+}
+
+// A column declared as a date is a date whatever notation the source used
+// for it. The declared format is tried first; the common Japanese office
+// notations follow, so a file that writes 2026/4/10 where the definition
+// says yyyyMMdd keeps its rows. What a column IS is still declared, never
+// guessed from its shape.
+public static class Rdv3Dates
+{
+    private static readonly string[] Alternates =
+    {
+        "yyyyMMdd", "yyyy/MM/dd", "yyyy/M/d", "yyyy-MM-dd", "yyyy-M-d", "yyyy.MM.dd", "yyyy.M.d",
+        "yyyy/MM/dd HH:mm", "yyyy/M/d H:mm", "yyyy/MM/dd HH:mm:ss", "yyyy/M/d H:mm:ss",
+        // the two kanji forms (year/month/day marks), written as escapes so this file stays ASCII
+        "yyyy-MM-dd HH:mm", "yyyy-MM-dd HH:mm:ss", "yyyy年M月d日", "yyyy年MM月dd日"
+    };
+
+    public static bool TryParse(string value, string format, out DateTime parsed)
+    {
+        string text = Rdv3Input.Fold(value);
+        if (DateTime.TryParseExact(text, format, CultureInfo.InvariantCulture, DateTimeStyles.None, out parsed)) { return true; }
+        for (int i = 0; i < Alternates.Length; i++)
+        {
+            if (Alternates[i] == format) { continue; }
+            if (DateTime.TryParseExact(text, Alternates[i], CultureInfo.InvariantCulture, DateTimeStyles.None, out parsed)) { return true; }
+        }
+        return false;
     }
 }
 
@@ -114,12 +149,14 @@ public sealed class Rdv3ProcessSetDef
 
 public sealed class Rdv3ProcessInputDef
 {
+    public string[] Head;
     public Encoding Enc = new UTF8Encoding(false);
     public string EncodingSetting = "data.encoding";
     public string Id = "";
     public string Label = "";
     public string Table = "";
     public string File = "";
+    public string FileMatch = "prefix";
     public string Column = "";
     public string Key = "";
     public int HeaderRow = 1;
@@ -179,6 +216,9 @@ public sealed class Rdv3ProcessJobDef
 
 public sealed class Rdv3Data
 {
+    public string Definition = "{}";
+    public string LegacyDefinition = "{}";
+    public string[] ProtectedStates = new string[0];
     public string EncodingName = "utf-8";
     public Encoding Enc = new UTF8Encoding(false);
     public List<Rdv3TableDef> Tables = new List<Rdv3TableDef>();
@@ -242,6 +282,52 @@ public sealed class Rdv3Data
         return null;
     }
 
+    // The settings dialog changed where a table's file is. Every job input
+    // that reads the table carries a copy of the name, so both are updated.
+    public void SetTableFile(string id, string file, string match)
+    {
+        Rdv3TableDef table = TableOf(id);
+        if (table == null) { return; }
+        table.File = file;
+        table.FileMatch = match;
+        foreach (Rdv3ProcessJobDef job in Jobs)
+        {
+            foreach (Rdv3ProcessInputDef input in job.Inputs)
+            {
+                if (input.IsTable && input.Table == id) { input.File = file; input.FileMatch = match; }
+            }
+        }
+    }
+
+    // The tables the update job reads. Any other table (a deletion list) is
+    // read by the job that uses it, when that job runs.
+    public bool IsUpdateInput(int tableOrd)
+    {
+        if (UpdateJob == null) { return false; }
+        foreach (Rdv3ProcessInputDef input in UpdateJob.Inputs) { if (input.IsTable && input.TableOrd == tableOrd) { return true; } }
+        return false;
+    }
+
+    // The job's table inputs that are not in the data folder, as "label (file)".
+    public List<string> MissingInputs(Rdv3ProcessJobDef job, string dataDir)
+    {
+        List<string> missing = new List<string>();
+        foreach (Rdv3ProcessInputDef input in job.Inputs)
+        {
+            string note;
+            string path = Rdv3Files.ResolveInput(input.File, input.FileMatch, dataDir, out note);
+            if (!Rdv3Files.Exists(path)) { missing.Add(input.File); }
+        }
+        return missing;
+    }
+
+    public List<string> InputFileNames(Rdv3ProcessJobDef job)
+    {
+        List<string> names = new List<string>();
+        foreach (Rdv3ProcessInputDef input in job.Inputs) { names.Add(input.File); }
+        return names;
+    }
+
     public Rdv3ProcessJobDef JobOf(string id)
     {
         for (int i = 0; i < Jobs.Count; i++) { if (Jobs[i].Id == id) { return Jobs[i]; } }
@@ -284,7 +370,7 @@ public sealed class Rdv3Data
         get
         {
             string[] h = new string[Columns.Count];
-            for (int i = 0; i < h.Length; i++) { h[i] = Columns[i].Column; }
+            for (int i = 0; i < h.Length; i++) { h[i] = Columns[i].Heading; }
             return h;
         }
     }
@@ -325,12 +411,13 @@ public sealed class Rdv3Data
             }
             if (id == "ledger") { throw to.Fail("ledger is a reserved value name"); }
             if (to.Kind != Rdv3Json.TObject) { throw to.Fail("must be an object { label, file, key }"); }
-            to.Only("label", "file", "key", "keyValidation", "encoding", "headerRow", "delimiter", "sheet");
+            to.Only("label", "file", "fileMatch", "key", "keyValidation", "encoding", "headerRow", "delimiter", "sheet");
             Rdv3TableDef t = new Rdv3TableDef();
             t.Id = id;
             int before = to.ErrorCount;
             to.Check(delegate { t.Label = to.StrOr("label", id); });
-            to.Check(delegate { t.File = to.Need("file"); });
+            to.Check(delegate { t.File = to.Need("file").Trim(); });
+            to.Check(delegate { t.FileMatch = to.Word("fileMatch", "prefix", "exact", "prefix"); });
             to.Check(delegate { t.HeaderRow = to.IntOr("headerRow", 1, 1, 1000000); });
             t.Sheet = to.StrOr("sheet", "");
             to.Check(delegate { t.Delimiter = ReadDelimiter(to); });
@@ -412,9 +499,10 @@ public sealed class Rdv3Data
         }
 
         Rdv3Json ledger = o.Obj("ledger", true);
-        ledger.Only("identity", "search", "columns");
+        ledger.Only("identity", "search", "columns", "protectStates");
+        d.ProtectedStates = ledger.Strs("protectStates", false);
         Rdv3Json columnGroups = ledger.Obj("columns", true);
-        columnGroups.Only("source", "application");
+        columnGroups.Only("source", "names", "application");
         string[] cols = columnGroups.Strs("source", true);
         if (cols.Length == 0) { throw ledger.Member("columns").Fail("names no column"); }
         Rdv3Json colsNode = columnGroups.Member("source");
@@ -423,6 +511,30 @@ public sealed class Rdv3Data
             Rdv3ColumnRef c = ParseLedgerRef(d, cols[i], colsNode.At(i));
             if (d.IndexOf(c.Ref) >= 0) { throw colsNode.At(i).Fail(c.Ref + " is listed twice"); }
             d.Columns.Add(c);
+        }
+
+        // A heading the settings chose for a saved column. Listing a column
+        // here renames what the ledger file and an export show; the column
+        // itself, and everything that refers to it, keeps its own name.
+        Rdv3Json names = columnGroups.Obj("names", false);
+        if (names != null)
+        {
+            foreach (string reference in names.Order)
+            {
+                Rdv3Json node = names.Member(reference);
+                int at = d.IndexOf(reference.Trim());
+                if (at < 0) { throw node.Fail(reference + " is not one of the ledger source columns"); }
+                if (node.Kind != Rdv3Json.TString || node.Str.Trim().Length == 0)
+                { throw node.Fail("must be the heading this column shows"); }
+                d.Columns[at].Name = node.Str.Trim();
+            }
+            List<string> headings = new List<string>();
+            for (int i = 0; i < d.Columns.Count; i++)
+            {
+                if (headings.Contains(d.Columns[i].Heading))
+                { throw names.Fail(d.Columns[i].Heading + " is the heading of two columns"); }
+                headings.Add(d.Columns[i].Heading);
+            }
         }
 
         List<Rdv3Json> appColumns = columnGroups.Objs("application", true);
@@ -459,7 +571,8 @@ public sealed class Rdv3Data
             Rdv3ColumnRef identityRef = ParseLedgerRef(d, identityRefs[k], ledger.Member("identity"));
             identityRefs[k] = identityRef.Ref;
             d.IdentityCols[k] = d.IndexOf(identityRef.Ref);
-            if (d.IdentityCols[k] < 0) { throw colsNode.Fail("must include the update key " + identityRef.Ref + " (the row identity)"); }
+            if (d.IdentityCols[k] < 0)
+            { throw colsNode.Fail("must include the update key " + identityRef.Ref + " (the row identity). " + Rdv3Text.SettingsIdentityNotSaved.Replace("{name}", identityRef.Ref)); }
         }
         d.Spine = "";
         d.SpineOrd = -1;
@@ -496,7 +609,7 @@ public sealed class Rdv3Data
         {
             Rdv3ColumnRef c = ParseLedgerRef(d, searchRefs[i], search.Member("columns").At(i));
             int col = d.IndexOf(c.Ref);
-            if (col < 0) { throw search.Member("columns").At(i).Fail(c.Ref + " must be one of the ledger source columns"); }
+            if (col < 0) { throw search.Member("columns").At(i).Fail(c.Ref + " must be one of the ledger source columns. " + Rdv3Text.SettingsSearchNotSaved.Replace("{name}", c.Ref)); }
             if (d.SearchRefs.Contains(c.Ref)) { throw search.Member("columns").At(i).Fail(c.Ref + " is listed twice"); }
             d.SearchRefs.Add(c.Ref);
             searchCols.Add(col);
@@ -504,6 +617,8 @@ public sealed class Rdv3Data
         d.SearchCols = searchCols.ToArray();
 
         ValidateJobRefs(d, jobs);
+        d.Definition = Rdv3BusinessDefinition.Normalize(o, true);
+        d.LegacyDefinition = Rdv3BusinessDefinition.Normalize(o, false);
         return d;
     }
 
@@ -564,6 +679,7 @@ public sealed class Rdv3Data
                 input.Label = table.Label;
                 input.Table = table.Id;
                 input.File = table.File;
+                input.FileMatch = table.FileMatch;
                 input.HeaderRow = table.HeaderRow;
                 input.Sheet = table.Sheet;
                 input.Delimiter = table.Delimiter;
@@ -577,10 +693,11 @@ public sealed class Rdv3Data
             }
             else
             {
-                io.Only("id", "label", "file", "column", "key", "keyValidation", "encoding", "headerRow", "delimiter", "sheet");
+                io.Only("id", "label", "file", "fileMatch", "column", "key", "keyValidation", "encoding", "headerRow", "delimiter", "sheet");
                 input.Id = io.Need("id");
                 input.Label = io.StrOr("label", input.Id);
-                input.File = io.Need("file");
+                input.File = io.Need("file").Trim();
+                input.FileMatch = io.Word("fileMatch", "prefix", "exact", "prefix");
                 input.HeaderRow = io.IntOr("headerRow", 1, 1, 1000000);
                 input.Sheet = io.StrOr("sheet", "");
                 input.Delimiter = ReadDelimiter(io);
@@ -1246,6 +1363,8 @@ public sealed class Rdv3Data
         for (int t = 0; t < Tables.Count; t++)
         {
             Tables[t].Head = heads[t];
+            // a table that was not read this time (a deletion list) is checked when its job runs
+            if (heads[t] == null) { continue; }
             foreach (string key in Tables[t].KeyColumns)
             { if (FieldOf(heads[t], key) < 0) { Report(validation, Missing(Tables[t], key, "tables." + Tables[t].Id + ".key")); } }
         }
@@ -1266,13 +1385,13 @@ public sealed class Rdv3Data
         for (int i = 0; i < Columns.Count; i++)
         {
             Rdv3ColumnRef c = Columns[i];
-            c.Field = (c.TableOrd >= 0) ? FieldOf(heads[c.TableOrd], c.Column) : -1;
+            c.Field = (c.TableOrd >= 0 && heads[c.TableOrd] != null) ? FieldOf(heads[c.TableOrd], c.Column) : -1;
         }
         for (int i = 0; i < TypeOrder.Count; i++)
         {
             Rdv3ColumnTypeDef type = TypeOrder[i];
             int dot = type.Ref.IndexOf('.');
-            type.Field = (type.TableOrd >= 0) ? FieldOf(heads[type.TableOrd], type.Ref.Substring(dot + 1)) : -1;
+            type.Field = (type.TableOrd >= 0 && heads[type.TableOrd] != null) ? FieldOf(heads[type.TableOrd], type.Ref.Substring(dot + 1)) : -1;
         }
         if (validation != null) { validation.Finish("input columns", "job columns, ledger columns, input types and job preparation"); }
         HashSet<string> produced = Rdv3Process.ValidateColumns(this, heads, validation);
@@ -1288,6 +1407,7 @@ public sealed class Rdv3Data
         {
             Rdv3ColumnTypeDef type = TypeOrder[i];
             if (type.Field >= 0 || (produced != null && produced.Contains(type.Ref))) { continue; }
+            if (type.TableOrd >= 0 && heads[type.TableOrd] == null) { continue; }
             int dot = type.Ref.IndexOf('.');
             Report(validation, MissingRef(type.TableOrd, type.Ref.Substring(0, dot), type.Ref.Substring(dot + 1), "types"));
         }
@@ -1431,8 +1551,11 @@ public sealed class Rdv3Data
 
     private static Rdv3DataError Missing(Rdv3TableDef t, string column, string where)
     {
+        string hint = where.EndsWith(".key", StringComparison.Ordinal)
+            ? " " + Rdv3Text.SettingsKeyNotInHead.Replace("{id}", t.Id).Replace("{name}", column).Replace("{file}", t.File)
+            : "";
         return new Rdv3DataError(Rdv3Text.DataNoColumn.Replace("{file}", t.File).Replace("{row}", "1")
-            .Replace("{name}", column) + " (data." + where + ")");
+            .Replace("{name}", column) + " (data." + where + ")" + hint);
     }
 
     private Rdv3DataError MissingRef(int tableOrd, string owner, string column, string where)

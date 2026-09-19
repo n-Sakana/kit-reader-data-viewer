@@ -1,0 +1,11 @@
+{
+    "schema": 1,
+    "application": "ReaderDataViewer",
+    "variant": "fixed-layout",
+    "name": "レイアウト固定版（v2.1）",
+    "createdUtc": "2026-09-18T02:39:54.0000000Z",
+    "sourceCommit": null,
+    "sourceDirty": null,
+    "data": "sample",
+    "sampleSet": "v2-dummy-20260918"
+}
