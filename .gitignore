@@ -90,3 +90,7 @@ __pycache__/
 
 # Generated build candidates, separate from published releases.
 /build/packages/
+
+# 2026-09-18 に別端末の自動コミットが持ち込んだ受け渡し用の作業フォルダ。
+# 公開する中身ではないので追跡から外す。実体は各端末のディスクに残す (消さないこと)。
+/v2用_20260918-0531/
