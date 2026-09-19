@@ -94,3 +94,9 @@ __pycache__/
 # 2026-09-18 に別端末の自動コミットが持ち込んだ受け渡し用の作業フォルダ。
 # 公開する中身ではないので追跡から外す。実体は各端末のディスクに残す (消さないこと)。
 /v2用_20260918-0531/
+
+# 2026-09-19: 端末名や利用者名がそのまま入っているので追跡しない。
+# 実体は各端末のディスクに残す (消さないこと)。
+/tests/Test-PaymentLive.ps1
+/docs/manual-reader-data-viewer-opus_ppt169_20260915/sources/reader-data-viewer-manual-facts.md
+/docs/manual-reader-data-viewer-opus_ppt169_20260915/sources/capture-rig/app-log/ReaderDataViewer-log-session-a.txt
