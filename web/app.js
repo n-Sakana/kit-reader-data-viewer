@@ -1473,7 +1473,10 @@
     var value = [now.getHours(), now.getMinutes(), now.getSeconds()].map(function (part) {
       return String(part).padStart(2, '0');
     }).join(':');
-    Array.prototype.forEach.call(stage.querySelectorAll('[data-clock=true]'), function (node) { node.textContent = value; });
+    // A notice shares the clock's segment; it keeps the segment until it ends.
+    Array.prototype.forEach.call(stage.querySelectorAll('[data-clock=true]'), function (node) {
+      if (!node.classList.contains('notice')) { node.textContent = value; }
+    });
   }, 1000);
   if (window.chrome && window.chrome.webview) { window.chrome.webview.addEventListener('message', onMessage); }
   window.rdvBridge = { version: 1, render: renderScreen, state: applyState };

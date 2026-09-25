@@ -254,7 +254,7 @@ public sealed class Rdv3PickerForm
 
     // FromPoint stops at the host of a XAML island -- the Windows 11 Explorer
     // search box sits in one -- and returns the bridge pane, whose name is not
-    // the typed text. Look inside that pane for the element under the point.
+    // the typed text. Look inside that host for the element under the point.
     // The intermediate panes of an island report bounds that do not cover
     // their content, so this searches the whole subtree instead of walking
     // down by containment. An input under the point wins over the placeholder
@@ -262,7 +262,7 @@ public sealed class Rdv3PickerForm
     // later, deeper element is taken.
     private static AutomationElement Innermost(AutomationElement element, Point point)
     {
-        if (element == null || element.Current.ControlType != ControlType.Pane) { return element; }
+        if (element == null || !IsIslandHost(element.Current.ClassName)) { return element; }
         AutomationElement smallest = null;
         AutomationElement input = null;
         double smallestArea = double.MaxValue;
@@ -278,6 +278,15 @@ public sealed class Rdv3PickerForm
             { input = candidate; inputArea = area; }
         }
         return input ?? smallest ?? element;
+    }
+
+    // The windows that host XAML islands (WinUI 3, and UWP XAML in Win32).
+    // Only these are searched: any other pane can hold a whole browser page or
+    // sheet, and walking it every tick would stall the picker.
+    private static bool IsIslandHost(string className)
+    {
+        return className == "Microsoft.UI.Content.DesktopChildSiteBridge"
+            || className == "Windows.UI.Composition.DesktopWindowContentBridge";
     }
 
     private void SendPreview(AutomationElement element)

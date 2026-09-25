@@ -1646,6 +1646,10 @@ public sealed class Rdv3App
     private void OpenSettings()
     {
         if (writes.Pending || form.IsModalOpen) { form.Error(Rdv3Text.ErrSaveInFlight); return; }
+        // While a check or a reload runs, its question to the operator would
+        // meet the open dialog and be taken as "no". Refused on the status
+        // bar, not with a dialog, which would do the same.
+        if (state != StReady && state != StBlocked) { form.Notice(Rdv3Text.ErrNotReady); return; }
         Rdv3Config latest;
         try { latest = Rdv3Config.Load(cfg.SourcePath); }
         catch (Exception ex) { form.Error(Rdv3Text.ErrSettingsSave + ex.Message); return; }
