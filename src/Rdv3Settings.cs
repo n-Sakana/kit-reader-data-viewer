@@ -267,7 +267,7 @@ public sealed class Rdv3PickerForm
         AutomationElement input = null;
         double smallestArea = double.MaxValue;
         double inputArea = double.MaxValue;
-        foreach (AutomationElement candidate in element.FindAll(TreeScope.Descendants, Condition.TrueCondition))
+        foreach (AutomationElement candidate in element.FindAll(TreeScope.Descendants, System.Windows.Automation.Condition.TrueCondition))
         {
             Rect bounds = candidate.Current.BoundingRectangle;
             if (bounds.IsEmpty || !bounds.Contains(point)) { continue; }
