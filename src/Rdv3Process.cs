@@ -185,7 +185,9 @@ public static class Rdv3Process
             Rdv3Relation relation = new Rdv3Relation();
             if (input.IsTable)
             {
-                throw new InvalidDataException("$work requires the ledger's application-owned states");
+                string[] head = heads[input.TableOrd];
+                relation.Columns = new string[head.Length];
+                for (int c = 0; c < head.Length; c++) { relation.Columns[c] = input.Table + "." + head[c]; }
             }
             else { relation.Columns = new string[] { input.Key }; }
             prepared.Inputs.Add(input.Id, relation);
