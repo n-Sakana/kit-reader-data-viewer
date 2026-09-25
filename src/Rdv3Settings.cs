@@ -254,23 +254,30 @@ public sealed class Rdv3PickerForm
 
     // FromPoint stops at the host of a XAML island -- the Windows 11 Explorer
     // search box sits in one -- and returns the bridge pane, whose name is not
-    // the typed text. Walk down to the innermost element under the point.
+    // the typed text. Look inside that pane for the element under the point.
+    // The intermediate panes of an island report bounds that do not cover
+    // their content, so this searches the whole subtree instead of walking
+    // down by containment. An input under the point wins over the placeholder
+    // text drawn inside it; otherwise the smallest element does. On ties the
+    // later, deeper element is taken.
     private static AutomationElement Innermost(AutomationElement element, Point point)
     {
-        TreeWalker walker = TreeWalker.ControlViewWalker;
-        for (int depth = 0; element != null && depth < 32; depth++)
+        if (element == null || element.Current.ControlType != ControlType.Pane) { return element; }
+        AutomationElement smallest = null;
+        AutomationElement input = null;
+        double smallestArea = double.MaxValue;
+        double inputArea = double.MaxValue;
+        foreach (AutomationElement candidate in element.FindAll(TreeScope.Descendants, Condition.TrueCondition))
         {
-            AutomationElement hit = null;
-            for (AutomationElement child = walker.GetFirstChild(element); child != null;
-                 child = walker.GetNextSibling(child))
-            {
-                Rect bounds = child.Current.BoundingRectangle;
-                if (!bounds.IsEmpty && bounds.Contains(point)) { hit = child; break; }
-            }
-            if (hit == null) { break; }
-            element = hit;
+            Rect bounds = candidate.Current.BoundingRectangle;
+            if (bounds.IsEmpty || !bounds.Contains(point)) { continue; }
+            double area = bounds.Width * bounds.Height;
+            if (area <= smallestArea) { smallest = candidate; smallestArea = area; }
+            if (area <= inputArea &&
+                (bool)candidate.GetCurrentPropertyValue(AutomationElement.IsValuePatternAvailableProperty))
+            { input = candidate; inputArea = area; }
         }
-        return element;
+        return input ?? smallest ?? element;
     }
 
     private void SendPreview(AutomationElement element)
