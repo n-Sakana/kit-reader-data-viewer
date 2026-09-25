@@ -235,7 +235,7 @@ public sealed class Rdv3PickerForm
         Point point = new Point(native.X, native.Y);
         if (owner.CardBounds.Contains(point)) { return; }
         AutomationElement element = null;
-        try { element = AutomationElement.FromPoint(point); }
+        try { element = Innermost(AutomationElement.FromPoint(point), point); }
         catch (Exception) { }
         if (element != null && !Rdv3Uia.Same(element, hover))
         {
@@ -250,6 +250,27 @@ public sealed class Rdv3PickerForm
             if (result != null) { frame.Continue = false; }
         }
         else if (!chord) { armed = false; }
+    }
+
+    // FromPoint stops at the host of a XAML island -- the Windows 11 Explorer
+    // search box sits in one -- and returns the bridge pane, whose name is not
+    // the typed text. Walk down to the innermost element under the point.
+    private static AutomationElement Innermost(AutomationElement element, Point point)
+    {
+        TreeWalker walker = TreeWalker.ControlViewWalker;
+        for (int depth = 0; element != null && depth < 32; depth++)
+        {
+            AutomationElement hit = null;
+            for (AutomationElement child = walker.GetFirstChild(element); child != null;
+                 child = walker.GetNextSibling(child))
+            {
+                Rect bounds = child.Current.BoundingRectangle;
+                if (!bounds.IsEmpty && bounds.Contains(point)) { hit = child; break; }
+            }
+            if (hit == null) { break; }
+            element = hit;
+        }
+        return element;
     }
 
     private void SendPreview(AutomationElement element)
