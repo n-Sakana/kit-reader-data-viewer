@@ -1,8 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="720" viewBox="0 0 1280 720" data-pptx-page-role="content" font-family="'Yu Gothic UI','Segoe UI',sans-serif">
-  <rect id="background" data-pptx-role="background" width="1280" height="720" fill="#FFFFFF" />
-  <g id="heading" data-pptx-bounds="64 36 1152 98" font-weight="bold"><text x="64" y="58" font-size="18" fill="#C05B21">02　検索・確認・送信　／　一覧をCSVへ</text><text x="64" y="112" font-size="40" fill="#24507F">帳票出力で、出したい項目を選ぶ</text></g>
-  <g id="export-screen" data-pptx-bounds="64 153 600 509"><image href="../images/15-export.png" x="64" y="157" width="595" height="499.8" preserveAspectRatio="xMidYMid meet" /></g>
-  <g id="field-instructions" data-pptx-bounds="704 168 512 348"><text x="704" y="202" font-size="26" fill="#24507F" font-weight="bold">右側が「出力する項目」</text><text x="704" y="263" font-size="22" fill="#1F2A37">左で項目を選び、▶で右へ移します。<tspan x="704" dy="34">外すときは、右で選んで◀。</tspan></text><text x="704" y="377" font-size="22" fill="#1F2A37">項目のダブルクリックでも移動できます。</text><text x="704" y="459" font-size="22" fill="#1F2A37">［既定に戻す］で、設定された<tspan x="704" dy="34">初期の項目選択へ戻ります。</tspan></text></g>
-  <g id="export-scope" data-pptx-bounds="704 545 512 104"><rect x="704" y="545" width="512" height="104" rx="12" fill="#F2F6FB" /><text x="730" y="582" font-size="22" fill="#24507F" font-weight="bold">出るのは、このPCで見えている内容。</text><text x="730" y="623" font-size="18" fill="#1F2A37">他PCの未送信変更は含みません。</text></g>
-  <g id="footer" data-pptx-bounds="64 664 1152 26" fill="#5D6B7A" font-size="14"><text x="64" y="682">出典：README「設定では提供しないこと」・画面の項目選択処理　／　実画面：帳票出力</text><text x="1216" y="682" text-anchor="end">15 / 24</text></g>
-</svg>

@@ -100,3 +100,7 @@ __pycache__/
 /tests/Test-PaymentLive.ps1
 /docs/manual-reader-data-viewer-opus_ppt169_20260915/sources/reader-data-viewer-manual-facts.md
 /docs/manual-reader-data-viewer-opus_ppt169_20260915/sources/capture-rig/app-log/ReaderDataViewer-log-session-a.txt
+
+# 試験が書き出す結果と見た目の確認用の画像。2026-09-25 に追跡から外した。
+tests/results/
+docs/previews/

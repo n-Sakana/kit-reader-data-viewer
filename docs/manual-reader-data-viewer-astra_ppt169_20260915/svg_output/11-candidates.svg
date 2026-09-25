@@ -1,8 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="720" viewBox="0 0 1280 720" data-pptx-page-role="content" font-family="'Yu Gothic UI','Segoe UI',sans-serif">
-  <rect id="background" data-pptx-role="background" width="1280" height="720" fill="#FFFFFF" />
-  <g id="heading" data-pptx-bounds="64 36 1152 98" font-weight="bold"><text x="64" y="58" font-size="18" fill="#C05B21">02　検索・確認・送信　／　複数候補</text><text x="64" y="112" font-size="40" fill="#24507F">候補が複数なら、内容を比べて1件選ぶ</text></g>
-  <g id="candidates-screen" data-pptx-bounds="64 170 1152 225"><text x="64" y="191" font-size="18" fill="#5D6B7A">同じ検索値に2件が一致した例</text><image href="../images/21-candidates.png" x="64" y="210" width="1152" height="184.32" preserveAspectRatio="xMidYMid meet" /></g>
-  <g id="choose-instructions" data-pptx-bounds="64 440 698 176"><text x="64" y="473" font-size="26" fill="#24507F" font-weight="bold">番号・日付・内容を見て、対象の行を選びます。</text><text x="64" y="525" font-size="22" fill="#1F2A37">行をダブルクリックするか、選んで［OK］を押します。<tspan x="64" dy="34">選ぶ前に、処理状態は変わりません。</tspan><tspan x="64" dy="34">対象が決められなければ［キャンセル］で戻ります。</tspan></text></g>
-  <g id="candidate-fixture-note" data-pptx-bounds="818 438 398 188"><rect x="818" y="438" width="398" height="188" rx="12" fill="#F2F6FB" /><text x="842" y="476" font-size="22" fill="#C05B21" font-weight="bold">この画像は説明用台帳です</text><text x="842" y="521" font-size="18" fill="#1F2A37">2件に同じ検索値を付けて撮影。<tspan x="842" dy="30">配布される100件のサンプルには、</tspan><tspan x="842" dy="30">この重複は入っていません。</tspan></text></g>
-  <g id="footer" data-pptx-bounds="64 664 1152 26" fill="#5D6B7A" font-size="14"><text x="64" y="682">出典：PAYMENT-GUIDE「サンプルを実際に使う」　／　実画面：説明用2候補</text><text x="1216" y="682" text-anchor="end">11 / 24</text></g>
-</svg>

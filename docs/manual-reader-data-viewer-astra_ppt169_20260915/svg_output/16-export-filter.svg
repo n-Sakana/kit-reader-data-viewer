@@ -1,8 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="720" viewBox="0 0 1280 720" data-pptx-page-role="content" font-family="'Yu Gothic UI','Segoe UI',sans-serif">
-  <rect id="background" data-pptx-role="background" width="1280" height="720" fill="#FFFFFF" />
-  <g id="heading" data-pptx-bounds="64 36 1152 98" font-weight="bold"><text x="64" y="58" font-size="18" fill="#C05B21">02　検索・確認・送信　／　条件を付けて出力</text><text x="64" y="112" font-size="40" fill="#24507F">条件を［追加］し、新しいCSVへ書き出す</text></g>
-  <g id="filter-screen" data-pptx-bounds="64 153 600 509"><image href="../images/16-export-filter.png" x="64" y="157" width="595" height="499.8" preserveAspectRatio="xMidYMid meet" /></g>
-  <g id="filter-instructions" data-pptx-bounds="704 169 512 343"><text x="704" y="202" font-size="26" fill="#24507F" font-weight="bold">「済」の行だけを出す例</text><text x="704" y="259" font-size="22" fill="#1F2A37">項目：決済確認済<tspan x="704" dy="34">条件：等しい</tspan><tspan x="704" dy="34">値：済</tspan></text><text x="704" y="391" font-size="22" fill="#C05B21" font-weight="bold">［追加］で、下の一覧へ入れる。</text><text x="704" y="440" font-size="22" fill="#1F2A37">出力先を指定して［OK］。<tspan x="704" dy="34">このサンプルでは80行が出ます。</tspan></text></g>
-  <g id="filter-notes" data-pptx-bounds="704 533 512 122"><rect x="704" y="533" width="512" height="122" rx="12" fill="#F2F6FB" /><text x="730" y="568" font-size="18" fill="#1F2A37">複数の条件は、すべて一致した行が対象です。</text><text x="730" y="609" font-size="18" fill="#5D6B7A">Excel向けの数式無効化は、番号や日付の<tspan x="730" dy="28">自動変換まで防ぐものではありません。</tspan></text></g>
-  <g id="footer" data-pptx-bounds="64 664 1152 26" fill="#5D6B7A" font-size="14"><text x="64" y="682">出典：README「設定では提供しないこと」　／　実画面と出力CSV：条件「済」で80行</text><text x="1216" y="682" text-anchor="end">16 / 24</text></g>
-</svg>

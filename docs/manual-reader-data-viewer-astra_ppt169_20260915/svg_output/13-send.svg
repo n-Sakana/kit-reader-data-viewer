@@ -1,8 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="720" viewBox="0 0 1280 720" data-pptx-page-role="content" font-family="'Yu Gothic UI','Segoe UI',sans-serif">
-  <rect id="background" data-pptx-role="background" width="1280" height="720" fill="#FFFFFF" />
-  <g id="heading" data-pptx-bounds="64 36 1152 98" font-weight="bold"><text x="64" y="58" font-size="18" fill="#C05B21">02　検索・確認・送信　／　変更を共有する</text><text x="64" y="112" font-size="40" fill="#24507F">まとめて送信して、共有台帳へ反映する</text></g>
-  <g id="send-confirm" data-pptx-bounds="64 174 542 219"><text x="64" y="203" font-size="26" fill="#C05B21" font-weight="bold">件数を確認して［はい］</text><image href="../images/12-send-confirm.png" x="64" y="237" width="530" height="149.03" preserveAspectRatio="xMidYMid meet" /></g>
-  <g id="send-result-text" data-pptx-bounds="64 434 542 213"><text x="64" y="468" font-size="30" fill="#24507F" font-weight="bold">未送信0件になったら完了。</text><text x="64" y="525" font-size="22" fill="#1F2A37">このサンプルでは、送信後に表示も<tspan x="64" dy="34">クリアされます。</tspan></text><text x="64" y="620" font-size="18" fill="#5D6B7A">送るのは、このPCに溜めた変更です。</text></g>
-  <g id="sent-screen" data-pptx-bounds="654 161 562 495"><image href="../images/13-sent.png" x="654" y="171" width="560" height="481.79" preserveAspectRatio="xMidYMid meet" /></g>
-  <g id="footer" data-pptx-bounds="64 664 1152 26" fill="#5D6B7A" font-size="14"><text x="64" y="682">実画面：1件の送信確認と送信後　／　保存済みExcelでも処理済1件を確認</text><text x="1216" y="682" text-anchor="end">13 / 24</text></g>
-</svg>

@@ -1,8 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="720" viewBox="0 0 1280 720" data-pptx-page-role="content" font-family="'Yu Gothic UI','Segoe UI',sans-serif">
-  <rect id="background" data-pptx-role="background" width="1280" height="720" fill="#FFFFFF" />
-  <g id="heading" data-pptx-bounds="64 36 1152 98" font-weight="bold"><text x="64" y="58" font-size="18" fill="#C05B21">03　更新・削除・共有　／　結果を確かめる</text><text x="64" y="112" font-size="40" fill="#24507F">1件を送信してから削除すると、99件になる</text></g>
-  <g id="delete-outcome" data-pptx-bounds="64 184 538 243"><text x="64" y="217" font-size="22" fill="#5D6B7A">AA10000000AAを処理済にして送信した例</text><text x="64" y="304" font-size="54" fill="#24507F" font-weight="bold">100 → 99 件</text><text x="64" y="371" font-size="22" fill="#1F2A37">送信済みで条件に合う1件だけが消え、<tspan x="64" dy="34">未処理の一致行は残ります。</tspan></text></g>
-  <g id="delete-limit" data-pptx-bounds="64 475 538 173"><text x="64" y="511" font-size="26" fill="#C05B21" font-weight="bold">この版に、削除済み一覧はありません。</text><text x="64" y="562" font-size="22" fill="#1F2A37">削除した行は、再取込で復活し得ます。<tspan x="64" dy="34">実運用前に、台帳の控えと扱い方を</tspan><tspan x="64" dy="34">担当者と決めてください。</tspan></text></g>
-  <g id="deleted-screen" data-pptx-bounds="654 170 562 483"><image href="../images/19-after-delete.png" x="654" y="171" width="560" height="481.79" preserveAspectRatio="xMidYMid meet" /></g>
-  <g id="footer" data-pptx-bounds="64 664 1152 26" fill="#5D6B7A" font-size="14"><text x="64" y="682">出典：PAYMENT-GUIDE「既存台帳と残る改定範囲」　／　実画面・保存済みExcel：99件</text><text x="1216" y="682" text-anchor="end">19 / 24</text></g>
-</svg>

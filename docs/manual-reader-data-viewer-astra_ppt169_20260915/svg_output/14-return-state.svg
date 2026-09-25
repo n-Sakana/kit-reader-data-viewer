@@ -1,8 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="720" viewBox="0 0 1280 720" data-pptx-page-role="content" font-family="'Yu Gothic UI','Segoe UI',sans-serif">
-  <rect id="background" data-pptx-role="background" width="1280" height="720" fill="#FFFFFF" />
-  <g id="heading" data-pptx-bounds="64 36 1152 98" font-weight="bold"><text x="64" y="58" font-size="18" fill="#C05B21">02　検索・確認・送信　／　状態を戻す</text><text x="64" y="112" font-size="40" fill="#24507F">戻すときも、同じ番号を検索して送信する</text></g>
-  <g id="return-confirm-screen" data-pptx-bounds="184 178 912 232"><text x="184" y="204" font-size="18" fill="#5D6B7A">処理済の状態でボタンを押すと、確認が出ます</text><image href="../images/14-return-confirm.png" x="184" y="228" width="800" height="172.67" preserveAspectRatio="xMidYMid meet" /></g>
-  <g id="return-instructions" data-pptx-bounds="64 440 708 190"><text x="64" y="475" font-size="26" fill="#24507F" font-weight="bold">同じ番号をもう一度検索して、［処理済］を押す。</text><text x="64" y="528" font-size="22" fill="#1F2A37">確認に［はい］で答えると、未処理へ戻ります。<tspan x="64" dy="34">その変更も［変更をまとめて送信］で反映します。</tspan></text><text x="64" y="617" font-size="18" fill="#5D6B7A">送信済みの行でも、状態の切り替えはできます。</text></g>
-  <g id="clear-note" data-pptx-bounds="824 445 392 175"><rect x="824" y="445" width="392" height="175" rx="12" fill="#F2F6FB" /><text x="850" y="486" font-size="26" fill="#C05B21" font-weight="bold">［クリア］の役割</text><text x="850" y="535" font-size="22" fill="#1F2A37">表示を消す操作です。<tspan x="850" dy="34">処理状態の取り消しには</tspan><tspan x="850" dy="34">なりません。</tspan></text></g>
-  <g id="footer" data-pptx-bounds="64 664 1152 26" fill="#5D6B7A" font-size="14"><text x="64" y="682">出典：README「台帳の更新と確認状態」　／　実画面：戻す確認（撮影後はキャンセル）</text><text x="1216" y="682" text-anchor="end">14 / 24</text></g>
-</svg>
