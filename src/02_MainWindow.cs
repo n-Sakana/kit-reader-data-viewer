@@ -87,8 +87,13 @@ namespace ReaderDataViewer
 
         public int ExitCode { get; private set; }
 
+        // Zoom applied to the page so the declared size fits the work area;
+        // the dialog surfaces use the same so they match the main window.
+        public double PageZoom { get; private set; }
+
         public MainWindow(Rdv3Screen screen)
         {
+            PageZoom = 1.0;
             targetClientWidth = Math.Max(480.0, screen.StartWidth);
             targetClientHeight = Math.Max(300.0, screen.StartHeight);
             Title = "Reader Data Viewer";
@@ -451,10 +456,24 @@ namespace ReaderDataViewer
             Top = area.Top + (area.Height - ActualHeight) / 2;
         }
 
+        // The page is laid out at the size settings.json declares, in CSS
+        // pixels. When that size plus the window frame does not fit the work
+        // area (a small screen, or a large Windows scale setting), the page is
+        // zoomed out as a whole instead of being cut off: the layout stays the
+        // declared one and only its rendering shrinks. It never zooms in.
         private async Task FitConfiguredClient()
         {
-            Width += targetClientWidth - webView.ActualWidth;
-            Height += targetClientHeight - webView.ActualHeight;
+            double frameWidth = ActualWidth - webView.ActualWidth;
+            double frameHeight = ActualHeight - webView.ActualHeight;
+            Rect area = SystemParameters.WorkArea;
+            PageZoom = Math.Max(0.25, Math.Min(1.0, Math.Min(
+                (area.Width - frameWidth) / targetClientWidth,
+                (area.Height - frameHeight) / targetClientHeight)));
+            webView.ZoomFactor = PageZoom;
+            MinWidth = 480 * PageZoom;
+            MinHeight = 300 * PageZoom;
+            Width = targetClientWidth * PageZoom + frameWidth;
+            Height = targetClientHeight * PageZoom + frameHeight;
             await Task.Delay(60);
 
             // WebView2 rounds its composition bounds to physical pixels.  On
@@ -484,8 +503,9 @@ namespace ReaderDataViewer
                     return;
                 }
 
-                double widthDelta = targetClientWidth - browserWidth;
-                double heightDelta = targetClientHeight - browserHeight;
+                // the browser reports CSS pixels; the window is sized in DIPs
+                double widthDelta = (targetClientWidth - browserWidth) * PageZoom;
+                double heightDelta = (targetClientHeight - browserHeight) * PageZoom;
                 if (Math.Abs(widthDelta) < 0.1 &&
                     Math.Abs(heightDelta) < 0.1)
                 {
@@ -632,9 +652,17 @@ namespace ReaderDataViewer
             Show();
         }
 
+        private double OwnerZoom()
+        {
+            MainWindow main = Owner as MainWindow;
+            return main != null ? main.PageZoom : 1.0;
+        }
+
         public void OpenWith(string openJson)
         {
             sized = false;
+            // the surface may have been warmed before the main window fitted
+            if (webView.CoreWebView2 != null) { webView.ZoomFactor = OwnerZoom(); }
             webView.SetValue(UIElement.OpacityProperty, 0.0);
             Left = -32000;
             Top = -32000;
@@ -657,6 +685,9 @@ namespace ReaderDataViewer
         {
             if (clientWidth < 1 || clientHeight < 1) { return; }
             if (!string.IsNullOrEmpty(title)) { Title = title; }
+            // the page measures in CSS pixels; the window is sized in DIPs
+            clientWidth *= webView.ZoomFactor;
+            clientHeight *= webView.ZoomFactor;
             if (frameWidth < 0)
             {
                 UpdateLayout();
@@ -754,7 +785,7 @@ namespace ReaderDataViewer
             try
             {
                 await webView.EnsureCoreWebView2Async(environment);
-                webView.ZoomFactor = 1.0;
+                webView.ZoomFactor = OwnerZoom();
                 webView.CoreWebView2.SetVirtualHostNameToFolderMapping(
                     trustedHost,
                     webDirectory,
