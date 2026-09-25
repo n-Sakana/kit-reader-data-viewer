@@ -111,12 +111,10 @@ public static class Rdv3SettingsForm
         Rdv3Target picked = owner.TakePickedTarget();
         if (picked != null)
         {
+            // The picked target is named after the window it was taken from, so
+            // the dialog and the log show which screen is watched now.
             if (before != null)
             {
-                if (before.Name.Length > 0 && !before.Name.StartsWith(Rdv3Text.SecTarget))
-                {
-                    picked.Name = before.Name;
-                }
                 picked.Enabled = before.Enabled;
                 working.Targets[0] = picked;
             }
